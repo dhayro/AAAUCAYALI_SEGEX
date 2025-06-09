@@ -38,7 +38,17 @@ exports.getExpedienteById = async (req, res) => {
 
 exports.createExpediente = async (req, res) => {
   try {
-    const nuevoExpediente = await Expediente.create(req.body);
+    const { cut, ...otherData } = req.body;
+
+    // Check if an expediente with the same cut already exists
+    const existingExpediente = await Expediente.findOne({ where: { cut } });
+    if (existingExpediente) {
+      // Return a 200 status with a message indicating the cut already exists
+      return res.status(200).json({ alert: 'El expediente con este CUT ya existe' });
+    }
+
+    // Create a new expediente if the cut does not exist
+    const nuevoExpediente = await Expediente.create({ cut, ...otherData });
     res.status(201).json(nuevoExpediente);
   } catch (error) {
     res.status(400).json({ message: error.message });

@@ -5,7 +5,9 @@ import {
   Description as DocumentIcon, 
   Folder as ExpedienteIcon, 
   Work as CargoIcon,
-  AccountTree as AreaIcon // Importamos el icono para Áreas
+  AccountTree as AreaIcon,
+  People as UserIcon,
+  Description as TipoDocumentoIcon // Import the icon for Tipos de Documentos
 } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
 
@@ -32,6 +34,16 @@ const Sidebar = ({ mobileOpen, handleDrawerToggle, drawerWidth }) => {
       <ListItem component={Link} to="/areas" onClick={handleDrawerToggle}>
         <ListItemIcon><AreaIcon /></ListItemIcon>
         <ListItemText primary="Áreas" />
+      </ListItem>
+      {/* Nuevo elemento para Tipos de Documentos */}
+      <ListItem component={Link} to="/tipos-documentos" onClick={handleDrawerToggle}>
+        <ListItemIcon><TipoDocumentoIcon /></ListItemIcon>
+        <ListItemText primary="Tipos de Documentos" />
+      </ListItem>
+      {/* Nuevo elemento para Usuarios */}
+      <ListItem component={Link} to="/usuarios" onClick={handleDrawerToggle}>
+        <ListItemIcon><UserIcon /></ListItemIcon>
+        <ListItemText primary="Usuarios" />
       </ListItem>
     </List>
   );

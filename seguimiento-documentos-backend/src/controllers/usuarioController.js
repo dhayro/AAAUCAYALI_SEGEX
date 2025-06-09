@@ -1,6 +1,9 @@
 const Usuario = require('../models/Usuario');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { Op } = require('sequelize'); // Import Op from Sequelize
+const Cargo = require('../models/Cargo');
+const Area = require('../models/Area');
 
 exports.obtenerTodosLosUsuarios = async (req, res) => {
   try {
@@ -8,7 +11,50 @@ exports.obtenerTodosLosUsuarios = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
+    const { nombre, email, cargo, area, filtro } = req.query;
+
+    // Build the where clause for filtering
+    let whereClause = {};
+
+    // Include Cargo and Area models for filtering by name
+    const include = [
+      {
+        model: Cargo,
+        attributes: [], // Exclude Cargo attributes from the result
+      },
+      {
+        model: Area,
+        attributes: [], // Exclude Area attributes from the result
+      }
+    ];
+
+    if (filtro) {
+      whereClause[Op.or] = [
+        { nombre: { [Op.like]: `%${filtro}%` } },
+        { email: { [Op.like]: `%${filtro}%` } },
+        { '$Cargo.nombre$': { [Op.like]: `%${filtro}%` } },
+        { '$Area.nombre$': { [Op.like]: `%${filtro}%` } }
+      ];
+    } else {
+      if (nombre) {
+        whereClause.nombre = { [Op.like]: `%${nombre}%` };
+      }
+      if (email) {
+        whereClause.email = { [Op.like]: `%${email}%` };
+      }
+    }
+
+    if (cargo) {
+      include[0].where = { nombre: { [Op.like]: `%${cargo}%` } };
+    }
+
+    if (area) {
+      include[1].where = { nombre: { [Op.like]: `%${area}%` } };
+    }
+
     const { count, rows } = await Usuario.findAndCountAll({
+      where: whereClause,
+      include: include,
       limit: limit,
       offset: offset,
       order: [['id', 'ASC']],
@@ -91,7 +137,6 @@ exports.registrarUsuario = async (req, res) => {
   try {
     const { 
       usuario, 
-      password, 
       email, 
       nombre, 
       apellido, 
@@ -104,7 +149,9 @@ exports.registrarUsuario = async (req, res) => {
       fecha_nacimiento 
     } = req.body;
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Set the default password
+    const defaultPassword = 'Autoridad1';
+    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 
     const nuevoUsuario = await Usuario.create({
       usuario,
@@ -157,6 +204,92 @@ exports.loginUsuario = async (req, res) => {
       });
     } else {
       res.status(400).json({ mensaje: 'Usuario o contraseña incorrectos' });
+    }
+  } catch (error) {
+    res.status(500).json({ mensaje: error.message });
+  }
+};
+
+exports.actualizarContrasena = async (req, res) => {
+  try {
+    const { id } = req.params; // Get user ID from the request parameters
+    const { currentPassword, newPassword } = req.body;
+
+    const user = await Usuario.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+    }
+
+    // Verify current password
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ mensaje: 'Contraseña actual incorrecta' });
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update the password in the database
+    await Usuario.update({ password: hashedPassword }, { where: { id } });
+
+    res.json({ mensaje: 'Contraseña actualizada exitosamente' });
+  } catch (error) {
+    res.status(500).json({ mensaje: error.message });
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  try {
+    const { id } = req.params; // Get user ID from the request parameters
+
+    const user = await Usuario.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+    }
+
+    // Set the default password
+    const defaultPassword = 'Autoridad1';
+    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+
+    // Update the password in the database
+    await Usuario.update({ password: hashedPassword }, { where: { id } });
+
+    res.json({ mensaje: 'Contraseña restablecida exitosamente' });
+  } catch (error) {
+    res.status(500).json({ mensaje: error.message });
+  }
+};
+
+exports.verificarUsuarioExistente = async (req, res) => {
+  try {
+    const { usuario, email } = req.params; // Access path parameters
+
+    let user = null;
+    let mensaje = '';
+    let tipo = ''; // To store whether it was found by 'usuario' or 'email'
+
+    // Check if the user exists by username
+    if (usuario) {
+      user = await Usuario.findOne({ where: { usuario } });
+      if (user) {
+        mensaje = 'El nombre de usuario ya existe';
+        tipo = 'usuario';
+      }
+    }
+
+    // If not found by username, check by email
+    if (!user && email) {
+      user = await Usuario.findOne({ where: { email } });
+      if (user) {
+        mensaje = 'El correo electrónico ya existe';
+        tipo = 'email';
+      }
+    }
+
+    if (user) {
+      res.json({ existe: true, mensaje, tipo });
+    } else {
+      res.json({ existe: false, mensaje: 'El usuario no existe' });
     }
   } catch (error) {
     res.status(500).json({ mensaje: error.message });

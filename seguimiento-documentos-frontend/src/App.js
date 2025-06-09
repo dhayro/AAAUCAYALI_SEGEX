@@ -7,6 +7,9 @@ import Dashboard from './components/Dashboard/Dashboard';
 import Login from './components/Auth/Login';
 import Cargos from './components/Cargos';
 import Areas from './components/Areas';
+import Usuarios from './components/Usuarios'; // Asegúrate de importar el componente Usuarios
+import TiposDocumentos from './components/TiposDocumentos';
+import Expedientes from './components/Expedientes'; // Import the Expedientes component
 import ProtectedRoute from './components/ProtectedRoute';
 import api from './services/api';
 import './globalStyles.css';
@@ -25,7 +28,7 @@ const App = () => {
       if (token) {
         try {
           // Hacer una llamada a la API para verificar el token
-          const response = await api.get('/usuarios/verify-token');
+          const response = await api.patch('/usuarios/verify-token');
           setUser(response.data); // Asumiendo que la API devuelve los datos del usuario
         } catch (error) {
           console.error('Token inválido o expirado:', error);
@@ -107,6 +110,30 @@ const App = () => {
               element={
                 <ProtectedRoute user={user}>
                   <Areas />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/usuarios"
+              element={
+                <ProtectedRoute user={user}>
+                  <Usuarios />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tipos-documentos"
+              element={
+                <ProtectedRoute user={user}>
+                  <TiposDocumentos />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/expedientes"
+              element={
+                <ProtectedRoute user={user}>
+                  <Expedientes />
                 </ProtectedRoute>
               }
             />

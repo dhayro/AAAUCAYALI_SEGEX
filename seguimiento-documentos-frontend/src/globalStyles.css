@@ -1,3 +1,6 @@
 .my-swal {
   z-index: 9999;
 }
+.swal2-container {
+  z-index: 2000 !important; /* Asegúrate de que este valor sea mayor que el z-index de otros elementos */
+}

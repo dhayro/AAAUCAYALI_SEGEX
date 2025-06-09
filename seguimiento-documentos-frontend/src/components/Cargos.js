@@ -303,36 +303,54 @@ const Cargos = () => {
   };
 
   const handleDelete = async (id) => {
-    try {
-      const result = await showSweetAlert({
-        title: '¿Está seguro?',
-        text: "No podrá revertir esta acción",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Sí, eliminar',
-        cancelButtonText: 'Cancelar'
-      });
+  try {
+    const result = await showSweetAlert({
+      title: '¿Está seguro?',
+      text: "No podrá revertir esta acción",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
 
-      if (result.isConfirmed) {
-        await api.delete(`/cargos/${id}`);
-        fetchPaginatedCargos(filters, pagination);
-       
-        showSweetAlert({
-          icon: 'success',
-          title: 'Eliminado',
-          text: 'El cargo ha sido eliminado.',
-          timer: 2500,
-          timerProgressBar: true,
-          showConfirmButton: false
-        });
-      }
-    } catch (error) {
-      console.error('Error deleting cargo:', error);
-      showErrorAlert('Error al eliminar el cargo. Por favor, intente de nuevo más tarde.');
+    if (result.isConfirmed) {
+      await api.delete(`/cargos/${id}`);
+      fetchPaginatedCargos(filters, pagination);
+
+      showSweetAlert({
+        icon: 'success',
+        title: 'Eliminado',
+        text: 'El cargo ha sido eliminado.',
+        timer: 2500,
+        timerProgressBar: true,
+        showConfirmButton: false
+      });
     }
-  };
+  } catch (error) {
+    console.error('Error deleting cargo:', error);
+    let errorMessage = 'Error al procesar la solicitud. Por favor, intente de nuevo.';
+    // if (error.response) {
+    //   console.error('Error response:', error.response.data);
+    //   console.error('Error status:', error.response.status);
+    //   errorMessage = error.response.data.mensaje || errorMessage;
+    // } else if (error.request) {
+    //   console.error('Error request:', error.request);
+    //   errorMessage = 'No se recibió respuesta del servidor. Por favor, verifique su conexión.';
+    // } else {
+    //   console.error('Error message:', error.message);
+    // }
+    showSweetAlert({
+      icon: 'error',
+      title: 'Error',
+      text: "No se pudo eliminar el cargo. " + errorMessage,
+      timer: 3000,
+      timerProgressBar: true,
+      showConfirmButton: false
+    });
+  }
+};
 
   const handleChangePage = (event, newPage) => {
     setPagination(old => ({ ...old, pageIndex: newPage }));

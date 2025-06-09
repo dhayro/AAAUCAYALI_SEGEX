@@ -72,10 +72,10 @@ const { authenticateToken, isAdmin, isJefeOrAdmin } = require('../middleware/aut
 /**
  * @swagger
  * tags:
- *   name: Usuarios
- *   description: API para gestionar usuarios
- *   name: Autenticación
- *   description: API para autenticación de usuarios
+ *   - name: Usuarios
+ *     description: API para gestionar usuarios
+ * security:
+ *   - bearerAuth: []
  */
 
 /**
@@ -279,7 +279,7 @@ router.delete('/:id', isAdmin, usuarioController.eliminarUsuario);
 /**
  * @swagger
  * /api/usuarios/verify-token:
- *   get:
+ *   patch:
  *     summary: Verificar token JWT
  *     tags: [Autenticación]
  *     security:
@@ -318,6 +318,140 @@ router.delete('/:id', isAdmin, usuarioController.eliminarUsuario);
  *       403:
  *         description: No se proporcionó token
  */
-router.get('/verify-token', authController.verifyToken);
+router.patch('/verify-token', authController.verifyToken);
+
+/**
+ * @swagger
+ * /api/usuarios/cambiar-contrasena:
+ *   patch:
+ *     summary: Cambiar la contraseña del usuario autenticado
+ *     tags: [Usuarios]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - currentPassword
+ *               - newPassword
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Contraseña actualizada exitosamente
+ *       400:
+ *         description: Error en los datos proporcionados
+ *       401:
+ *         description: No autorizado
+ *       404:
+ *         description: Usuario no encontrado
+ */
+router.patch('/cambiar-contrasena', authenticateToken, usuarioController.actualizarContrasena);
+
+/**
+ * @swagger
+ * /api/usuarios/{id}/reset-password:
+ *   patch:
+ *     summary: Restablecer la contraseña de un usuario a un valor por defecto
+ *     tags: [Usuarios]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del usuario cuya contraseña se va a restablecer
+ *     responses:
+ *       200:
+ *         description: Contraseña restablecida exitosamente
+ *       401:
+ *         description: No autorizado
+ *       404:
+ *         description: Usuario no encontrado
+ */
+router.patch('/:id/reset-password', authenticateToken, isAdmin, usuarioController.resetPassword);
+
+/**
+ * @swagger
+ * /api/usuarios/{id}/actualizar-contrasena:
+ *   patch:
+ *     summary: Actualizar la contraseña de un usuario
+ *     tags: [Usuarios]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del usuario cuya contraseña se va a actualizar
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Contraseña actualizada exitosamente
+ *       400:
+ *         description: Error en los datos proporcionados
+ *       404:
+ *         description: Usuario no encontrado
+ *       500:
+ *         description: Error del servidor
+ */
+router.patch('/:id/actualizar-contrasena', authenticateToken, usuarioController.actualizarContrasena);
+
+/**
+ * @swagger
+ * /api/usuarios/verificar/{usuario}/{email}:
+ *   get:
+ *     summary: Verificar si un usuario existe por nombre de usuario o correo electrónico
+ *     tags: [Usuarios]
+ *     parameters:
+ *       - in: path
+ *         name: usuario
+ *         schema:
+ *           type: string
+ *         description: Nombre de usuario a verificar
+ *       - in: path
+ *         name: email
+ *         schema:
+ *           type: string
+ *         description: Correo electrónico a verificar
+ *     responses:
+ *       200:
+ *         description: Resultado de la verificación
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 existe:
+ *                   type: boolean
+ *                 mensaje:
+ *                   type: string
+ *                 tipo:
+ *                   type: string
+ *                   description: Indica si el usuario fue encontrado por 'usuario' o 'email'
+ *       500:
+ *         description: Error del servidor
+ */
+router.get('/verificar/:usuario/:email', usuarioController.verificarUsuarioExistente);
 
 module.exports = router;

@@ -37,7 +37,7 @@ const { authenticateToken, isSecretariaOrAbove } = require('../middleware/auth')
 
 /**
  * @swagger
- * /api/tipos-documentos:
+ * /api/tipoDocumentos:
  *   get:
  *     summary: Obtener todos los tipos de documentos
  *     tags: [Tipos de Documentos]
@@ -55,7 +55,7 @@ router.get('/', tipoDocumentoController.obtenerTodos);
 
 /**
  * @swagger
- * /api/tipos-documentos/{id}:
+ * /api/tipoDocumentos/{id}:
  *   get:
  *     summary: Obtener un tipo de documento por ID
  *     tags: [Tipos de Documentos]
@@ -80,7 +80,7 @@ router.get('/:id', tipoDocumentoController.obtenerPorId);
 
 /**
  * @swagger
- * /api/tipos-documentos:
+ * /api/tipoDocumentos:
  *   post:
  *     summary: Crear un nuevo tipo de documento
  *     tags: [Tipos de Documentos]
@@ -110,7 +110,7 @@ router.post('/', authenticateToken, isSecretariaOrAbove, tipoDocumentoController
 
 /**
  * @swagger
- * /api/tipos-documentos/{id}:
+ * /api/tipoDocumentos/{id}:
  *   put:
  *     summary: Actualizar un tipo de documento existente
  *     tags: [Tipos de Documentos]
@@ -149,7 +149,7 @@ router.put('/:id', authenticateToken, isSecretariaOrAbove, tipoDocumentoControll
 
 /**
  * @swagger
- * /api/tipos-documentos/{id}:
+ * /api/tipoDocumentos/{id}:
  *   delete:
  *     summary: Eliminar un tipo de documento
  *     tags: [Tipos de Documentos]

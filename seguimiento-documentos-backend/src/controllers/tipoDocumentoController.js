@@ -1,13 +1,34 @@
 const TipoDocumento = require('../models/TipoDocumento');
+const { Op } = require('sequelize'); // Import Op from Sequelize
 
-// Obtener todos los tipos de documento con paginación
+// Obtener todos los tipos de documento con paginación y filtros
 exports.obtenerTodos = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
+    const { nombre, descripcion, filtro } = req.query;
+
+    // Build the where clause for filtering
+    let whereClause = {};
+
+    if (filtro) {
+      whereClause[Op.or] = [
+        { nombre: { [Op.like]: `%${filtro}%` } },
+        { descripcion: { [Op.like]: `%${filtro}%` } }
+      ];
+    } else {
+      if (nombre) {
+        whereClause.nombre = { [Op.like]: `%${nombre}%` };
+      }
+      if (descripcion) {
+        whereClause.descripcion = { [Op.like]: `%${descripcion}%` };
+      }
+    }
+
     const { count, rows } = await TipoDocumento.findAndCountAll({
+      where: whereClause,
       limit: limit,
       offset: offset,
       order: [['id', 'ASC']]

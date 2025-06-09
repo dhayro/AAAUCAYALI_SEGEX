@@ -112,7 +112,7 @@ router.get('/', areaController.obtenerTodasLasAreas);
  *       500:
  *         description: Error del servidor
  */
-router.get('/principales', areaController.obtenerAreasPrincipales);
+router.patch('/principales', areaController.obtenerAreasPrincipales);
 
 /**
  * @swagger

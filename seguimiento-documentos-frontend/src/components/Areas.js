@@ -11,6 +11,7 @@ import Swal from 'sweetalert2';
 import SearchIcon from '@mui/icons-material/Search';
 import { debounce } from 'lodash';
 import { getAreasHijas } from '../services/api';
+import { getAreasPrincipales } from '../services/api';
 
 // Definimos estilos personalizados para los botones
 const BootstrapButton = styled(Button)(({ theme, color }) => ({
@@ -141,38 +142,40 @@ const Areas = () => {
   }, []);
 
   const fetchAreas = useCallback(async (parentId = null) => {
-    setIsLoading(true);
-    try {
-      let response;
-      if (parentId === null) {
-        response = await api.get('/areas', {
-          params: {
-            page: pagination.pageIndex + 1,
-            limit: pagination.pageSize,
-            nombre: filters.nombre,
-            descripcion: filters.descripcion,
-            filtro: filters.filtro,
-            id_padre: 'null', // Añade este parámetro para obtener áreas principales
-          },
-        });
-      } else {
+  setIsLoading(true);
+  try {
+    let response;
+    if (parentId === null) {
+      // Fetch areas principales using getAreasPrincipales function
+      response = await getAreasPrincipales({
+        page: pagination.pageIndex + 1,
+        limit: pagination.pageSize,
+        nombre: filters.nombre,
+        descripcion: filters.descripcion,
+        filtro: filters.filtro,
+      });
+    } else {
+      // Fetch sub-areas using getAreasHijas function
+      if (parentId >0) {
         response = await getAreasHijas(parentId);
       }
       
-      if (response.data && (response.data.areas || Array.isArray(response.data))) {
-        setAreas(response.data.areas || response.data);
-        setTotalCount(response.data.totalAreas || response.data.length);
-      } else {
-        console.error('Unexpected response format:', response.data);
-        showErrorAlert('Formato de respuesta inesperado del servidor.');
-      }
-    } catch (error) {
-      console.error('Error fetching areas:', error);
-      showErrorAlert('Error al cargar las áreas. Por favor, intente de nuevo más tarde.');
-    } finally {
-      setIsLoading(false);
     }
-  }, [pagination, filters, showErrorAlert]);
+    
+    if (response.data && (response.data.areas || Array.isArray(response.data))) {
+      setAreas(response.data.areas || response.data);
+      setTotalCount(response.data.totalAreas || response.data.length);
+    } else {
+      console.error('Unexpected response format:', response.data);
+      showErrorAlert('Formato de respuesta inesperado del servidor.');
+    }
+  } catch (error) {
+    // console.error('Error fetching areas:', error);
+    showErrorAlert('Error al cargar las áreas. Por favor, intente de nuevo más tarde.');
+  } finally {
+    setIsLoading(false);
+  }
+}, [pagination, filters, showErrorAlert]);
 
   const fetchAllAreas = useCallback(async () => {
     try {
@@ -321,37 +324,55 @@ const Areas = () => {
   };
 
   const handleDelete = async (id) => {
-    try {
-      const result = await showSweetAlert({
-        title: '¿Está seguro?',
-        text: "No podrá revertir esta acción",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Sí, eliminar',
-        cancelButtonText: 'Cancelar'
-      });
+  try {
+    const result = await showSweetAlert({
+      title: '¿Está seguro?',
+      text: "No podrá revertir esta acción",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
 
-      if (result.isConfirmed) {
-        await api.delete(`/areas/${id}`);
+    if (result.isConfirmed) {
+      const response = await api.delete(`/areas/${id}`);
+
+      if (response.status === 200) {
         fetchAreas(currentParentId);
-        fetchAllAreas(); // Actualizar la lista de áreas para el selector de área padre
-       
+        fetchAllAreas();
         showSweetAlert({
           icon: 'success',
-          title: 'Eliminado',
-          text: 'El área ha sido eliminada.',
+          title: 'Éxito',
+          text: 'Área eliminada correctamente',
           timer: 2500,
           timerProgressBar: true,
           showConfirmButton: false
         });
+      } else if (response.status === 400 && response.data.message === 'No se puede eliminar el área porque tiene sub-áreas asociadas. Elimine primero las sub-áreas.') {
+        showSweetAlert({
+          icon: 'error',
+          title: 'Error',
+          text: 'No se puede eliminar el área porque tiene sub-áreas asociadas. Elimine primero las sub-áreas.',
+          timer: 3000,
+          timerProgressBar: true,
+          showConfirmButton: false
+        });
       }
-    } catch (error) {
-      console.error('Error deleting area:', error);
-      showErrorAlert('Error al eliminar el área. Por favor, intente de nuevo más tarde.');
     }
-  };
+  } catch (error) {
+    // console.error('Error deleting area:', error);
+    showSweetAlert({
+      icon: 'error',
+      title: 'Error',
+      text: 'Error al eliminar el área. Por favor, intente de nuevo.',
+      timer: 3000,
+      timerProgressBar: true,
+      showConfirmButton: false
+    });
+  }
+};
 
   const handleChangePage = (event, newPage) => {
     setPagination(old => ({ ...old, pageIndex: newPage }));
