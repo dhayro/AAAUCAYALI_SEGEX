@@ -34,15 +34,14 @@ export const createDocumento = (documentoData) => api.post('/documentos', docume
 export const updateDocumento = (id, documentoData) => api.put(`/documentos/${id}`, documentoData);
 export const getDocumentoById = (id) => api.get(`/documentos/${id}`);
 export const deleteDocumento = (id) => api.delete(`/documentos/${id}`);
+export const getDocumentosByExpedienteId = (expedienteId) => api.get(`/documentos/expediente/${expedienteId}`);
 
 export const getExpedientes = (params) => api.get('/expedientes', { params });
 export const createExpediente = (expedienteData) => api.post('/expedientes', expedienteData);
 export const getExpedienteById = (id) => api.get(`/expedientes/${id}`);
 export const updateExpediente = (id, expedienteData) => api.put(`/expedientes/${id}`, expedienteData);
 export const deleteExpediente = (id) => api.delete(`/expedientes/${id}`);
-export const getDocumentosByExpedienteId = (expedienteId) => {
-  return api.get(`/documentos/expediente/${expedienteId}`);
-};
+
 
 export const getUsuarios = () => api.get('/usuarios');
 export const createUsuario = (usuarioData) => api.post('/usuarios', usuarioData);
@@ -77,5 +76,13 @@ export const deleteRespuesta = (id) => api.delete(`/respuestas/${id}`);
 // Agrega m&aacute;s funciones para otras rutas de la API seg&uacute;n sea necesario
 
 export const getNombresUnicosTiposDocumentos = () => api.patch('/tipoDocumentos/nombres-unicos');
+
+export const getDocumentosRelacionados = (expedienteId, numeroDocumento = '', idTipoDocumento = '') => {
+  const params = {};
+  if (numeroDocumento) params.numero_documento = numeroDocumento;
+  if (idTipoDocumento) params.id_tipo_documento = idTipoDocumento;
+
+  return api.get(`/expedientes/${expedienteId}/documentos-relacionados`, { params });
+};
 
 export default api;

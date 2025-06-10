@@ -2,6 +2,7 @@ const { Op } = require('sequelize');
 const sequelize = require('../config/database'); // Asegúrate de que esta ruta sea correcta
 const Expediente = require('../models/Expediente');
 const TipoDocumento = require('../models/TipoDocumento');
+const Documento = require('../models/Documento');
 const { formatDateForLima } = require('../utils/dateUtils');
 
 exports.getAllExpedientes = async (req, res) => {
@@ -199,6 +200,53 @@ exports.getUniqueProcedimientos = async (req, res) => {
 
     res.json(uniqueProcedimientos);
   } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.getDocumentosRelacionados = async (req, res) => {
+  try {
+    const expedienteId = req.params.id;
+    const numero_documento = req.query.numero_documento;
+    const id_tipo_documento = req.query.id_tipo_documento;
+    
+    // Primero obtenemos el expediente para tener sus datos
+    const expediente = await Expediente.findByPk(expedienteId, {
+      include: [{
+        model: TipoDocumento,
+        as: 'TipoDocumento'
+      }]
+    });
+
+    if (!expediente) {
+      return res.status(404).json({ message: 'Expediente no encontrado' });
+    }
+
+    // Buscamos documentos que coincidan con los criterios
+    const documentosRelacionados = await Documento.findOne({
+      where: {
+        [Op.and]: [
+          // Documentos que pertenecen directamente al expediente
+          { id_expediente: expedienteId },
+          
+          // Documentos con el mismo número y tipo de documento
+          {
+            [Op.and]: [
+              { numero_documento: numero_documento  },
+              { id_tipo_documento: id_tipo_documento  }
+            ]
+          }
+        ]
+      },
+      include: [{
+        model: TipoDocumento,
+        as: 'TipoDocumento'
+      }]
+    });
+
+    res.json(documentosRelacionados);
+  } catch (error) {
+    console.error('Error al buscar documentos relacionados:', error);
     res.status(500).json({ message: error.message });
   }
 };

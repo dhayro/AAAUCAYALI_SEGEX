@@ -250,4 +250,45 @@ router.delete('/:id', expedienteController.deleteExpediente);
  */
 router.patch('/procedimientos', expedienteController.getUniqueProcedimientos);
 
+/**
+ * @swagger
+ * /api/expedientes/{id}/documentos-relacionados:
+ *   get:
+ *     summary: Obtener documentos relacionados con un expediente
+ *     tags: [Expedientes]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del expediente
+ *       - in: query
+ *         name: numero_documento
+ *         schema:
+ *           type: string
+ *         description: Número de documento específico para buscar (opcional)
+ *       - in: query
+ *         name: id_tipo_documento
+ *         schema:
+ *           type: integer
+ *         description: ID del tipo de documento específico para buscar (opcional)
+ *     responses:
+ *       200:
+ *         description: Documento relacionado obtenido exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Documento'
+ *       401:
+ *         description: No autorizado
+ *       404:
+ *         description: Expediente no encontrado
+ *       500:
+ *         description: Error del servidor
+ */
+router.get('/:id/documentos-relacionados', expedienteController.getDocumentosRelacionados);
+
 module.exports = router;

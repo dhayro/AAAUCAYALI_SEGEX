@@ -39,7 +39,7 @@ exports.getDocumentoById = async (req, res) => {
 
 exports.createDocumento = async (req, res) => {
   try {
-    const { numero_documento, ...otherData } = req.body;
+    const { numero_documento, fecha_documento, ...otherData } = req.body;
     let id_tipo_documento = req.body.id_tipo_documento || null; // Mantener el id_tipo_documento si ya viene en el body
     let updatedNumeroDocumento = numero_documento;
 
@@ -62,17 +62,31 @@ exports.createDocumento = async (req, res) => {
       }
     }
 
+    // Procesar la fecha si viene en formato YYYY-MM-DD
+    let processedFechaDocumento = fecha_documento;
+    if (fecha_documento && typeof fecha_documento === 'string') {
+      // Verificar si la fecha está en formato YYYY-MM-DD
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (dateRegex.test(fecha_documento)) {
+        // La fecha ya está en formato ISO, se puede usar directamente
+        processedFechaDocumento = new Date(fecha_documento);
+        console.log(`Fecha procesada: ${processedFechaDocumento}`);
+      }
+    }
+
     console.log('Datos a guardar:', {
       ...otherData,
       numero_documento: updatedNumeroDocumento,
-      id_tipo_documento: id_tipo_documento
+      id_tipo_documento: id_tipo_documento,
+      fecha_documento: processedFechaDocumento
     });
 
-    // Crear el nuevo documento con el id_tipo_documento y el número de documento actualizado
+    // Crear el nuevo documento con el id_tipo_documento, el número de documento actualizado y la fecha procesada
     const nuevoDocumento = await Documento.create({
       ...otherData,
       numero_documento: updatedNumeroDocumento,
-      id_tipo_documento: id_tipo_documento
+      id_tipo_documento: id_tipo_documento,
+      fecha_documento: processedFechaDocumento
     });
 
     res.status(201).json(nuevoDocumento);
@@ -121,6 +135,10 @@ exports.getDocumentosByExpedienteId = async (req, res) => {
       where: {
         id_expediente: expedienteId
       },
+      include: [{
+        model: TipoDocumento,
+        as: 'TipoDocumento', // This matches the alias used in the association
+      }],
       order: [['id', 'ASC']]
     });
     

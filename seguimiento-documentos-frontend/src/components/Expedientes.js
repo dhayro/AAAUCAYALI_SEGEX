@@ -2,18 +2,21 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Button, TextField, Dialog, DialogActions, DialogContent, DialogTitle,
   Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  TablePagination, InputAdornment, CircularProgress, Autocomplete, Tooltip
+  TablePagination, InputAdornment, CircularProgress, Autocomplete, Tooltip,
+  List, ListItem, ListItemText, Divider, Typography // Add Typography here
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { getExpedientes, createExpediente, updateExpediente, deleteExpediente, createDocumento, getTiposProcedimientos, getExpedienteById, getNombresUnicosTiposDocumentos, updateDocumento } from '../services/api';
+import { getExpedientes, createExpediente, updateExpediente, deleteExpediente, createDocumento, 
+  getTiposProcedimientos, getExpedienteById, getNombresUnicosTiposDocumentos, updateDocumento,
+  getDocumentosByExpedienteId,getDocumentosRelacionados } from '../services/api';
 import Swal from 'sweetalert2';
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import NoteAddIcon from '@mui/icons-material/NoteAdd';
+import ListAltIcon from '@mui/icons-material/ListAlt';
 import { debounce } from 'lodash';
 import { readExcelFile } from '../utils/excelUtils';
-// import jwtDecode from 'jwt-decode';
 import { jwtDecode } from 'jwt-decode';
 
 // Add this function at the top of your component or outside it
@@ -163,6 +166,15 @@ const Expedientes = () => {
   const [procedimientoInputValue, setProcedimientoInputValue] = useState('');
   const [nombresUnicosTiposDocumentos, setNombresUnicosTiposDocumentos] = useState([]);
   const [tipoDocumentoInputValue, setTipoDocumentoInputValue] = useState('');
+  const [openDocumentosListDialog, setOpenDocumentosListDialog] = useState(false);
+  const [documentosList, setDocumentosList] = useState([]);
+  const [isLoadingDocumentos, setIsLoadingDocumentos] = useState(false);
+  const [currentExpedienteForList, setCurrentExpedienteForList] = useState(null);
+  const [originalNumeroDocumento, setOriginalNumeroDocumento] = useState('');
+  const [originalIdTipoDocumento, setOriginalIdTipoDocumento] = useState('');
+  const [originalDocumento, setOriginalDocumento] = useState('');
+
+ 
 
   // Add these state variables at the beginning of your component
   const [openDocumentoDialog, setOpenDocumentoDialog] = useState(false);
@@ -357,6 +369,8 @@ const Expedientes = () => {
           return;
         }
         
+
+        
         expediente.id_usuario_modificador = id_usuario_creador; // Actualizar el usuario modificador
         await updateExpediente(currentExpediente.id, expediente);
         expedienteId = currentExpediente.id;
@@ -365,7 +379,8 @@ const Expedientes = () => {
         // Actualizar el documento asociado al expediente si existe
         try {
           // Primero obtenemos el documento asociado al expediente
-          const expedienteResponse = await getExpedienteById(expedienteId);
+
+          const expedienteResponse = await getDocumentosRelacionados(expedienteId, originalNumeroDocumento, originalIdTipoDocumento);
           if (expedienteResponse.data ) {
             const documentoId = expedienteResponse.data.id;
             
@@ -375,7 +390,7 @@ const Expedientes = () => {
               id_tipo_documento: expedienteId_tipo_documento,
               numero_documento: currentExpediente.numero_documento || '',
               asunto: currentExpediente.asunto || '',
-              fecha_documento: currentExpediente.fecha_documento || null,
+              fecha_documento:  (currentExpediente.fecha_documento ? formatDate(currentExpediente.fecha_documento) : '') || null,
               id_usuario_modificador: id_usuario_creador,
             };
             
@@ -396,7 +411,7 @@ const Expedientes = () => {
             id_tipo_documento: expedienteId_tipo_documento || '',
             numero_documento: currentExpediente.numero_documento || '',
             asunto: currentExpediente.asunto || '',
-            fecha_documento: currentExpediente.fecha_documento || null,
+            fecha_documento:  (currentExpediente.fecha_documento ? formatDate(currentExpediente.fecha_documento) : '') || null,
             estado: 'pendiente',
           };
 
@@ -434,6 +449,12 @@ const Expedientes = () => {
             nombre: expedienteData.tipo_documento.nombre
           };
         }
+
+        setOriginalNumeroDocumento(expedienteData.numero_documento || '');
+        setOriginalIdTipoDocumento(expedienteData.id_tipo_documento.id || '');
+
+        const documentosResponse = await getDocumentosRelacionados(expedienteData.id, originalNumeroDocumento, originalIdTipoDocumento);
+        setOriginalDocumento(documentosResponse.data || '');
 
         setCurrentExpediente(expedienteData);
         setIsEditing(true);
@@ -543,7 +564,7 @@ const Expedientes = () => {
             const documento = {
               id_expediente: expedienteId,
               numero_documento: row[12] ? row[12].toString().toUpperCase() : '',
-              asunto: row[9] || '',
+              asunto: '', //row[9] || 
               ultimo_escritorio: row[13] || '',
               ultima_oficina_area: row[15] || '',
               fecha_ingreso_ultimo_escritorio: row[17] ? parseDate(row[17]) : null,
@@ -588,13 +609,13 @@ const Expedientes = () => {
   const remitenteRef = useRef();
   const fechaDocumentoRef = useRef();
 
-  const formatDate = (isoString) => {
-    const date = new Date(isoString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0'); // Añadir cero si es necesario
-    const day = String(date.getDate()).padStart(2, '0'); // Añadir cero si es necesario
-    return `${year}-${month}-${day}`;
-  };
+const formatDate = (isoString) => {
+  const date = new Date(isoString);
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0'); // Añadir cero si es necesario
+  const day = String(date.getUTCDate()).padStart(2, '0'); // Añadir cero si es necesario
+  return `${year}-${month}-${day}`;
+};
 
   // Add these handler functions
   const handleOpenDocumentoDialog = (expediente) => {
@@ -670,6 +691,38 @@ const Expedientes = () => {
         text: 'Error al procesar la solicitud. Por favor, intente de nuevo.' 
       });
     }
+  };
+
+  const handleOpenDocumentosList = async (expediente) => {
+    setCurrentExpedienteForList(expediente);
+    setIsLoadingDocumentos(true);
+    setOpenDocumentosListDialog(true);
+    
+    try {
+      const response = await getDocumentosByExpedienteId(expediente.id);
+      if (response.data && Array.isArray(response.data)) {
+        setDocumentosList(response.data);
+      } else {
+        setDocumentosList([]);
+        console.error('Unexpected response format:', response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching documentos by expediente ID:', error);
+      showSweetAlert({ 
+        icon: 'error', 
+        title: 'Error', 
+        text: 'Error al cargar los documentos asociados al expediente.' 
+      });
+      setDocumentosList([]);
+    } finally {
+      setIsLoadingDocumentos(false);
+    }
+  };
+
+  const handleCloseDocumentosList = () => {
+    setOpenDocumentosListDialog(false);
+    setDocumentosList([]);
+    setCurrentExpedienteForList(null);
   };
 
   return (
@@ -794,10 +847,10 @@ const Expedientes = () => {
               <TableCell align="right">Acciones</TableCell>
             </TableRow>
           </TableHead>
-          <TableBody>
+           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} align="center">Cargando...</TableCell>
+                <TableCell colSpan={8} align="center">Cargando...</TableCell>
               </TableRow>
             ) : expedientes.length > 0 ? (
               expedientes.map((expediente, index) => (
@@ -809,58 +862,51 @@ const Expedientes = () => {
                       handleEdit(expediente);
                     }
                   }}
-                >
+                > 
                   <TableCell>{pagination.pageIndex * pagination.pageSize + index + 1}</TableCell>
                   <TableCell>{expediente.cut || ''}</TableCell>
                   <TableCell>{expediente.asunto || ''}</TableCell>
                   <TableCell>{expediente.remitente || ''}</TableCell>
                   <TableCell>{`${expediente.TipoDocumento?.nombre || ''} ${expediente.numero_documento || ''}`.trim()}</TableCell>
                   <TableCell align="right">
-                    <Tooltip title="Editar">
+                    <Tooltip title="Listar Documentos">
                       <BootstrapButton
-                        color="info"
-                        onClick={() => handleEdit(expediente)}
-                        style={{ 
-                          minWidth: '28px', 
-                          width: '28px', 
-                          height: '28px', 
-                          padding: '4px', 
-                          marginRight: '4px' 
-                        }}
+                        color="celeste"
+                        onClick={() => handleOpenDocumentosList(expediente)}
+                        style={{ marginRight: '8px', padding: '4px 8px' }}
                         size="small"
                       >
-                        <EditIcon fontSize="small" style={{ fontSize: '16px' }} />
-                      </BootstrapButton>
-                    </Tooltip>
-                    <Tooltip title="Eliminar">
-                      <BootstrapButton
-                        color="secondary"
-                        onClick={() => handleDelete(expediente.id)}
-                        style={{ 
-                          minWidth: '28px', 
-                          width: '28px', 
-                          height: '28px', 
-                          padding: '4px', 
-                          marginRight: '4px' 
-                        }}
-                        size="small"
-                      >
-                        <DeleteIcon fontSize="small" style={{ fontSize: '16px' }} />
+                        <ListAltIcon fontSize="small" />
                       </BootstrapButton>
                     </Tooltip>
                     <Tooltip title="Agregar Documento">
                       <BootstrapButton
                         color="primary"
                         onClick={() => handleOpenDocumentoDialog(expediente)}
-                        style={{ 
-                          minWidth: '28px', 
-                          width: '28px', 
-                          height: '28px', 
-                          padding: '4px' 
-                        }}
+                        style={{ marginRight: '8px', padding: '4px 8px' }}
                         size="small"
                       >
-                        <NoteAddIcon fontSize="small" style={{ fontSize: '16px' }} />
+                        <NoteAddIcon fontSize="small" />
+                      </BootstrapButton>
+                    </Tooltip>
+                    <Tooltip title="Editar Expediente">
+                      <BootstrapButton
+                        color="success"
+                        onClick={() => handleEdit(expediente)}
+                        style={{ marginRight: '8px', padding: '4px 8px' }}
+                        size="small"
+                      >
+                        <EditIcon fontSize="small" />
+                      </BootstrapButton>
+                    </Tooltip>
+                    <Tooltip title="Eliminar Expediente">
+                      <BootstrapButton
+                        color="secondary"
+                        onClick={() => handleDelete(expediente.id)}
+                        style={{ padding: '4px 8px' }}
+                        size="small"
+                      >
+                        <DeleteIcon fontSize="small" />
                       </BootstrapButton>
                     </Tooltip>
                   </TableCell>
@@ -868,7 +914,7 @@ const Expedientes = () => {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} align="center">No hay expedientes disponibles</TableCell>
+                <TableCell colSpan={8} align="center">No hay expedientes disponibles</TableCell>
               </TableRow>
             )}
           </TableBody>
@@ -1008,9 +1054,8 @@ const Expedientes = () => {
               InputLabelProps={{
                 shrink: true,
               }}
-              value={currentExpediente.fecha_documento || ''}
+              value={originalDocumento.fecha_documento || ''}
               onChange={handleInputChange}
-              inputRef={fechaDocumentoRef}
             />
             <TextField
               margin="dense"
@@ -1151,6 +1196,58 @@ const Expedientes = () => {
             </StyledDialogButton>
           </DialogActions>
         </form>
+      </Dialog>
+    <Dialog
+        open={openDocumentosListDialog}
+        onClose={handleCloseDocumentosList}
+        aria-labelledby="documentos-list-dialog-title"
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle id="documentos-list-dialog-title">
+          {currentExpedienteForList ? `Documentos del Expediente: ${currentExpedienteForList.cut}` : 'Documentos del Expediente'}
+        </DialogTitle>
+        <DialogContent>
+          {isLoadingDocumentos ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
+              <CircularProgress />
+            </div>
+          ) : documentosList.length > 0 ? (
+            <List>
+              {documentosList.map((documento, index) => (
+                <React.Fragment key={documento.id}>
+                  <ListItem alignItems="flex-start">
+                    <ListItemText
+                      primary={`${index + 1}. ${documento.TipoDocumento.nombre + documento.numero_documento || 'Sin número'}`}
+                      secondary={
+                        <>
+                          <Typography component="span" variant="body2" color="textPrimary">
+                            {documento.TipoDocumento?.nombre || 'Tipo no especificado'}
+                          </Typography>
+                          {` — ${documento.asunto || 'Sin asunto'}`}
+                          <br />
+                          {`Fecha: ${documento.fecha_documento ? formatDate(documento.fecha_documento) : 'No especificada'}`}
+                          <br />
+                          {`Estado: ${documento.estado || 'No especificado'}`}
+                        </>
+                      }
+                    />
+                  </ListItem>
+                  {index < documentosList.length - 1 && <Divider variant="inset" component="li" />}
+                </React.Fragment>
+              ))}
+            </List>
+          ) : (
+            <Typography variant="body1" align="center" style={{ padding: '20px' }}>
+              No hay documentos asociados a este expediente.
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <DialogButton onClick={handleCloseDocumentosList} color="primary">
+            Cerrar
+          </DialogButton>
+        </DialogActions>
       </Dialog>
     </div>
   );
