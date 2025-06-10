@@ -2,16 +2,25 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Button, TextField, Dialog, DialogActions, DialogContent, DialogTitle,
   Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  TablePagination, InputAdornment, CircularProgress, Autocomplete
+  TablePagination, InputAdornment, CircularProgress, Autocomplete, Tooltip
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { getExpedientes, createExpediente, updateExpediente, deleteExpediente, createDocumento, getTiposProcedimientos, getExpedienteById, getNombresUnicosTiposDocumentos } from '../services/api';
+import { getExpedientes, createExpediente, updateExpediente, deleteExpediente, createDocumento, getTiposProcedimientos, getExpedienteById, getNombresUnicosTiposDocumentos, updateDocumento } from '../services/api';
 import Swal from 'sweetalert2';
 import SearchIcon from '@mui/icons-material/Search';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import NoteAddIcon from '@mui/icons-material/NoteAdd';
 import { debounce } from 'lodash';
 import { readExcelFile } from '../utils/excelUtils';
 // import jwtDecode from 'jwt-decode';
 import { jwtDecode } from 'jwt-decode';
+
+// Add this function at the top of your component or outside it
+const isEqual = (obj1, obj2) => {
+  return JSON.stringify(obj1) === JSON.stringify(obj2);
+};
+
 
 // Definimos estilos personalizados para los botones
 const BootstrapButton = styled(Button)(({ theme, color }) => ({
@@ -55,7 +64,6 @@ const BootstrapButton = styled(Button)(({ theme, color }) => ({
       color === 'secondary' ? '#bd2130' :
       color === 'success' ? '#1e7e34' :
       color === 'celeste' ? '#00a3cc' : '#0062cc',
-    boxShadow: 'none',
   },
   '&:active': {
     boxShadow: 'none',
@@ -79,6 +87,67 @@ const BootstrapButton = styled(Button)(({ theme, color }) => ({
   },
 }));
 
+// Añade esto justo después de la definición de BootstrapButton
+const DialogButton = styled(Button)(({ theme, color }) => ({
+  textTransform: 'none',
+  padding: '6px 16px',
+  borderRadius: '4px',
+  fontWeight: 'bold',
+  color: theme.palette.getContrastText(theme.palette.primary.main),
+  backgroundColor: color === 'primary' ? theme.palette.primary.main : theme.palette.secondary.main,
+  '&:hover': {
+    backgroundColor: color === 'primary' ? theme.palette.primary.dark : theme.palette.secondary.dark,
+  },
+}));
+
+// Nuevo estilo para las filas de la tabla
+const StyledTableRow = styled(TableRow)(({ theme }) => ({
+  '&:hover': {
+    backgroundColor: theme.palette.action.hover,
+    cursor: 'pointer',
+  },
+  '&:focus': {
+    backgroundColor: theme.palette.action.selected,
+    outline: 'none',
+  },
+}));
+
+// Añadir un estilo específico para los botones de diálogo
+const StyledDialogButton = styled(Button)(({ theme, color }) => ({
+  boxShadow: 'none',
+  textTransform: 'none',
+  fontSize: 14,
+  padding: '4px 10px',
+  borderRadius: '4px',
+  fontWeight: 'bold',
+  backgroundColor:
+    color === 'primary' ? '#0063cc' :
+    color === 'secondary' ? '#dc3545' :
+    color === 'success' ? '#28a745' : '#0063cc',
+  borderColor:
+    color === 'primary' ? '#0063cc' :
+    color === 'secondary' ? '#dc3545' :
+    color === 'success' ? '#28a745' : '#0063cc',
+  color: '#ffffff',
+  '&:hover': {
+    backgroundColor:
+      color === 'primary' ? '#0069d9' :
+      color === 'secondary' ? '#c82333' :
+      color === 'success' ? '#218838' : '#0069d9',
+    borderColor:
+      color === 'primary' ? '#0062cc' :
+      color === 'secondary' ? '#bd2130' :
+      color === 'success' ? '#1e7e34' : '#0062cc',
+  },
+  '&:focus': {
+    boxShadow: `0 0 0 0.2rem ${
+      color === 'primary' ? 'rgba(0,123,255,.5)' :
+      color === 'secondary' ? 'rgba(220,53,69,.5)' :
+      color === 'success' ? 'rgba(40,167,69,.5)' : 'rgba(0,123,255,.5)'
+    }`,
+  },
+}));
+
 const Expedientes = () => {
   const [expedientes, setExpedientes] = useState([]);
   const [open, setOpen] = useState(false);
@@ -94,6 +163,17 @@ const Expedientes = () => {
   const [procedimientoInputValue, setProcedimientoInputValue] = useState('');
   const [nombresUnicosTiposDocumentos, setNombresUnicosTiposDocumentos] = useState([]);
   const [tipoDocumentoInputValue, setTipoDocumentoInputValue] = useState('');
+
+  // Add these state variables at the beginning of your component
+  const [openDocumentoDialog, setOpenDocumentoDialog] = useState(false);
+  const [currentDocumento, setCurrentDocumento] = useState({
+    id_expediente: null,
+    id_tipo_documento: '',
+    numero_documento: '',
+    asunto: '',
+    fecha_documento: null,
+  });
+  const [currentExpedienteForDocumento, setCurrentExpedienteForDocumento] = useState(null);
 
   const fileInputRef = useRef();
 
@@ -189,7 +269,6 @@ const Expedientes = () => {
       tipo_documento: '',
       numero_documento: '',
       periodo: '',
-      fecha_creacion: new Date().toISOString().split('T')[0], // Establecer la fecha de creación a hoy
       asunto: '',
       remitente: '',
       id_usuario_creador: '',
@@ -221,10 +300,10 @@ const Expedientes = () => {
       return;
     }
     if (!currentExpediente.id_tipo_documento ) {
-  showSweetAlert({ icon: 'error', title: 'Error', text: 'El campo Tipo de Documento es obligatorio.' });
-  tipoDocumentoRef.current.focus();
-  return;
-}
+      showSweetAlert({ icon: 'error', title: 'Error', text: 'El campo Tipo de Documento es obligatorio.' });
+      tipoDocumentoRef.current.focus();
+      return;
+    }
     if (!currentExpediente.numero_documento || currentExpediente.numero_documento.trim() === '') {
       showSweetAlert({ icon: 'error', title: 'Error', text: 'El campo Número de Documento es obligatorio.' });
       numeroDocumentoRef.current.focus();
@@ -259,12 +338,72 @@ const Expedientes = () => {
         id_usuario_creador, // Usar el ID del usuario obtenido del token
       };
 
+      let expedienteId;
+      let expedienteId_tipo_documento;
+
       if (isEditing) {
+        // Check if there are changes before updating
+        const originalExpediente = expedientes.find(exp => exp.id === currentExpediente.id);
+        if (originalExpediente && isEqual(originalExpediente, expediente)) {
+          showSweetAlert({
+            icon: 'info',
+            title: 'Sin cambios',
+            text: 'No se han realizado cambios en el expediente.',
+            timer: 2500,
+            timerProgressBar: true,
+            showConfirmButton: false
+          });
+          handleClose();
+          return;
+        }
+        
         expediente.id_usuario_modificador = id_usuario_creador; // Actualizar el usuario modificador
         await updateExpediente(currentExpediente.id, expediente);
+        expedienteId = currentExpediente.id;
+        expedienteId_tipo_documento = expediente.id_tipo_documento;
+        
+        // Actualizar el documento asociado al expediente si existe
+        try {
+          // Primero obtenemos el documento asociado al expediente
+          const expedienteResponse = await getExpedienteById(expedienteId);
+          if (expedienteResponse.data ) {
+            const documentoId = expedienteResponse.data.id;
+            
+            // Actualizamos el documento con los nuevos datos
+            const documentoActualizado = {
+              id_expediente: expedienteId,
+              id_tipo_documento: expedienteId_tipo_documento,
+              numero_documento: currentExpediente.numero_documento || '',
+              asunto: currentExpediente.asunto || '',
+              fecha_documento: currentExpediente.fecha_documento || null,
+              id_usuario_modificador: id_usuario_creador,
+            };
+            
+            await updateDocumento(documentoId, documentoActualizado);
+          }
+        } catch (docError) {
+          console.error('Error updating associated document:', docError);
+          // No interrumpimos el flujo si falla la actualización del documento
+        }
       } else {
-        await createExpediente(expediente);
+        const response = await createExpediente(expediente);
+        expedienteId = response.data.id;
+        expedienteId_tipo_documento = response.data.id_tipo_documento;
+        // Crear el documento asociado al expediente
+        if (expedienteId && expedienteId_tipo_documento) {
+          const documento = {
+            id_expediente: expedienteId,
+            id_tipo_documento: expedienteId_tipo_documento || '',
+            numero_documento: currentExpediente.numero_documento || '',
+            asunto: currentExpediente.asunto || '',
+            fecha_documento: currentExpediente.fecha_documento || null,
+            estado: 'pendiente',
+          };
+
+          await createDocumento(documento);
+        }
       }
+
       fetchPaginatedExpedientes(filters, pagination);
       handleClose();
       showSweetAlert({ icon: 'success', title: 'Éxito', text: isEditing ? 'Expediente actualizado correctamente' : 'Expediente agregado correctamente' });
@@ -283,21 +422,19 @@ const Expedientes = () => {
       if (response.data) {
         const expedienteData = response.data;
         
-        // Convertir la fecha de creación al formato deseado
-        if (expedienteData.fecha_creacion) {
-          expedienteData.fecha_creacion = formatDate(expedienteData.fecha_creacion);
-        }
-  
-        // Ensure tipo_documento is an object with the expected structure
-        if (expedienteData.tipo_documento && typeof expedienteData.tipo_documento === 'object') {
-          expedienteData.tipo_documento = {
+        // Asignar correctamente el tipo de documento
+        if (expedienteData.TipoDocumento) {
+          expedienteData.id_tipo_documento = {
+            id: expedienteData.TipoDocumento.id,
+            nombre: expedienteData.TipoDocumento.nombre
+          };
+        } else if (expedienteData.tipo_documento) {
+          expedienteData.id_tipo_documento = {
             id: expedienteData.tipo_documento.id,
             nombre: expedienteData.tipo_documento.nombre
           };
-        } else {
-          expedienteData.tipo_documento = null;
         }
-  
+
         setCurrentExpediente(expedienteData);
         setIsEditing(true);
         setOpen(true);
@@ -449,6 +586,7 @@ const Expedientes = () => {
   const periodoRef = useRef();
   const asuntoRef = useRef();
   const remitenteRef = useRef();
+  const fechaDocumentoRef = useRef();
 
   const formatDate = (isoString) => {
     const date = new Date(isoString);
@@ -456,6 +594,82 @@ const Expedientes = () => {
     const month = String(date.getMonth() + 1).padStart(2, '0'); // Añadir cero si es necesario
     const day = String(date.getDate()).padStart(2, '0'); // Añadir cero si es necesario
     return `${year}-${month}-${day}`;
+  };
+
+  // Add these handler functions
+  const handleOpenDocumentoDialog = (expediente) => {
+    setCurrentExpedienteForDocumento(expediente);
+    setCurrentDocumento({
+      id_expediente: expediente.id,
+      id_tipo_documento: '',
+      numero_documento: '',
+      asunto:  '',
+      fecha_documento: null,
+    });
+    setOpenDocumentoDialog(true);
+  };
+
+  const handleCloseDocumentoDialog = () => {
+    setOpenDocumentoDialog(false);
+  };
+
+  const handleDocumentoInputChange = (e) => {
+    setCurrentDocumento({ ...currentDocumento, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmitDocumento = async (e) => {
+    e.preventDefault();
+    
+    // Validate required fields
+    if (!currentDocumento.id_tipo_documento) {
+      showSweetAlert({ icon: 'error', title: 'Error', text: 'El campo Tipo de Documento es obligatorio.' });
+      return;
+    }
+    if (!currentDocumento.numero_documento || currentDocumento.numero_documento.trim() === '') {
+      showSweetAlert({ icon: 'error', title: 'Error', text: 'El campo Número de Documento es obligatorio.' });
+      return;
+    }
+    if (!currentDocumento.asunto || currentDocumento.asunto.trim() === '') {
+      showSweetAlert({ icon: 'error', title: 'Error', text: 'El campo Asunto es obligatorio.' });
+      return;
+    }
+
+    try {
+      // Get user ID from token
+      const token = localStorage.getItem('token');
+      const decodedToken = jwtDecode(token);
+      const id_usuario_creador = decodedToken.id;
+
+      const documento = {
+        ...currentDocumento,
+        id_tipo_documento: typeof currentDocumento.id_tipo_documento === 'object' ? 
+                           currentDocumento.id_tipo_documento.id : 
+                           currentDocumento.id_tipo_documento,
+        id_usuario_creador,
+        estado: 'pendiente',
+      };
+
+      await createDocumento(documento);
+      handleCloseDocumentoDialog();
+      showSweetAlert({ 
+        icon: 'success', 
+        title: 'Éxito', 
+        text: 'Documento agregado correctamente',
+        timer: 2500,
+        timerProgressBar: true,
+        showConfirmButton: false
+      });
+      
+      // Optionally refresh the expediente data if needed
+      fetchPaginatedExpedientes(filters, pagination);
+    } catch (error) {
+      console.error('Error submitting documento:', error);
+      showSweetAlert({ 
+        icon: 'error', 
+        title: 'Error', 
+        text: 'Error al procesar la solicitud. Por favor, intente de nuevo.' 
+      });
+    }
   };
 
   return (
@@ -587,7 +801,7 @@ const Expedientes = () => {
               </TableRow>
             ) : expedientes.length > 0 ? (
               expedientes.map((expediente, index) => (
-                <TableRow
+                <StyledTableRow
                   key={expediente.id}
                   tabIndex={0}
                   onKeyDown={(e) => {
@@ -602,32 +816,55 @@ const Expedientes = () => {
                   <TableCell>{expediente.remitente || ''}</TableCell>
                   <TableCell>{`${expediente.TipoDocumento?.nombre || ''} ${expediente.numero_documento || ''}`.trim()}</TableCell>
                   <TableCell align="right">
-                    <BootstrapButton
-                      color="info"
-                      onClick={() => handleEdit(expediente)}
-                      style={{ marginRight: '8px', padding: '4px 8px' }}
-                      size="small"
-                    >
-                      Editar
-                    </BootstrapButton>
-                    <BootstrapButton
-                      color="secondary"
-                      onClick={() => handleDelete(expediente.id)}
-                      style={{ padding: '4px 8px' }}
-                      size="small"
-                    >
-                      Eliminar
-                    </BootstrapButton>
-                    <BootstrapButton
-                      color="primary"
-                      onClick={() => alert(`Listar documentos para expediente ${expediente.id}`)}
-                      style={{ padding: '4px 8px' }}
-                      size="small"
-                    >
-                      Listar Documentos
-                    </BootstrapButton>
+                    <Tooltip title="Editar">
+                      <BootstrapButton
+                        color="info"
+                        onClick={() => handleEdit(expediente)}
+                        style={{ 
+                          minWidth: '28px', 
+                          width: '28px', 
+                          height: '28px', 
+                          padding: '4px', 
+                          marginRight: '4px' 
+                        }}
+                        size="small"
+                      >
+                        <EditIcon fontSize="small" style={{ fontSize: '16px' }} />
+                      </BootstrapButton>
+                    </Tooltip>
+                    <Tooltip title="Eliminar">
+                      <BootstrapButton
+                        color="secondary"
+                        onClick={() => handleDelete(expediente.id)}
+                        style={{ 
+                          minWidth: '28px', 
+                          width: '28px', 
+                          height: '28px', 
+                          padding: '4px', 
+                          marginRight: '4px' 
+                        }}
+                        size="small"
+                      >
+                        <DeleteIcon fontSize="small" style={{ fontSize: '16px' }} />
+                      </BootstrapButton>
+                    </Tooltip>
+                    <Tooltip title="Agregar Documento">
+                      <BootstrapButton
+                        color="primary"
+                        onClick={() => handleOpenDocumentoDialog(expediente)}
+                        style={{ 
+                          minWidth: '28px', 
+                          width: '28px', 
+                          height: '28px', 
+                          padding: '4px' 
+                        }}
+                        size="small"
+                      >
+                        <NoteAddIcon fontSize="small" style={{ fontSize: '16px' }} />
+                      </BootstrapButton>
+                    </Tooltip>
                   </TableCell>
-                </TableRow>
+                </StyledTableRow>
               ))
             ) : (
               <TableRow>
@@ -683,6 +920,11 @@ const Expedientes = () => {
               value={currentExpediente.tipo_procedimiento || null}
               onInputChange={(event, newInputValue) => {
                 setProcedimientoInputValue(newInputValue);
+                // Update currentExpediente directly with the input value
+                setCurrentExpediente({
+                  ...currentExpediente,
+                  tipo_procedimiento: newInputValue || ''
+                });
               }}
               onChange={(event, newValue) => {
                 setCurrentExpediente({
@@ -690,6 +932,7 @@ const Expedientes = () => {
                   tipo_procedimiento: newValue || ''
                 });
               }}
+              freeSolo // Allow users to enter values that don't exist in the options
               renderInput={(params) => (
                 <TextField
                   {...params}
@@ -702,7 +945,18 @@ const Expedientes = () => {
             />
             <Autocomplete
               options={nombresUnicosTiposDocumentos}
-              getOptionLabel={(option) => option.nombre || currentExpediente.TipoDocumento.nombre || ''}
+              getOptionLabel={(option) => {
+                // Si option es un objeto con nombre, usa eso
+                if (option && option.nombre) {
+                  return option.nombre;
+                }
+                // Si no hay option pero hay un tipo de documento en currentExpediente, usa eso
+                if (currentExpediente.TipoDocumento && currentExpediente.TipoDocumento.nombre) {
+                  return currentExpediente.TipoDocumento.nombre;
+                }
+                // Valor por defecto
+                return '';
+              }}
               value={currentExpediente.id_tipo_documento || null}
               onInputChange={(event, newInputValue) => {
                 setTipoDocumentoInputValue(newInputValue);
@@ -716,12 +970,24 @@ const Expedientes = () => {
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  label="Tipo de Documento"
+                  label="Tipo de Documento *"
                   margin="dense"
                   fullWidth
                   inputRef={tipoDocumentoRef}
                 />
               )}
+              isOptionEqualToValue={(option, value) => {
+                // Compara por ID si ambos tienen ID
+                if (option && value && option.id && value.id) {
+                  return option.id === value.id;
+                }
+                // Si no tienen ID, compara por nombre
+                if (option && value && option.nombre && value.nombre) {
+                  return option.nombre === value.nombre;
+                }
+                // Si no hay forma de comparar, son diferentes
+                return false;
+              }}
             />
             <TextField
               margin="dense"
@@ -735,6 +1001,19 @@ const Expedientes = () => {
             />
             <TextField
               margin="dense"
+              name="fecha_documento"
+              label="Fecha del Documento"
+              type="date"
+              fullWidth
+              InputLabelProps={{
+                shrink: true,
+              }}
+              value={currentExpediente.fecha_documento || ''}
+              onChange={handleInputChange}
+              inputRef={fechaDocumentoRef}
+            />
+            <TextField
+              margin="dense"
               name="periodo"
               label="Periodo *"
               type="text"
@@ -742,18 +1021,6 @@ const Expedientes = () => {
               value={currentExpediente.periodo || ''}
               onChange={handleInputChange}
               inputRef={periodoRef}
-            />
-            <TextField
-              margin="dense"
-              name="fecha_creacion"
-              label="Fecha de Creación"
-              type="date"
-              fullWidth
-              InputLabelProps={{
-                shrink: true,
-              }}
-              value={currentExpediente.fecha_creacion || new Date().toISOString().split('T')[0]}
-              onChange={handleInputChange}
             />
             <TextField
               margin="dense"
@@ -778,12 +1045,110 @@ const Expedientes = () => {
             
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleClose} color="secondary">
+            <StyledDialogButton onClick={handleClose} color="secondary">
               Cancelar
-            </Button>
-            <Button type="submit" color="primary">
+            </StyledDialogButton>
+            <StyledDialogButton type="submit" color="primary">
               {isEditing ? 'Actualizar' : 'Agregar'}
-            </Button>
+            </StyledDialogButton>
+          </DialogActions>
+        </form>
+      </Dialog>
+
+      {/* Documento Dialog */}
+      <Dialog 
+        open={openDocumentoDialog} 
+        onClose={handleCloseDocumentoDialog}
+        aria-labelledby="dialog-documento-title"
+        fullWidth
+        maxWidth="md"
+      >
+        <form onSubmit={handleSubmitDocumento}>
+          <DialogTitle id="dialog-documento-title">
+            Agregar Documento para Expediente {currentExpedienteForDocumento?.cut || ''}
+          </DialogTitle>
+          <DialogContent>
+            <div style={{ marginBottom: '10px' }}>
+              <strong>Expediente:</strong> {currentExpedienteForDocumento?.cut || ''} - {currentExpedienteForDocumento?.asunto || ''}
+            </div>
+            
+            <Autocomplete
+              id="tipo-documento-select"
+              options={nombresUnicosTiposDocumentos}
+              getOptionLabel={(option) => option.nombre || ''}
+              value={currentDocumento.id_tipo_documento}
+              onChange={(event, newValue) => {
+                setCurrentDocumento({ ...currentDocumento, id_tipo_documento: newValue });
+              }}
+              onInputChange={(event, newInputValue) => {
+                setTipoDocumentoInputValue(newInputValue);
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Tipo de Documento"
+                  variant="outlined"
+                  margin="normal"
+                  fullWidth
+                  required
+                />
+              )}
+            />
+            
+            <TextField
+              margin="normal"
+              name="numero_documento"
+              label="Número de Documento"
+              type="text"
+              fullWidth
+              required
+              value={currentDocumento.numero_documento}
+              onChange={handleDocumentoInputChange}
+            />
+            
+            <TextField
+              margin="normal"
+              name="asunto"
+              label="Asunto"
+              type="text"
+              fullWidth
+              required
+              multiline
+              rows={3}
+              value={currentDocumento.asunto}
+              onChange={handleDocumentoInputChange}
+            />
+            
+            <TextField
+              margin="normal"
+              name="fecha_documento"
+              label="Fecha del Documento"
+              type="date"
+              fullWidth
+              InputLabelProps={{
+                shrink: true,
+              }}
+              value={currentDocumento.fecha_documento ? formatDate(currentDocumento.fecha_documento) : ''}
+              onChange={handleDocumentoInputChange}
+            />
+          </DialogContent>
+          <DialogActions>
+            <StyledDialogButton 
+              onClick={handleCloseDocumentoDialog} 
+              color="primary"
+              style={{ minWidth: '80px', padding: '4px 8px' }}
+              size="small"
+            >
+              Cancelar
+            </StyledDialogButton>
+            <StyledDialogButton 
+              type="submit" 
+              color="primary"
+              style={{ minWidth: '80px', padding: '4px 8px' }}
+              size="small"
+            >
+              Guardar
+            </StyledDialogButton>
           </DialogActions>
         </form>
       </Dialog>

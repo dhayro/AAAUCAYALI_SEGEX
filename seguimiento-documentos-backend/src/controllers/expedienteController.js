@@ -2,6 +2,7 @@ const { Op } = require('sequelize');
 const sequelize = require('../config/database'); // Asegúrate de que esta ruta sea correcta
 const Expediente = require('../models/Expediente');
 const TipoDocumento = require('../models/TipoDocumento');
+const { formatDateForLima } = require('../utils/dateUtils');
 
 exports.getAllExpedientes = async (req, res) => {
   try {
@@ -21,7 +22,7 @@ exports.getAllExpedientes = async (req, res) => {
       whereClause[Op.or] = [
         { cut: { [Op.like]: `%${filtro}%` } },
         { asunto: { [Op.like]: `%${filtro}%` } },
-        { remitente: { [Op.like]: `%${filtro}%` } },
+        { remitente: { [Op.like]: `%${remitente}%` } },
         { '$TipoDocumento.nombre$': { [Op.like]: `%${filtro}%` } },
         { numero_documento: { [Op.like]: `%${filtro}%` } }
       ];
@@ -48,7 +49,7 @@ exports.getAllExpedientes = async (req, res) => {
       include: [{
         model: TipoDocumento,
         as: 'TipoDocumento', // Ensure this matches the alias used in your associations
-        attributes: [] // Include this if you don't need any attributes from TipoDocumento
+        attributes: ['id', 'nombre', 'descripcion'] // Include the TipoDocumento attributes you want to return
       }],
       limit: limit,
       offset: offset,
@@ -108,7 +109,7 @@ exports.getExpedienteById = async (req, res) => {
 
 exports.createExpediente = async (req, res) => {
   try {
-    const { cut, numero_documento, ...otherData } = req.body;
+    const { cut, numero_documento, fecha_creacion, ...otherData } = req.body;
 
     // Check if an expediente with the same cut already exists
     const existingExpediente = await Expediente.findOne({ where: { cut } });
@@ -136,11 +137,15 @@ exports.createExpediente = async (req, res) => {
       }
     }
 
+    // Formatear la fecha de creación para Lima o usar la fecha actual
+    const formattedDate = formatDateForLima(fecha_creacion || new Date());
+
     // Create a new expediente if the cut does not exist
     const nuevoExpediente = await Expediente.create({
       cut,
       numero_documento: updatedNumeroDocumento,
       id_tipo_documento,
+      fecha_creacion: formattedDate,
       ...otherData
     });
 

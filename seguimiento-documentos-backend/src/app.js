@@ -16,6 +16,10 @@ const initTipoDocumentos = require('./utils/initTipoDocumentos');
 
 require('dotenv').config();
 
+// Set timezone to Lima, Peru
+process.env.TZ = 'America/Lima';
+console.log(`Application timezone set to: ${process.env.TZ}`);
+
 const app = express();
 
 // Opciones de Swagger
@@ -60,7 +64,6 @@ sequelize.sync().then(async () => {
   // Inicializar usuario admin
   await initAdmin();
   await initTipoDocumentos();
-
 
   app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);

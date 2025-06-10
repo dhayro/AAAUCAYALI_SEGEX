@@ -208,4 +208,37 @@ router.put('/:id', documentoController.updateDocumento);
  */
 router.delete('/:id', documentoController.deleteDocumento);
 
+/**
+ * @swagger
+ * /api/documentos/expediente/{expedienteId}:
+ *   get:
+ *     summary: Obtener documentos por ID de expediente
+ *     tags: [Documentos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: expedienteId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del expediente
+ *     responses:
+ *       200:
+ *         description: Lista de documentos del expediente obtenida exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Documento'
+ *       401:
+ *         description: No autorizado
+ *       404:
+ *         description: No se encontraron documentos para este expediente
+ *       500:
+ *         description: Error del servidor
+ */
+router.get('/expediente/:expedienteId', documentoController.getDocumentosByExpedienteId);
+
 module.exports = router;

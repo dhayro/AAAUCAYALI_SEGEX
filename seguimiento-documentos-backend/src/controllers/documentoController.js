@@ -39,34 +39,45 @@ exports.getDocumentoById = async (req, res) => {
 
 exports.createDocumento = async (req, res) => {
   try {
-    const { numero_documento } = req.body;
-    let id_tipo_documento = null; // Inicializar como null
+    const { numero_documento, ...otherData } = req.body;
+    let id_tipo_documento = req.body.id_tipo_documento || null; // Mantener el id_tipo_documento si ya viene en el body
     let updatedNumeroDocumento = numero_documento;
 
-    // Obtener todos los tipos de documentos
-    const tiposDocumentos = await TipoDocumento.findAll();
+    // Si no se proporcionó un id_tipo_documento, intentar detectarlo automáticamente
+    if (!id_tipo_documento && numero_documento) {
+      // Obtener todos los tipos de documentos
+      const tiposDocumentos = await TipoDocumento.findAll();
 
-    // Ordenar tiposDocumentos por la longitud del nombre en orden descendente
-    tiposDocumentos.sort((a, b) => b.nombre.length - a.nombre.length);
+      // Ordenar tiposDocumentos por la longitud del nombre en orden descendente
+      tiposDocumentos.sort((a, b) => b.nombre.length - a.nombre.length);
 
-    for (const tipo of tiposDocumentos) {
-      const tipoNombre = tipo.nombre.toUpperCase();
-      if (numero_documento.toUpperCase().startsWith(tipoNombre)) {
-        id_tipo_documento = tipo.id;
-        updatedNumeroDocumento = numero_documento.substring(tipoNombre.length).trim();
-        break;
+      for (const tipo of tiposDocumentos) {
+        const tipoNombre = tipo.nombre.toUpperCase();
+        if (numero_documento.toUpperCase().startsWith(tipoNombre)) {
+          id_tipo_documento = tipo.id;
+          updatedNumeroDocumento = numero_documento.substring(tipoNombre.length).trim();
+          console.log(`Tipo de documento detectado: ${tipo.nombre} (ID: ${tipo.id})`);
+          break;
+        }
       }
     }
 
-    // Crear el nuevo documento con el id_tipo_documento (puede ser null) y el número de documento actualizado
+    console.log('Datos a guardar:', {
+      ...otherData,
+      numero_documento: updatedNumeroDocumento,
+      id_tipo_documento: id_tipo_documento
+    });
+
+    // Crear el nuevo documento con el id_tipo_documento y el número de documento actualizado
     const nuevoDocumento = await Documento.create({
-      ...req.body,
-      id_tipo_documento,
-      numero_documento: updatedNumeroDocumento
+      ...otherData,
+      numero_documento: updatedNumeroDocumento,
+      id_tipo_documento: id_tipo_documento
     });
 
     res.status(201).json(nuevoDocumento);
   } catch (error) {
+    console.error('Error al crear documento:', error);
     res.status(400).json({ message: error.message });
   }
 };
@@ -97,6 +108,23 @@ exports.deleteDocumento = async (req, res) => {
     } else {
       res.status(404).json({ message: 'Documento no encontrado' });
     }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.getDocumentosByExpedienteId = async (req, res) => {
+  try {
+    const expedienteId = req.params.expedienteId;
+    
+    const documentos = await Documento.findAll({
+      where: {
+        id_expediente: expedienteId
+      },
+      order: [['id', 'ASC']]
+    });
+    
+    res.json(documentos);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

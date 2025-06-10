@@ -31,12 +31,18 @@ export const register = (userData) => api.post('/usuarios/registro', userData);
 
 export const getDocumentos = () => api.get('/documentos');
 export const createDocumento = (documentoData) => api.post('/documentos', documentoData);
+export const updateDocumento = (id, documentoData) => api.put(`/documentos/${id}`, documentoData);
+export const getDocumentoById = (id) => api.get(`/documentos/${id}`);
+export const deleteDocumento = (id) => api.delete(`/documentos/${id}`);
 
 export const getExpedientes = (params) => api.get('/expedientes', { params });
 export const createExpediente = (expedienteData) => api.post('/expedientes', expedienteData);
 export const getExpedienteById = (id) => api.get(`/expedientes/${id}`);
 export const updateExpediente = (id, expedienteData) => api.put(`/expedientes/${id}`, expedienteData);
 export const deleteExpediente = (id) => api.delete(`/expedientes/${id}`);
+export const getDocumentosByExpedienteId = (expedienteId) => {
+  return api.get(`/documentos/expediente/${expedienteId}`);
+};
 
 export const getUsuarios = () => api.get('/usuarios');
 export const createUsuario = (usuarioData) => api.post('/usuarios', usuarioData);
