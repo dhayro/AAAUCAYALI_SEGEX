@@ -230,4 +230,24 @@ router.put('/:id', expedienteController.updateExpediente);
  */
 router.delete('/:id', expedienteController.deleteExpediente);
 
+/**
+ * @swagger
+ * /api/expedientes/procedimientos:
+ *   patch:
+ *     summary: Obtener todos los tipos de procedimientos únicos
+ *     tags: [Expedientes]
+ *     responses:
+ *       200:
+ *         description: Lista de tipos de procedimientos obtenida exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: string
+ *       500:
+ *         description: Error del servidor
+ */
+router.patch('/procedimientos', expedienteController.getUniqueProcedimientos);
+
 module.exports = router;

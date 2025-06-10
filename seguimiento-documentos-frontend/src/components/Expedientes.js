@@ -1,15 +1,17 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Button, TextField, Dialog, DialogActions, DialogContent, DialogTitle,
   Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  TablePagination, InputAdornment, CircularProgress
+  TablePagination, InputAdornment, CircularProgress, Autocomplete
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { getExpedientes, createExpediente, updateExpediente, deleteExpediente } from '../services/api';
+import { getExpedientes, createExpediente, updateExpediente, deleteExpediente, createDocumento, getTiposProcedimientos, getExpedienteById, getNombresUnicosTiposDocumentos } from '../services/api';
 import Swal from 'sweetalert2';
 import SearchIcon from '@mui/icons-material/Search';
 import { debounce } from 'lodash';
-import { readExcelFile } from '../utils/excelUtils'; // Importa la funci&#243;n para leer Excel
+import { readExcelFile } from '../utils/excelUtils';
+// import jwtDecode from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 
 // Definimos estilos personalizados para los botones
 const BootstrapButton = styled(Button)(({ theme, color }) => ({
@@ -85,18 +87,22 @@ const Expedientes = () => {
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [filters, setFilters] = useState({ filtro: '', cut: '', asunto: '' });
-  const [selectedFile, setSelectedFile] = useState(null); // New state for selected file
-  const [isProcessing, setIsProcessing] = useState(false); // New state for processing
+  const [filters, setFilters] = useState({ filtro: '', cut: '', asunto: '', remitente: '', documento: '' });
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [tiposProcedimientos, setTiposProcedimientos] = useState([]);
+  const [procedimientoInputValue, setProcedimientoInputValue] = useState('');
+  const [nombresUnicosTiposDocumentos, setNombresUnicosTiposDocumentos] = useState([]);
+  const [tipoDocumentoInputValue, setTipoDocumentoInputValue] = useState('');
 
   const fileInputRef = useRef();
 
-  const showSweetAlert = (options) => {
+  const showSweetAlert = useCallback((options) => {
     return Swal.fire({
       ...options,
       customClass: { container: 'my-swal' }
     });
-  };
+  }, []);
 
   const fetchPaginatedExpedientes = useCallback(async (currentFilters, currentPagination) => {
     setIsLoading(true);
@@ -107,6 +113,8 @@ const Expedientes = () => {
         cut: currentFilters.cut,
         asunto: currentFilters.asunto,
         filtro: currentFilters.filtro,
+        remitente: currentFilters.remitente,
+        documento: currentFilters.documento,
       });
       if (response.data && response.data.expedientes) {
         setExpedientes(response.data.expedientes);
@@ -117,11 +125,11 @@ const Expedientes = () => {
       }
     } catch (error) {
       console.error('Error fetching expedientes:', error);
-      showSweetAlert({ icon: 'error', title: 'Error', text: 'Error al cargar los expedientes. Por favor, intente de nuevo m&#225;s tarde.' });
+      showSweetAlert({ icon: 'error', title: 'Error', text: 'Error al cargar los expedientes. Por favor, intente de nuevo más tarde.' });
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [showSweetAlert]);
 
   const debouncedFetchExpedientes = useRef(
     debounce((newFilters, newPagination) => {
@@ -133,8 +141,59 @@ const Expedientes = () => {
     debouncedFetchExpedientes(filters, pagination);
   }, [filters, pagination, debouncedFetchExpedientes]);
 
+  const fetchTiposProcedimientos = useCallback(
+    debounce(async (inputValue) => {
+      try {
+        const response = await getTiposProcedimientos({ search: inputValue });
+        if (response.data) {
+          setTiposProcedimientos(response.data);
+        }
+      } catch (error) {
+        console.error('Error fetching tipos de procedimientos:', error);
+      }
+    }, 300),
+    [] // Ensure all dependencies are listed here
+  );
+
+  useEffect(() => {
+    if (procedimientoInputValue) {
+      fetchTiposProcedimientos(procedimientoInputValue);
+    }
+  }, [procedimientoInputValue, fetchTiposProcedimientos]);
+
+  const fetchNombresUnicosTiposDocumentos = useCallback(
+    debounce(async (inputValue) => {
+      try {
+        const response = await getNombresUnicosTiposDocumentos({ search: inputValue });
+        if (response.data) {
+          setNombresUnicosTiposDocumentos(response.data);
+        }
+      } catch (error) {
+        console.error('Error fetching nombres únicos de tipos de documentos:', error);
+      }
+    }, 300),
+    [] // Ensure all dependencies are listed here
+  );
+
+  useEffect(() => {
+    if (tipoDocumentoInputValue) {
+      fetchNombresUnicosTiposDocumentos(tipoDocumentoInputValue);
+    }
+  }, [tipoDocumentoInputValue, fetchNombresUnicosTiposDocumentos]);
+
   const handleOpen = () => {
-    setCurrentExpediente({});
+    setCurrentExpediente({
+      cut: '',
+      estupa: '',
+      tipo_procedimiento: '',
+      tipo_documento: '',
+      numero_documento: '',
+      periodo: '',
+      fecha_creacion: new Date().toISOString().split('T')[0], // Establecer la fecha de creación a hoy
+      asunto: '',
+      remitente: '',
+      id_usuario_creador: '',
+    });
     setIsEditing(false);
     setOpen(true);
   };
@@ -149,37 +208,118 @@ const Expedientes = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validar campos obligatorios y enfocar el primero que esté vacío
+    if (!currentExpediente.cut || currentExpediente.cut.trim() === '') {
+      showSweetAlert({ icon: 'error', title: 'Error', text: 'El campo CUT es obligatorio.' });
+      cutRef.current.focus();
+      return;
+    }
+    if (!currentExpediente.tipo_procedimiento || currentExpediente.tipo_procedimiento.trim() === '') {
+      showSweetAlert({ icon: 'error', title: 'Error', text: 'El campo Tipo de Procedimiento es obligatorio.' });
+      tipoProcedimientoRef.current.focus();
+      return;
+    }
+    if (!currentExpediente.id_tipo_documento ) {
+  showSweetAlert({ icon: 'error', title: 'Error', text: 'El campo Tipo de Documento es obligatorio.' });
+  tipoDocumentoRef.current.focus();
+  return;
+}
+    if (!currentExpediente.numero_documento || currentExpediente.numero_documento.trim() === '') {
+      showSweetAlert({ icon: 'error', title: 'Error', text: 'El campo Número de Documento es obligatorio.' });
+      numeroDocumentoRef.current.focus();
+      return;
+    }
+    if (!currentExpediente.periodo || (typeof currentExpediente.periodo === 'string' && currentExpediente.periodo.trim() === '')) {
+      showSweetAlert({ icon: 'error', title: 'Error', text: 'El campo Periodo es obligatorio.' });
+      periodoRef.current.focus();
+      return;
+    }
+    if (!currentExpediente.asunto || currentExpediente.asunto.trim() === '') {
+      showSweetAlert({ icon: 'error', title: 'Error', text: 'El campo Asunto es obligatorio.' });
+      asuntoRef.current.focus();
+      return;
+    }
+    if (!currentExpediente.remitente || currentExpediente.remitente.trim() === '') {
+      showSweetAlert({ icon: 'error', title: 'Error', text: 'El campo Remitente es obligatorio.' });
+      remitenteRef.current.focus();
+      return;
+    }
+
     try {
+      // Obtener el token del almacenamiento local
+      const token = localStorage.getItem('token');
+      // Decodificar el token para obtener el ID del usuario
+      const decodedToken = jwtDecode(token);
+      const id_usuario_creador = decodedToken.id; // Asegúrate de que 'id' es la clave correcta
+
+      const expediente = {
+        ...currentExpediente,
+        id_tipo_documento: currentExpediente.id_tipo_documento.id || '', // Extract ID from tipo_documento object
+        id_usuario_creador, // Usar el ID del usuario obtenido del token
+      };
+
       if (isEditing) {
-        await updateExpediente(currentExpediente.id, currentExpediente);
+        expediente.id_usuario_modificador = id_usuario_creador; // Actualizar el usuario modificador
+        await updateExpediente(currentExpediente.id, expediente);
       } else {
-        await createExpediente(currentExpediente);
+        await createExpediente(expediente);
       }
       fetchPaginatedExpedientes(filters, pagination);
       handleClose();
-      showSweetAlert({ icon: 'success', title: '&#201;xito', text: isEditing ? 'Expediente actualizado correctamente' : 'Expediente agregado correctamente' });
+      showSweetAlert({ icon: 'success', title: 'Éxito', text: isEditing ? 'Expediente actualizado correctamente' : 'Expediente agregado correctamente' });
     } catch (error) {
       console.error('Error submitting expediente:', error);
       showSweetAlert({ icon: 'error', title: 'Error', text: 'Error al procesar la solicitud. Por favor, intente de nuevo.' });
     }
   };
 
-  const handleEdit = (expediente) => {
-    setCurrentExpediente(expediente);
-    setIsEditing(true);
-    setOpen(true);
+  const handleEdit = async (expediente) => {
+    try {
+      await fetchNombresUnicosTiposDocumentos('');
+
+      const response = await getExpedienteById(expediente.id);
+      console.log('API response:', response.data); // Log the response to verify
+      if (response.data) {
+        const expedienteData = response.data;
+        
+        // Convertir la fecha de creación al formato deseado
+        if (expedienteData.fecha_creacion) {
+          expedienteData.fecha_creacion = formatDate(expedienteData.fecha_creacion);
+        }
+  
+        // Ensure tipo_documento is an object with the expected structure
+        if (expedienteData.tipo_documento && typeof expedienteData.tipo_documento === 'object') {
+          expedienteData.tipo_documento = {
+            id: expedienteData.tipo_documento.id,
+            nombre: expedienteData.tipo_documento.nombre
+          };
+        } else {
+          expedienteData.tipo_documento = null;
+        }
+  
+        setCurrentExpediente(expedienteData);
+        setIsEditing(true);
+        setOpen(true);
+      } else {
+        showSweetAlert({ icon: 'error', title: 'Error', text: 'No se pudo obtener los datos completos del expediente.' });
+      }
+    } catch (error) {
+      console.error('Error fetching expediente by ID:', error);
+      showSweetAlert({ icon: 'error', title: 'Error', text: 'Error al obtener los datos del expediente. Por favor, intente de nuevo.' });
+    }
   };
 
   const handleDelete = async (id) => {
     try {
       const result = await showSweetAlert({
-        title: '&#191;Est&#225; seguro?',
-        text: "No podr&#225; revertir esta acci&#243;n",
+        title: '¿Está seguro?',
+        text: "No podrá revertir esta acción",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#3085d6',
         cancelButtonColor: '#d33',
-        confirmButtonText: 'S&#237;, eliminar',
+        confirmButtonText: 'Sí, eliminar',
         cancelButtonText: 'Cancelar'
       });
 
@@ -214,58 +354,85 @@ const Expedientes = () => {
 
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
-    setSelectedFile(file); // Set the selected file
+    setSelectedFile(file);
+  };
+
+  const parseDate = (dateString) => {
+    const [datePart, timePart] = dateString.split(' ');
+    const [day, month, year] = datePart.split('/').map(Number);
+    const [hours, minutes, seconds] = timePart.split(':').map(Number);
+    return new Date(year, month - 1, day, hours, minutes, seconds);
   };
 
   const handleImport = async () => {
     if (selectedFile) {
-      setIsProcessing(true); // Start processing
+      setIsProcessing(true);
       try {
         const data = await readExcelFile(selectedFile);
-        
-        // Skip the first two rows (headers) and start processing from the third row
-        const expedientes = data.slice(2).map(row => ({
-          cut: row[1] ? row[1].trim() : '', // Ensure cut is a string
-          estupa: row[4] || '',
-          tipo_procedimiento: row[5] || '',
-          periodo: row[7] || '',
-          fecha_creacion: row[6] || '',
-          asunto: row[9] || '',
-          remitente: row[11] || '',
-        }));
 
-        for (const expediente of expedientes) {
+        const token = localStorage.getItem('token');
+        const decodedToken = jwtDecode(token);
+        const id_usuario_creador = decodedToken.id;
+
+        for (const row of data.slice(2)) {
+          const expediente = {
+            cut: row[1] ? row[1].trim() : '',
+            estupa: row[4] || '',
+            tipo_procedimiento: row[5] || '',
+            tipo_documento: row[10] || '',
+            numero_documento: row[8] ? row[8].toString().toUpperCase() : '',
+            periodo: row[7] || '',
+            fecha_creacion: row[6] ? parseDate(row[6]) : null,
+            asunto: row[9] || '',
+            remitente: row[11] || '',
+            id_usuario_creador,
+          };
+
           if (!expediente.cut) {
             console.warn('CUT is blank, skipping:', expediente);
-            continue; // Skip if CUT is blank
+            continue;
           }
 
-          // Create new expediente
           try {
             const response = await createExpediente(expediente);
+            const expedienteId = response.data.id;
+
             if (response.data.alert) {
               console.log('Expediente with CUT already exists:', expediente);
             } else {
               console.log('Expediente created:', expediente);
             }
+
+            const documento = {
+              id_expediente: expedienteId,
+              numero_documento: row[12] ? row[12].toString().toUpperCase() : '',
+              asunto: row[9] || '',
+              ultimo_escritorio: row[13] || '',
+              ultima_oficina_area: row[15] || '',
+              fecha_ingreso_ultimo_escritorio: row[17] ? parseDate(row[17]) : null,
+              bandeja: row[18] || '',
+              estado: 'pendiente',
+            };
+
+            await createDocumento(documento);
+            console.log('Documento created:', documento);
+
           } catch (error) {
-            console.error('Error creating expediente:', error);
-            // Handle specific error messages from the backend
-            const errorMessage = error.response?.data?.message || 'Error al crear el expediente.';
+            console.error('Error creating expediente or documento:', error);
+            const errorMessage = error.response?.data?.message || 'Error al crear el expediente o documento.';
             showSweetAlert({ icon: 'error', title: 'Error', text: errorMessage });
           }
         }
 
-        showSweetAlert({ icon: 'success', title: 'Éxito', text: 'Expedientes importados correctamente.' });
+        showSweetAlert({ icon: 'success', title: 'Éxito', text: 'Expedientes y documentos importados correctamente.' });
         
-        // Refresh the table after import
         fetchPaginatedExpedientes(filters, pagination);
         
       } catch (error) {
         console.error('Error reading Excel file:', error);
         showSweetAlert({ icon: 'error', title: 'Error', text: 'Error al leer el archivo Excel.' });
       } finally {
-        setIsProcessing(false); // End processing
+        setIsProcessing(false);
       }
     }
   };
@@ -274,9 +441,26 @@ const Expedientes = () => {
     fileInputRef.current.click();
   };
 
+  // Crear referencias para los campos de entrada
+  const cutRef = useRef();
+  const tipoProcedimientoRef = useRef();
+  const tipoDocumentoRef = useRef();
+  const numeroDocumentoRef = useRef();
+  const periodoRef = useRef();
+  const asuntoRef = useRef();
+  const remitenteRef = useRef();
+
+  const formatDate = (isoString) => {
+    const date = new Date(isoString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // Añadir cero si es necesario
+    const day = String(date.getDate()).padStart(2, '0'); // Añadir cero si es necesario
+    return `${year}-${month}-${day}`;
+  };
+
   return (
     <div>
-      <h2>Gesti[&#243;]n de Expedientes</h2>
+      <h2>Gestión de Expedientes</h2>
       <input
         type="file"
         accept=".xlsx, .xls"
@@ -284,25 +468,27 @@ const Expedientes = () => {
         ref={fileInputRef}
         style={{ display: 'none' }}
       />
-      <BootstrapButton
-        variant="contained"
-        color="celeste" // Use the new celeste color
-        onClick={triggerFileInput}
-        style={{ marginBottom: '1rem' }}
-      >
-        Seleccionar Archivo
-      </BootstrapButton>
-      
-      {selectedFile && (
+      <div style={{ marginBottom: '1rem' }}>
         <BootstrapButton
           variant="contained"
-          color="primary"
-          onClick={handleImport}
-          style={{ marginBottom: '1rem', marginLeft: '1rem' }}
+          color="celeste"
+          onClick={triggerFileInput}
+          style={{ marginRight: '1rem' }}
         >
-          Importar
+          Seleccionar Archivo
         </BootstrapButton>
-      )}
+        
+        {selectedFile && (
+          <BootstrapButton
+            variant="contained"
+            color="primary"
+            onClick={handleImport}
+            style={{ marginRight: '1rem' }}
+          >
+            Importar
+          </BootstrapButton>
+        )}
+      </div>
 
       {isProcessing && (
         <div style={{ marginBottom: '1rem' }}>
@@ -310,37 +496,87 @@ const Expedientes = () => {
           <span style={{ marginLeft: '10px' }}>Procesando archivo...</span>
         </div>
       )}
-      
-      <BootstrapButton variant="contained" color="primary" onClick={handleOpen} style={{ marginBottom: '1rem' }}>
-        Agregar Nuevo Expediente
-      </BootstrapButton>
-      
-      <TextField
-        name="filtro"
-        value={filters.filtro}
-        onChange={handleFilterChange}
-        placeholder="Buscar en todos los campos"
-        variant="outlined"
-        size="small"
-        style={{ marginBottom: '1rem', marginRight: '1rem' }}
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start">
-              <SearchIcon />
-            </InputAdornment>
-          ),
-        }}
-      />
+
+      <div style={{ marginBottom: '1rem' }}>
+        <BootstrapButton variant="contained" color="primary" onClick={handleOpen} style={{ marginRight: '1rem' }}>
+          Agregar Nuevo Expediente
+        </BootstrapButton>
+        
+        <TextField
+          name="filtro"
+          value={filters.filtro}
+          onChange={handleFilterChange}
+          placeholder="Buscar en todos los campos"
+          variant="outlined"
+          size="small"
+          style={{ marginRight: '1rem' }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+        />
+      </div>
 
       <TableContainer component={Paper}>
         <Table size="small">
           <TableHead>
             <TableRow>
               <TableCell>Item</TableCell>
-              <TableCell>CUT</TableCell>
-              <TableCell>Asunto</TableCell>
-              <TableCell>Remitente</TableCell>
-              <TableCell>Documento</TableCell>
+              <TableCell>
+                CUT
+                <TextField
+                  name="cut"
+                  value={filters.cut}
+                  onChange={handleFilterChange}
+                  placeholder="Filtrar por CUT"
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  margin="dense"
+                />
+              </TableCell>
+              <TableCell>
+                Asunto
+                <TextField
+                  name="asunto"
+                  value={filters.asunto}
+                  onChange={handleFilterChange}
+                  placeholder="Filtrar por Asunto"
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  margin="dense"
+                />
+              </TableCell>
+              <TableCell>
+                Remitente
+                <TextField
+                  name="remitente"
+                  value={filters.remitente}
+                  onChange={handleFilterChange}
+                  placeholder="Filtrar por Remitente"
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  margin="dense"
+                />
+              </TableCell>
+              <TableCell>
+                Documento Origen
+                <TextField
+                  name="documento"
+                  value={filters.documento}
+                  onChange={handleFilterChange}
+                  placeholder="Filtrar por Documento"
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  margin="dense"
+                />
+              </TableCell>
               <TableCell align="right">Acciones</TableCell>
             </TableRow>
           </TableHead>
@@ -364,7 +600,7 @@ const Expedientes = () => {
                   <TableCell>{expediente.cut || ''}</TableCell>
                   <TableCell>{expediente.asunto || ''}</TableCell>
                   <TableCell>{expediente.remitente || ''}</TableCell>
-                  <TableCell>{`${expediente.tipo_documento || ''} ${expediente.numero_documento || ''}`.trim()}</TableCell>
+                  <TableCell>{`${expediente.TipoDocumento?.nombre || ''} ${expediente.numero_documento || ''}`.trim()}</TableCell>
                   <TableCell align="right">
                     <BootstrapButton
                       color="info"
@@ -384,7 +620,7 @@ const Expedientes = () => {
                     </BootstrapButton>
                     <BootstrapButton
                       color="primary"
-                      onClick={() => alert(`Listar documentos para expediente ${expediente.id}`)} // Use backticks for template literals
+                      onClick={() => alert(`Listar documentos para expediente ${expediente.id}`)}
                       style={{ padding: '4px 8px' }}
                       size="small"
                     >
@@ -409,8 +645,8 @@ const Expedientes = () => {
         rowsPerPage={pagination.pageSize}
         onRowsPerPageChange={handleChangeRowsPerPage}
         rowsPerPageOptions={[5, 10, 25]}
-        labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count !== -1 ? count : 'm&#225;s de ' + to}`}
-        labelRowsPerPage="Filas por p&#225;gina:"
+        labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count !== -1 ? count : 'más de ' + to}`}
+        labelRowsPerPage="Filas por página:"
       />
 
       <Dialog 
@@ -425,22 +661,121 @@ const Expedientes = () => {
               autoFocus
               margin="dense"
               name="cut"
-              label="CUT"
+              label="CUT *"
               type="text"
               fullWidth
               value={currentExpediente.cut || ''}
+              onChange={handleInputChange}
+              inputRef={cutRef}
+            />
+            <TextField
+              margin="dense"
+              name="estupa"
+              label="Estupa"
+              type="text"
+              fullWidth
+              value={currentExpediente.estupa || ''}
+              onChange={handleInputChange}
+            />
+            <Autocomplete
+              options={tiposProcedimientos}
+              getOptionLabel={(option) => option}
+              value={currentExpediente.tipo_procedimiento || null}
+              onInputChange={(event, newInputValue) => {
+                setProcedimientoInputValue(newInputValue);
+              }}
+              onChange={(event, newValue) => {
+                setCurrentExpediente({
+                  ...currentExpediente,
+                  tipo_procedimiento: newValue || ''
+                });
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Tipo de Procedimiento *"
+                  margin="dense"
+                  fullWidth
+                  inputRef={tipoProcedimientoRef}
+                />
+              )}
+            />
+            <Autocomplete
+              options={nombresUnicosTiposDocumentos}
+              getOptionLabel={(option) => option.nombre || currentExpediente.TipoDocumento.nombre || ''}
+              value={currentExpediente.id_tipo_documento || null}
+              onInputChange={(event, newInputValue) => {
+                setTipoDocumentoInputValue(newInputValue);
+              }}
+              onChange={(event, newValue) => {
+                setCurrentExpediente({
+                  ...currentExpediente,
+                  id_tipo_documento: newValue || null // Store the entire object
+                });
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Tipo de Documento"
+                  margin="dense"
+                  fullWidth
+                  inputRef={tipoDocumentoRef}
+                />
+              )}
+            />
+            <TextField
+              margin="dense"
+              name="numero_documento"
+              label="Número de Documento *"
+              type="text"
+              fullWidth
+              value={currentExpediente.numero_documento || ''}
+              onChange={handleInputChange}
+              inputRef={numeroDocumentoRef}
+            />
+            <TextField
+              margin="dense"
+              name="periodo"
+              label="Periodo *"
+              type="text"
+              fullWidth
+              value={currentExpediente.periodo || ''}
+              onChange={handleInputChange}
+              inputRef={periodoRef}
+            />
+            <TextField
+              margin="dense"
+              name="fecha_creacion"
+              label="Fecha de Creación"
+              type="date"
+              fullWidth
+              InputLabelProps={{
+                shrink: true,
+              }}
+              value={currentExpediente.fecha_creacion || new Date().toISOString().split('T')[0]}
               onChange={handleInputChange}
             />
             <TextField
               margin="dense"
               name="asunto"
-              label="Asunto"
+              label="Asunto *"
               type="text"
               fullWidth
               value={currentExpediente.asunto || ''}
               onChange={handleInputChange}
+              inputRef={asuntoRef}
             />
-            {/* Add more fields as necessary */}
+            <TextField
+              margin="dense"
+              name="remitente"
+              label="Remitente *"
+              type="text"
+              fullWidth
+              value={currentExpediente.remitente || ''}
+              onChange={handleInputChange}
+              inputRef={remitenteRef}
+            />
+            
           </DialogContent>
           <DialogActions>
             <Button onClick={handleClose} color="secondary">

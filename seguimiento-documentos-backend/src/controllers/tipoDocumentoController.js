@@ -1,5 +1,6 @@
 const TipoDocumento = require('../models/TipoDocumento');
-const { Op } = require('sequelize'); // Import Op from Sequelize
+const sequelize = require('../config/database'); // Import the Sequelize instance
+const { Op } = require('sequelize'); // Asegúrate de importar sequelize
 
 // Obtener todos los tipos de documento con paginación y filtros
 exports.obtenerTodos = async (req, res) => {
@@ -97,6 +98,28 @@ exports.eliminar = async (req, res) => {
     } else {
       res.status(404).json({ mensaje: 'Tipo de documento no encontrado' });
     }
+  } catch (error) {
+    res.status(500).json({ mensaje: error.message });
+  }
+};
+
+// Obtener nombres únicos de tipos de documentos para autocompletado
+exports.getUniqueTipoDocumentoNames = async (req, res) => {
+  try {
+    // Obtener todos los nombres únicos de tipos de documentos junto con sus IDs
+    const tipos = await TipoDocumento.findAll({
+      attributes: ['id', 'nombre'],
+      group: ['nombre'], // Group by 'nombre' to ensure uniqueness
+      order: [['nombre', 'ASC']]
+    });
+
+    // Extraer los IDs y nombres de los tipos de documentos
+    const uniqueTipos = tipos.map(tipo => ({
+      id: tipo.id,
+      nombre: tipo.nombre
+    }));
+
+    res.json(uniqueTipos);
   } catch (error) {
     res.status(500).json({ mensaje: error.message });
   }

@@ -44,6 +44,9 @@ export const getUsuarioById = (id) => api.get(`/usuarios/${id}`);
 export const updateUsuario = (id, usuarioData) => api.put(`/usuarios/${id}`, usuarioData);
 export const deleteUsuario = (id) => api.delete(`/usuarios/${id}`);
 
+// Cambiar a PATCH para obtener tipos de procedimientos
+export const getTiposProcedimientos = (params) => api.patch('/expedientes/procedimientos', { params });
+
 // ... otras importaciones y configuraciones
 
 export const getAreas = (params) => api.get('/areas', { params });
@@ -65,6 +68,8 @@ export const getRespuestaById = (id) => api.get(`/respuestas/${id}`);
 export const updateRespuesta = (id, respuestaData) => api.put(`/respuestas/${id}`, respuestaData);
 export const deleteRespuesta = (id) => api.delete(`/respuestas/${id}`);
 
-// Agrega más funciones para otras rutas de la API según sea necesario
+// Agrega m&aacute;s funciones para otras rutas de la API seg&uacute;n sea necesario
+
+export const getNombresUnicosTiposDocumentos = () => api.patch('/tipoDocumentos/nombres-unicos');
 
 export default api;

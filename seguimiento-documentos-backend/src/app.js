@@ -12,6 +12,8 @@ const documentoRoutes = require('./routes/documentoRoutes');
 const asignacionDocumentoRoutes = require('./routes/asignacionDocumentoRoutes');
 const respuestaDocumentoRoutes = require('./routes/respuestaDocumentoRoutes');
 const initAdmin = require('./utils/initAdmin');
+const initTipoDocumentos = require('./utils/initTipoDocumentos');
+
 require('dotenv').config();
 
 const app = express();
@@ -57,6 +59,8 @@ const PORT = process.env.PORT || 3000;
 sequelize.sync().then(async () => {
   // Inicializar usuario admin
   await initAdmin();
+  await initTipoDocumentos();
+
 
   app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);

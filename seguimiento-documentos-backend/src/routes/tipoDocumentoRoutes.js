@@ -174,4 +174,32 @@ router.put('/:id', authenticateToken, isSecretariaOrAbove, tipoDocumentoControll
  */
 router.delete('/:id', authenticateToken, isSecretariaOrAbove, tipoDocumentoController.eliminar);
 
+
+/**
+ * @swagger
+ * /api/tipoDocumentos/nombres-unicos:
+ *   patch:
+ *     summary: Obtener nombres únicos de tipos de documentos para autocompletado
+ *     tags: [Tipos de Documentos]
+ *     responses:
+ *       200:
+ *         description: Lista de nombres únicos de tipos de documentos obtenida exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                     description: ID del tipo de documento
+ *                   nombre:
+ *                     type: string
+ *                     description: Nombre del tipo de documento
+ *       500:
+ *         description: Error del servidor
+ */
+router.patch('/nombres-unicos', tipoDocumentoController.getUniqueTipoDocumentoNames);
+
 module.exports = router;

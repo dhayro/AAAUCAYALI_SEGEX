@@ -1,4 +1,5 @@
 const Documento = require('../models/Documento');
+const TipoDocumento = require('../models/TipoDocumento'); // Asegúrate de importar el modelo de TipoDocumento
 
 exports.getAllDocumentos = async (req, res) => {
   try {
@@ -38,7 +39,32 @@ exports.getDocumentoById = async (req, res) => {
 
 exports.createDocumento = async (req, res) => {
   try {
-    const nuevoDocumento = await Documento.create(req.body);
+    const { numero_documento } = req.body;
+    let id_tipo_documento = null; // Inicializar como null
+    let updatedNumeroDocumento = numero_documento;
+
+    // Obtener todos los tipos de documentos
+    const tiposDocumentos = await TipoDocumento.findAll();
+
+    // Ordenar tiposDocumentos por la longitud del nombre en orden descendente
+    tiposDocumentos.sort((a, b) => b.nombre.length - a.nombre.length);
+
+    for (const tipo of tiposDocumentos) {
+      const tipoNombre = tipo.nombre.toUpperCase();
+      if (numero_documento.toUpperCase().startsWith(tipoNombre)) {
+        id_tipo_documento = tipo.id;
+        updatedNumeroDocumento = numero_documento.substring(tipoNombre.length).trim();
+        break;
+      }
+    }
+
+    // Crear el nuevo documento con el id_tipo_documento (puede ser null) y el número de documento actualizado
+    const nuevoDocumento = await Documento.create({
+      ...req.body,
+      id_tipo_documento,
+      numero_documento: updatedNumeroDocumento
+    });
+
     res.status(201).json(nuevoDocumento);
   } catch (error) {
     res.status(400).json({ message: error.message });
