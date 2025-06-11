@@ -1,5 +1,6 @@
 const Documento = require('../models/Documento');
 const TipoDocumento = require('../models/TipoDocumento'); // Asegúrate de importar el modelo de TipoDocumento
+const { formatDateForLima } = require('../utils/dateUtils');
 
 exports.getAllDocumentos = async (req, res) => {
   try {
@@ -62,31 +63,14 @@ exports.createDocumento = async (req, res) => {
       }
     }
 
-    // Procesar la fecha si viene en formato YYYY-MM-DD
-    let processedFechaDocumento = fecha_documento;
-    if (fecha_documento && typeof fecha_documento === 'string') {
-      // Verificar si la fecha está en formato YYYY-MM-DD
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (dateRegex.test(fecha_documento)) {
-        // La fecha ya está en formato ISO, se puede usar directamente
-        processedFechaDocumento = new Date(fecha_documento);
-        console.log(`Fecha procesada: ${processedFechaDocumento}`);
-      }
-    }
-
-    console.log('Datos a guardar:', {
-      ...otherData,
-      numero_documento: updatedNumeroDocumento,
-      id_tipo_documento: id_tipo_documento,
-      fecha_documento: processedFechaDocumento
-    });
+    const formattedDate = formatDateForLima(fecha_documento || new Date());
 
     // Crear el nuevo documento con el id_tipo_documento, el número de documento actualizado y la fecha procesada
     const nuevoDocumento = await Documento.create({
       ...otherData,
       numero_documento: updatedNumeroDocumento,
       id_tipo_documento: id_tipo_documento,
-      fecha_documento: processedFechaDocumento
+      fecha_documento: formattedDate
     });
 
     res.status(201).json(nuevoDocumento);
@@ -98,9 +82,16 @@ exports.createDocumento = async (req, res) => {
 
 exports.updateDocumento = async (req, res) => {
   try {
-    const [updated] = await Documento.update(req.body, {
-      where: { id: req.params.id }
-    });
+    const { fecha_documento, ...otherData } = req.body;
+    const formattedDate = formatDateForLima(fecha_documento || new Date());
+
+    const [updated] = await Documento.update(
+      { ...otherData, fecha_documento: formattedDate },
+      {
+        where: { id: req.params.id }
+      }
+    );
+
     if (updated) {
       const updatedDocumento = await Documento.findByPk(req.params.id);
       res.json(updatedDocumento);
