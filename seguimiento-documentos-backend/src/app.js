@@ -60,13 +60,27 @@ app.use('/api/respuestas', respuestaDocumentoRoutes);
 
 const PORT = process.env.PORT || 3000;
 
-sequelize.sync().then(async () => {
-  // Inicializar usuario admin
-  await initAdmin();
-  await initTipoDocumentos();
+// Importar la función de inicialización de la base de datos
+const { initDatabaseFromSQL } = require('./config/database');
 
-  app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-    console.log(`Swagger documentation available at http://localhost:${PORT}/api-docs`);
-  });
-});
+// Inicializar la base de datos antes de sincronizar los modelos
+(async () => {
+  try {
+    // Inicializar la base de datos desde el script SQL si es necesario
+    await initDatabaseFromSQL();
+    
+    // Sincronizar los modelos con la base de datos
+    await sequelize.sync();
+    
+    // Inicializar usuario admin y tipos de documentos
+    await initAdmin();
+    await initTipoDocumentos();
+
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+      console.log(`Swagger documentation available at http://localhost:${PORT}/api-docs`);
+    });
+  } catch (error) {
+    console.error('Error durante la inicialización de la aplicación:', error);
+  }
+})();

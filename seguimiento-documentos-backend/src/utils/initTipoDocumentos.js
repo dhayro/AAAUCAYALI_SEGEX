@@ -71,24 +71,29 @@ const tipoDocumentos = [
   'RESOLUCION SUBDIRECTORAL',
   'SOBRE',
   'SOLICITUD',
-   'RECURSO DE RECONSIDERACION',
-   'DENUNCIA',
-   'SUMILLA',
-   'FORMULARIO',
-   'SOLICITUD DE REVISION',
-   'RECIBO DE INGRESOS'
+  'RECURSO DE RECONSIDERACION',
+  'DENUNCIA',
+  'SUMILLA',
+  'FORMULARIO',
+  'SOLICITUD DE REVISION',
+  'RECIBO DE INGRESOS'
 ];
 
 async function initTipoDocumentos() {
   try {
+    // Verificar si ya existen tipos de documentos en la base de datos
+    const count = await TipoDocumento.count();
+    
+    // Si ya hay registros, no ejecutar la inicialización
+    if (count > 0) {
+      console.log('Los tipos de documentos ya están inicializados. Omitiendo...');
+      return;
+    }
+    
+    // Si no hay registros, proceder con la inicialización
     for (const nombre of tipoDocumentos) {
-      const [tipoDocumento, created] = await TipoDocumento.findOrCreate({
-        where: { nombre },
-        defaults: { nombre }
-      });
-      if (created) {
-        console.log(`Tipo de documento '${nombre}' creado.`);
-      }
+      await TipoDocumento.create({ nombre });
+      console.log(`Tipo de documento '${nombre}' creado.`);
     }
     console.log('Inicialización de tipos de documentos completada.');
   } catch (error) {

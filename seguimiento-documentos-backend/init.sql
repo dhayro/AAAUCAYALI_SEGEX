@@ -58,13 +58,13 @@ CREATE TABLE IF NOT EXISTS expedientes (
     numero_documento VARCHAR(100),
     asunto TEXT,
     remitente VARCHAR(100),
-    fecha_creacion DATETIME NOT NULL,
     fecha_cierre DATETIME,
     fecha_ultima_respuesta DATETIME,
-    fecha_ultima_modificacion DATETIME,
     estado ENUM('abierto', 'cerrado', 'pendiente', 'en_revision') DEFAULT 'abierto' NOT NULL,
     id_usuario_creador INT,
     id_usuario_modificador INT,
+    fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+    fecha_modificacion DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (id_usuario_creador) REFERENCES usuarios(id),
     FOREIGN KEY (id_usuario_modificador) REFERENCES usuarios(id),
     FOREIGN KEY (id_tipo_documento) REFERENCES tipo_documentos(id),
@@ -84,6 +84,13 @@ CREATE TABLE IF NOT EXISTS documentos (
     fecha_ingreso_ultimo_escritorio DATETIME,
     bandeja VARCHAR(255),
     estado VARCHAR(50) NOT NULL COMMENT 'Estado del documento (pendiente, en_revision, aprobado, rechazado)',
+    fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+    fecha_modificacion DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    id_usuario_creador INT,
+    id_usuario_modificador INT,
+    brecha DATE ,
+    FOREIGN KEY (id_usuario_creador) REFERENCES usuarios(id),
+    FOREIGN KEY (id_usuario_modificador) REFERENCES usuarios(id),
     FOREIGN KEY (id_expediente) REFERENCES expedientes(id),
     FOREIGN KEY (id_tipo_documento) REFERENCES tipo_documentos(id)
 );
@@ -109,7 +116,7 @@ CREATE TABLE IF NOT EXISTS asignaciones_documentos (
     FOREIGN KEY (id_documento) REFERENCES documentos(id),
     FOREIGN KEY (id_asignado) REFERENCES usuarios(id)   ,
     FOREIGN KEY (id_usuario_creador) REFERENCES usuarios(id),
-    FOREIGN KEY (id_usuario_modificador) REFERENCES usuarios(id)    
+    FOREIGN KEY (id_usuario_modificador) REFERENCES usuarios(id)
 );
 
 -- Crear tabla de respuestas a documentos
@@ -119,7 +126,7 @@ CREATE TABLE IF NOT EXISTS respuestas_documentos (
     fecha_respuesta DATETIME NOT NULL,
     observaciones TEXT,
     fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
-    fecha_modificacion DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,  
+    fecha_modificacion DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     id_usuario_creador INT,
     id_usuario_modificador INT,
     estado BOOLEAN DEFAULT TRUE,

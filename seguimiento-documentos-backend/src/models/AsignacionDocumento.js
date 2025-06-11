@@ -36,21 +36,15 @@ const AsignacionDocumento = sequelize.define('AsignacionDocumento', {
   observaciones: {
     type: DataTypes.TEXT,
   },
-  fecha_creacion: {
-    type: DataTypes.DATE,
-    defaultValue: DataTypes.NOW,
-  },
-  fecha_modificacion: {
-    type: DataTypes.DATE,
-    defaultValue: DataTypes.NOW,
-  },
   estado: {
     type: DataTypes.BOOLEAN,
     defaultValue: true,
   },
 }, {
   tableName: 'asignaciones_documentos',
-  timestamps: false,
+  timestamps: true,
+  createdAt: 'fecha_creacion',
+  updatedAt: 'fecha_modificacion'
 });
 
 AsignacionDocumento.belongsTo(Documento, { foreignKey: 'id_documento' });

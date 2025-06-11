@@ -2,6 +2,7 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 const Expediente = require('./Expediente');
 const TipoDocumento = require('./TipoDocumento');
+const Usuario = require('./Usuario');
 
 const Documento = sequelize.define('Documento', {
   id: {
@@ -31,6 +32,11 @@ const Documento = sequelize.define('Documento', {
   bandeja: {
     type: DataTypes.STRING(255),
   },
+  brecha: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    comment: 'Fecha de brecha para el documento'
+  },
   estado: {
     type: DataTypes.STRING(50),
     allowNull: false,
@@ -38,10 +44,14 @@ const Documento = sequelize.define('Documento', {
   },
 }, {
   tableName: 'documentos',
-  timestamps: false,
+  timestamps: true,
+  createdAt: 'fecha_creacion',
+  updatedAt: 'fecha_modificacion'
 });
 
 Documento.belongsTo(Expediente, { foreignKey: 'id_expediente' });
 Documento.belongsTo(TipoDocumento, { foreignKey: 'id_tipo_documento' });
+Documento.belongsTo(Usuario, { as: 'creador', foreignKey: 'id_usuario_creador' });
+Documento.belongsTo(Usuario, { as: 'modificador', foreignKey: 'id_usuario_modificador' });
 
 module.exports = Documento;

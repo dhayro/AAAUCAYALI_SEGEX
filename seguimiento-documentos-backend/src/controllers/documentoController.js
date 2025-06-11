@@ -62,8 +62,11 @@ exports.createDocumento = async (req, res) => {
         }
       }
     }
+    let formattedDate = null;
+    if ( fecha_documento ) {
+        formattedDate = formatDateForLima(fecha_documento || new Date());
+    }
 
-    const formattedDate = formatDateForLima(fecha_documento || new Date());
 
     // Crear el nuevo documento con el id_tipo_documento, el número de documento actualizado y la fecha procesada
     const nuevoDocumento = await Documento.create({
