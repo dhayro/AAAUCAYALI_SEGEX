@@ -27,7 +27,12 @@ exports.getAllDocumentos = async (req, res) => {
 
 exports.getDocumentoById = async (req, res) => {
   try {
-    const documento = await Documento.findByPk(req.params.id);
+    const documento = await Documento.findByPk(req.params.id, {
+      include: [{
+        model: TipoDocumento,
+        as: 'TipoDocumento', // This matches the alias used in the association
+      }]
+    });
     if (documento) {
       res.json(documento);
     } else {

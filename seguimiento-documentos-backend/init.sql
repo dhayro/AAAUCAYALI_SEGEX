@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS documentos (
     ultima_oficina_area VARCHAR(100),
     fecha_ingreso_ultimo_escritorio DATETIME,
     bandeja VARCHAR(255),
-    estado VARCHAR(50) NOT NULL COMMENT 'Estado del documento (pendiente, en_revision, aprobado, rechazado)',
+    estado VARCHAR(50) NOT NULL COMMENT 'Estado del documento (pendiente, asignado, en_revision, cerrado,anulado,archivado)',
     fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
     fecha_modificacion DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     id_usuario_creador INT,

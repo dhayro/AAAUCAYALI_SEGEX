@@ -3,12 +3,11 @@ import {
   formatDate,
   parseISOToLimaDate,
   toISOLimaDate,
-  formatDateWithTime,
+  // formatDateWithTime,
 } from "../utils/dateUtils";
 
 import {
-  Grid, 
-  Box, 
+  Box,
   Chip,
   Button,
   TextField,
@@ -28,10 +27,6 @@ import {
   CircularProgress,
   Autocomplete,
   Tooltip,
-  List,
-  ListItem,
-  ListItemText,
-  Divider,
   Typography, // Add Typography here
 } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -53,6 +48,7 @@ import {
   updateDocumento,
   getDocumentosByExpedienteId,
   getDocumentosRelacionados,
+  getDocumentoById 
 } from "../services/api";
 import Swal from "sweetalert2";
 import SearchIcon from "@mui/icons-material/Search";
@@ -63,8 +59,8 @@ import ListAltIcon from "@mui/icons-material/ListAlt";
 import { debounce } from "lodash";
 import { readExcelFile } from "../utils/excelUtils";
 import { jwtDecode } from "jwt-decode";
-import AddIcon from '@mui/icons-material/Add';
-import DescriptionIcon from '@mui/icons-material/Description';
+import AddIcon from "@mui/icons-material/Add";
+import DescriptionIcon from "@mui/icons-material/Description";
 
 // Add this function at the top of your component or outside it
 const isEqual = (obj1, obj2) => {
@@ -323,6 +319,44 @@ const Expedientes = () => {
   const [originalNumeroDocumento, setOriginalNumeroDocumento] = useState("");
   const [originalIdTipoDocumento, setOriginalIdTipoDocumento] = useState("");
   const [originalDocumento, setOriginalDocumento] = useState("");
+
+  const [isEditingDocumento, setIsEditingDocumento] = useState(false);
+  
+  const handleEditDocumento = async (documentoId) => {
+    try {
+      setIsLoadingDocumentos(true);
+      await fetchNombresUnicosTiposDocumentos("");
+
+
+      const response = await getDocumentoById(documentoId);
+      if (response.data) {
+        const documentoToEdit = response.data;
+        setCurrentDocumento({
+          id: documentoToEdit.id,
+          id_expediente: documentoToEdit.id_expediente,
+          id_tipo_documento: documentoToEdit.TipoDocumento || null,
+          numero_documento: documentoToEdit.numero_documento || '',
+          asunto: documentoToEdit.asunto || '',
+          fecha_documento: documentoToEdit.fecha_documento || null,
+          estado: documentoToEdit.estado || 'PENDIENTE'
+        });
+        setIsEditingDocumento(true);
+        setOpenDocumentoDialog(true);
+      }
+    } catch (error) {
+      console.error('Error fetching documento details:', error);
+      showSweetAlert({
+        icon: 'error',
+        title: 'Error',
+        text: 'No se pudo cargar la información del documento',
+        timer: 3000,
+        timerProgressBar: true,
+        showConfirmButton: false
+      });
+    } finally {
+      setIsLoadingDocumentos(false);
+    }
+  };
 
   const [fechaBrecha, setFechaBrecha] = useState(null);
 
@@ -653,7 +687,7 @@ const Expedientes = () => {
               (originalDocumento.fecha_documento
                 ? parseISOToLimaDate(originalDocumento.fecha_documento)
                 : "") || null,
-            estado: "pendiente",
+            estado: "PENDIENTE",
             id_usuario_creador,
           };
 
@@ -970,7 +1004,7 @@ const Expedientes = () => {
                 ? parseDate(row[17])
                 : null,
               bandeja: row[18] || "",
-              estado: "pendiente",
+              estado: "PENDIENTE",
               id_usuario_creador,
               brecha: fechaBrechaISO,
             };
@@ -1044,17 +1078,26 @@ const Expedientes = () => {
   const handleOpenDocumentoDialog = (expediente) => {
     setCurrentExpedienteForDocumento(expediente);
     setCurrentDocumento({
-      id_expediente: expediente.id,
-      id_tipo_documento: "",
-      numero_documento: "",
-      asunto: "",
+      id_expediente: expediente?.id || null,
+      id_tipo_documento: null,
+      numero_documento: '',
+      asunto: '',
       fecha_documento: null,
     });
+    setIsEditingDocumento(false);
     setOpenDocumentoDialog(true);
   };
 
   const handleCloseDocumentoDialog = () => {
     setOpenDocumentoDialog(false);
+    setCurrentDocumento({
+      id_expediente: currentExpedienteForDocumento?.id || null,
+      id_tipo_documento: null,
+      numero_documento: '',
+      asunto: '',
+      fecha_documento: null,
+    });
+    setIsEditingDocumento(false);
   };
 
   const handleDocumentoInputChange = (e) => {
@@ -1097,38 +1140,70 @@ const Expedientes = () => {
     }
 
     try {
-      // // Get user ID from token
-      // const token = localStorage.getItem('token');
-      // const decodedToken = jwtDecode(token);
-      // const id_usuario_creador = decodedToken.id;
 
-      const documento = {
-        ...currentDocumento,
-        id_tipo_documento:
-          typeof currentDocumento.id_tipo_documento === "object"
-            ? currentDocumento.id_tipo_documento.id
-            : currentDocumento.id_tipo_documento,
+      const documentoData = {
+        id_expediente: currentDocumento.id_expediente,
+        id_tipo_documento: currentDocumento.id_tipo_documento.id,
+        numero_documento: currentDocumento.numero_documento,
+        asunto: currentDocumento.asunto,
         fecha_documento:
           (currentDocumento.fecha_documento
             ? parseISOToLimaDate(currentDocumento.fecha_documento)
             : "") || null,
-        id_usuario_creador,
-        estado: "pendiente",
+        estado: currentDocumento.estado || 'PENDIENTE'
       };
 
-      await createDocumento(documento);
-      handleCloseDocumentoDialog();
-      showSweetAlert({
-        icon: "success",
-        title: "Éxito",
-        text: "Documento agregado correctamente",
-        timer: 2500,
-        timerProgressBar: true,
-        showConfirmButton: false,
-      });
+      let response;
+      if (isEditingDocumento) {
+        response = await updateDocumento(currentDocumento.id, documentoData);
+      } else {
+        response = await createDocumento(documentoData);
+      }
 
-      // Optionally refresh the expediente data if needed
-      fetchPaginatedExpedientes(filters, pagination);
+      if (response.status === 200 || response.status === 201) {
+      
+        handleCloseDocumentoDialog();
+        
+         if (openDocumentosListDialog && currentExpedienteForList) {
+          handleOpenDocumentosList(currentExpedienteForList);
+        }
+        showSweetAlert({
+          icon: 'success',
+          title: 'Éxito',
+          text: isEditingDocumento ? 'Documento actualizado correctamente' : 'Documento agregado correctamente',
+          timer: 2500,
+          timerProgressBar: true,
+          showConfirmButton: false
+        });
+      
+      // const documento = {
+      //   ...currentDocumento,
+      //   id_tipo_documento:
+      //     typeof currentDocumento.id_tipo_documento === "object"
+      //       ? currentDocumento.id_tipo_documento.id
+      //       : currentDocumento.id_tipo_documento,
+      //   fecha_documento:
+      //     (currentDocumento.fecha_documento
+      //       ? parseISOToLimaDate(currentDocumento.fecha_documento)
+      //       : "") || null,
+      //   id_usuario_creador,
+      //   estado: "PENDIENTE",
+      // };
+
+      // await createDocumento(documento);
+      // handleCloseDocumentoDialog();
+      // showSweetAlert({
+      //   icon: "success",
+      //   title: "Éxito",
+      //   text: "Documento agregado correctamente",
+      //   timer: 2500,
+      //   timerProgressBar: true,
+      //   showConfirmButton: false,
+      // });
+
+      // // Optionally refresh the expediente data if needed
+      // fetchPaginatedExpedientes(filters, pagination);
+      } 
     } catch (error) {
       console.error("Error submitting documento:", error);
       showSweetAlert({
@@ -1614,8 +1689,9 @@ const Expedientes = () => {
           maxWidth="md">
           <form onSubmit={handleSubmitDocumento}>
             <DialogTitle id="dialog-documento-title">
-              Agregar Documento para Expediente{" "}
-              {currentExpedienteForDocumento?.cut || ""}
+              {isEditingDocumento 
+                ? `Editar Documento para Expediente ${currentExpedienteForDocumento?.cut || ""}`
+                : `Agregar Documento para Expediente ${currentExpedienteForDocumento?.cut || ""}`}
             </DialogTitle>
             <DialogContent>
               <div style={{ marginBottom: "10px" }}>
@@ -1710,7 +1786,7 @@ const Expedientes = () => {
                 color="primary"
                 style={{ minWidth: "80px", padding: "4px 8px" }}
                 size="small">
-                Guardar
+                {isEditingDocumento ? "Actualizar" : "Guardar"}
               </StyledDialogButton>
             </DialogActions>
           </form>
@@ -1748,104 +1824,75 @@ const Expedientes = () => {
                 <CircularProgress />
               </div>
             ) : documentosList.length > 0 ? (
-              <List
-                sx={{ width: "100%", bgcolor: "background.paper", padding: 0 }}>
-                {documentosList.map((documento, index) => (
-                  <React.Fragment key={documento.id}>
-                    <ListItem
-                      alignItems="flex-start"
-                      sx={{
-                        padding: "16px",
-                        "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.04)" },
-                        borderLeft:
-                          documento.estado === "PENDIENTE"
-                            ? "4px solid #ff9800"
-                            : documento.estado === "FINALIZADO"
-                            ? "4px solid #4caf50"
-                            : "4px solid #e0e0e0",
-                      }}>
-                      <ListItemText
-                        primary={
-                          <Typography
-                            variant="subtitle1"
-                            component="div"
-                            fontWeight="500">
-                            {`${index + 1}. ${
-                              documento.TipoDocumento?.nombre || ""
-                            } ${documento.numero_documento || "Sin número"}`}
-                          </Typography>
-                        }
-                        secondary={
-                          <Box sx={{ mt: 1 }}>
-                            <Grid container spacing={2}>
-                              <Grid item xs={12}>
-                                <Typography
-                                  variant="body1"
-                                  color="text.primary"
-                                  gutterBottom>
-                                  {documento.asunto || "Sin asunto"}
-                                </Typography>
-                              </Grid>
-                              <Grid item xs={12} sm={6}>
-                                <Typography variant="body2" component="div">
-                                  <strong>Fecha:</strong>{" "}
-                                  {documento.fecha_documento
-                                    ? formatDate(documento.fecha_documento)
-                                    : "No especificada"}
-                                </Typography>
-                                <Typography variant="body2" component="div">
-                                  <strong>Último Escritorio:</strong>{" "}
-                                  {documento.ultimo_escritorio ||
-                                    "No especificado"}
-                                </Typography>
-                                <Typography variant="body2" component="div">
-                                  <strong>Última Área:</strong>{" "}
-                                  {documento.ultima_oficina_area ||
-                                    "No especificado"}
-                                </Typography>
-                              </Grid>
-                              <Grid item xs={12} sm={6}>
-                                <Typography variant="body2" component="div">
-                                  <strong>Fecha Ingreso:</strong>{" "}
-                                  {formatDateWithTime(
-                                    documento.fecha_ingreso_ultimo_escritorio
-                                  ) || "No especificado"}
-                                </Typography>
-                                <Typography variant="body2" component="div">
-                                  <strong>Bandeja:</strong>{" "}
-                                  {documento.bandeja || "No especificado"}
-                                </Typography>
-                                <Typography variant="body2" component="div">
-                                  <strong>Estado:</strong>{" "}
-                                  <Chip
-                                    size="small"
-                                    label={
-                                      documento.estado || "No especificado"
-                                    }
-                                    color={
-                                      documento.estado === "PENDIENTE"
-                                        ? "warning"
-                                        : documento.estado === "FINALIZADO"
-                                        ? "success"
-                                        : "default"
-                                    }
-                                  />
-                                </Typography>
-                                <Typography variant="body2" component="div">
-                                  <strong>Brecha:</strong>{" "}
-                                  {formatDate(documento.brecha) ||
-                                    "No especificado"}
-                                </Typography>
-                              </Grid>
-                            </Grid>
-                          </Box>
-                        }
-                      />
-                    </ListItem>
-                    {index < documentosList.length - 1 && <Divider />}
-                  </React.Fragment>
-                ))}
-              </List>
+              <TableContainer component={Paper} sx={{ maxHeight: 440 }}>
+                <Table size="small" stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Item</TableCell>
+                      <TableCell>Tipo Documento</TableCell>
+                      <TableCell>Número</TableCell>
+                      <TableCell>Asunto</TableCell>
+                      <TableCell>Fecha</TableCell>
+                      <TableCell>Estado</TableCell>
+                      <TableCell>Acciones</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {documentosList.map((documento, index) => (
+                      <StyledTableRow key={documento.id}>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell>
+                          {documento.TipoDocumento?.nombre || ""}
+                        </TableCell>
+                        <TableCell>
+                          {documento.numero_documento || "Sin número"}
+                        </TableCell>
+                        <TableCell>
+                          {documento.asunto || "Sin asunto"}
+                        </TableCell>
+                        <TableCell>
+                          {documento.fecha_documento
+                            ? formatDate(documento.fecha_documento)
+                            : "No especificada"}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            size="small"
+                            label={documento.estado || "No especificado"}
+                            color={
+                              documento.estado === "PENDIENTE"
+                                ? "warning"
+                                : documento.estado === "ASIGNADO"
+                                ? "info"
+                                : documento.estado === "EN_REVISION"
+                                ? "primary"
+                                : documento.estado === "CERRADO"
+                                ? "success"
+                                : documento.estado === "ANULADO"
+                                ? "error"
+                                : documento.estado === "ARCHIVADO"
+                                ? "secondary"
+                                : "default"
+                            }
+                          />
+                        </TableCell>
+                        <TableCell>
+                           <Button 
+                            size="small" 
+                            color="primary"
+                            onClick={() => handleEditDocumento(documento.id)}
+                          >
+                            Editar
+                          </Button>
+                          <Button size="small" color="secondary">
+                            Asignar
+                          </Button>
+                        </TableCell>
+                      </StyledTableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             ) : (
               <Box
                 sx={{
@@ -1873,17 +1920,15 @@ const Expedientes = () => {
               variant="outlined">
               Cerrar
             </Button>
-            {documentosList.length > 0 && (
-              <Button
-                onClick={() =>
-                  handleOpenDocumentoDialog(currentExpedienteForList)
-                }
-                color="primary"
-                variant="contained"
-                startIcon={<AddIcon />}>
-                Agregar Documento
-              </Button>
-            )}
+            <Button
+              onClick={() =>
+                handleOpenDocumentoDialog(currentExpedienteForList)
+              }
+              color="primary"
+              variant="contained"
+              startIcon={<AddIcon />}>
+              Agregar Documento
+            </Button>
           </DialogActions>
         </Dialog>
       </div>
