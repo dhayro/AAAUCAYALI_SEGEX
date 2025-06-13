@@ -42,12 +42,16 @@ export const getExpedienteById = (id) => api.get(`/expedientes/${id}`);
 export const updateExpediente = (id, expedienteData) => api.put(`/expedientes/${id}`, expedienteData);
 export const deleteExpediente = (id) => api.delete(`/expedientes/${id}`);
 
-
 export const getUsuarios = () => api.get('/usuarios');
 export const createUsuario = (usuarioData) => api.post('/usuarios', usuarioData);
 export const getUsuarioById = (id) => api.get(`/usuarios/${id}`);
 export const updateUsuario = (id, usuarioData) => api.put(`/usuarios/${id}`, usuarioData);
 export const deleteUsuario = (id) => api.delete(`/usuarios/${id}`);
+export const getUsersForSelect = () => api.get('/usuarios/select');
+export const getUsersByAreaId = (areaId) => api.get(`/usuarios/area/${areaId}`);
+
+// Función para actualizar el estado de un documento
+export const updateDocumentoEstado = (id, estado) => api.patch(`/documentos/${id}/estado`, { estado });
 
 // Cambiar a PATCH para obtener tipos de procedimientos
 export const getTiposProcedimientos = (params) => api.patch('/expedientes/procedimientos', { params });
@@ -84,5 +88,9 @@ export const getDocumentosRelacionados = (expedienteId, numeroDocumento = '', id
 
   return api.get(`/expedientes/${expedienteId}/documentos-relacionados`, { params });
 };
+
+// Asignaciones API
+export const getAsignaciones = (params) => api.get('/asignaciones', { params });
+export const createAsignacion = (asignacionData) => api.post('/asignaciones', asignacionData);
 
 export default api;

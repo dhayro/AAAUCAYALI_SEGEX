@@ -10,6 +10,7 @@ import Areas from './components/Areas';
 import Usuarios from './components/Usuarios'; // Asegúrate de importar el componente Usuarios
 import TiposDocumentos from './components/TiposDocumentos';
 import Expedientes from './components/Expedientes'; // Import the Expedientes component
+import Documentos from './components/Documentos'; // Import the Documentos component
 import ProtectedRoute from './components/ProtectedRoute';
 import api from './services/api';
 import './globalStyles.css';
@@ -134,6 +135,14 @@ const App = () => {
               element={
                 <ProtectedRoute user={user}>
                   <Expedientes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/documentos"
+              element={
+                <ProtectedRoute user={user}>
+                  <Documentos />
                 </ProtectedRoute>
               }
             />

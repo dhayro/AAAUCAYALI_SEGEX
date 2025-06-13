@@ -48,7 +48,12 @@ import {
   updateDocumento,
   getDocumentosByExpedienteId,
   getDocumentosRelacionados,
-  getDocumentoById 
+  getDocumentoById,
+  getAreas,
+  getUsersByAreaId,
+  getUsersForSelect,
+  createAsignacion,
+  updateDocumentoEstado
 } from "../services/api";
 import Swal from "sweetalert2";
 import SearchIcon from "@mui/icons-material/Search";
@@ -61,6 +66,13 @@ import { readExcelFile } from "../utils/excelUtils";
 import { jwtDecode } from "jwt-decode";
 import AddIcon from "@mui/icons-material/Add";
 import DescriptionIcon from "@mui/icons-material/Description";
+
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
+
 
 // Add this function at the top of your component or outside it
 const isEqual = (obj1, obj2) => {
@@ -79,22 +91,22 @@ const BootstrapButton = styled(Button)(({ theme, color }) => ({
     color === "primary"
       ? "#0063cc"
       : color === "secondary"
-      ? "#dc3545"
-      : color === "success"
-      ? "#28a745"
-      : color === "celeste"
-      ? "#00bfff"
-      : "#0063cc", // Add celeste color
+        ? "#dc3545"
+        : color === "success"
+          ? "#28a745"
+          : color === "celeste"
+            ? "#00bfff"
+            : "#0063cc", // Add celeste color
   borderColor:
     color === "primary"
       ? "#0063cc"
       : color === "secondary"
-      ? "#dc3545"
-      : color === "success"
-      ? "#28a745"
-      : color === "celeste"
-      ? "#00bfff"
-      : "#0063cc",
+        ? "#dc3545"
+        : color === "success"
+          ? "#28a745"
+          : color === "celeste"
+            ? "#00bfff"
+            : "#0063cc",
   color: "#ffffff",
   fontFamily: [
     "-apple-system",
@@ -113,22 +125,22 @@ const BootstrapButton = styled(Button)(({ theme, color }) => ({
       color === "primary"
         ? "#0069d9"
         : color === "secondary"
-        ? "#c82333"
-        : color === "success"
-        ? "#218838"
-        : color === "celeste"
-        ? "#00a3cc"
-        : "#0069d9", // Add hover color for celeste
+          ? "#c82333"
+          : color === "success"
+            ? "#218838"
+            : color === "celeste"
+              ? "#00a3cc"
+              : "#0069d9", // Add hover color for celeste
     borderColor:
       color === "primary"
         ? "#0062cc"
         : color === "secondary"
-        ? "#bd2130"
-        : color === "success"
-        ? "#1e7e34"
-        : color === "celeste"
-        ? "#00a3cc"
-        : "#0062cc",
+          ? "#bd2130"
+          : color === "success"
+            ? "#1e7e34"
+            : color === "celeste"
+              ? "#00a3cc"
+              : "#0062cc",
   },
   "&:active": {
     boxShadow: "none",
@@ -136,35 +148,34 @@ const BootstrapButton = styled(Button)(({ theme, color }) => ({
       color === "primary"
         ? "#0062cc"
         : color === "secondary"
-        ? "#bd2130"
-        : color === "success"
-        ? "#1e7e34"
-        : color === "celeste"
-        ? "#0099cc"
-        : "#0062cc", // Add active color for celeste
+          ? "#bd2130"
+          : color === "success"
+            ? "#1e7e34"
+            : color === "celeste"
+              ? "#0099cc"
+              : "#0062cc", // Add active color for celeste
     borderColor:
       color === "primary"
         ? "#005cbf"
         : color === "secondary"
-        ? "#b21f2d"
-        : color === "success"
-        ? "#1c7e30"
-        : color === "celeste"
-        ? "#0099cc"
-        : "#005cbf",
+          ? "#b21f2d"
+          : color === "success"
+            ? "#1c7e30"
+            : color === "celeste"
+              ? "#0099cc"
+              : "#005cbf",
   },
   "&:focus": {
-    boxShadow: `0 0 0 0.2rem ${
-      color === "primary"
-        ? "rgba(0,123,255,.5)"
-        : color === "secondary"
+    boxShadow: `0 0 0 0.2rem ${color === "primary"
+      ? "rgba(0,123,255,.5)"
+      : color === "secondary"
         ? "rgba(220,53,69,.5)"
         : color === "success"
-        ? "rgba(40,167,69,.5)"
-        : color === "celeste"
-        ? "rgba(0,191,255,.5)"
-        : "rgba(0,123,255,.5)"
-    }`,
+          ? "rgba(40,167,69,.5)"
+          : color === "celeste"
+            ? "rgba(0,191,255,.5)"
+            : "rgba(0,123,255,.5)"
+      }`,
   },
 }));
 
@@ -211,47 +222,46 @@ const StyledDialogButton = styled(Button)(({ theme, color }) => ({
     color === "primary"
       ? "#0063cc"
       : color === "secondary"
-      ? "#dc3545"
-      : color === "success"
-      ? "#28a745"
-      : "#0063cc",
+        ? "#dc3545"
+        : color === "success"
+          ? "#28a745"
+          : "#0063cc",
   borderColor:
     color === "primary"
       ? "#0063cc"
       : color === "secondary"
-      ? "#dc3545"
-      : color === "success"
-      ? "#28a745"
-      : "#0063cc",
+        ? "#dc3545"
+        : color === "success"
+          ? "#28a745"
+          : "#0063cc",
   color: "#ffffff",
   "&:hover": {
     backgroundColor:
       color === "primary"
         ? "#0069d9"
         : color === "secondary"
-        ? "#c82333"
-        : color === "success"
-        ? "#218838"
-        : "#0069d9",
+          ? "#c82333"
+          : color === "success"
+            ? "#218838"
+            : "#0069d9",
     borderColor:
       color === "primary"
         ? "#0062cc"
         : color === "secondary"
-        ? "#bd2130"
-        : color === "success"
-        ? "#1e7e34"
-        : "#0062cc",
+          ? "#bd2130"
+          : color === "success"
+            ? "#1e7e34"
+            : "#0062cc",
   },
   "&:focus": {
-    boxShadow: `0 0 0 0.2rem ${
-      color === "primary"
-        ? "rgba(0,123,255,.5)"
-        : color === "secondary"
+    boxShadow: `0 0 0 0.2rem ${color === "primary"
+      ? "rgba(0,123,255,.5)"
+      : color === "secondary"
         ? "rgba(220,53,69,.5)"
         : color === "success"
-        ? "rgba(40,167,69,.5)"
-        : "rgba(0,123,255,.5)"
-    }`,
+          ? "rgba(40,167,69,.5)"
+          : "rgba(0,123,255,.5)"
+      }`,
   },
 }));
 
@@ -318,10 +328,291 @@ const Expedientes = () => {
     useState(null);
   const [originalNumeroDocumento, setOriginalNumeroDocumento] = useState("");
   const [originalIdTipoDocumento, setOriginalIdTipoDocumento] = useState("");
+  // Primero, agrega un nuevo estado para el filtro de documentos
+  const [documentosFilter, setDocumentosFilter] = useState('');
+
+
+  // Añade este estado junto con tus otros estados
+  const [filteredDocumentosList, setFilteredDocumentosList] = useState([]);
+
+  // Añade este useEffect para inicializar y actualizar filteredDocumentosList cuando documentosList o documentosFilter cambien
+  useEffect(() => {
+    if (!documentosList) {
+      setFilteredDocumentosList([]);
+      return;
+    }
+
+    const searchTerm = documentosFilter.toLowerCase();
+    if (searchTerm.trim() === '') {
+      setFilteredDocumentosList(documentosList);
+    } else {
+      const filtered = documentosList.filter(documento =>
+        (documento.TipoDocumento?.nombre || '').toLowerCase().includes(searchTerm) ||
+        (documento.numero_documento || '').toLowerCase().includes(searchTerm) ||
+        (documento.asunto || '').toLowerCase().includes(searchTerm) ||
+        (documento.estado || '').toLowerCase().includes(searchTerm)
+      );
+      setFilteredDocumentosList(filtered);
+    }
+  }, [documentosList, documentosFilter]);
+
+
+
+  const [openAsignarDialog, setOpenAsignarDialog] = useState(false);
+  const [currentDocumentoForAsignar, setCurrentDocumentoForAsignar] = useState(null);
+  const [areas, setAreas] = useState([]);
+  const [usuarios, setUsuarios] = useState([]);
+  const [selectedArea, setSelectedArea] = useState('');
+  const [plazoRespuesta, setPlazoRespuesta] = useState(3); // Default 3 días
+  const [observacion, setObservacion] = useState('');
+  const [isLoadingUsuarios, setIsLoadingUsuarios] = useState(false);
+
+  const [selectedUsuarios, setSelectedUsuarios] = useState([]);
+
+
+  // Agregar estas funciones para manejar la asignación
+  const handleOpenAsignarDialog = (documento) => {
+    setCurrentDocumentoForAsignar(documento);
+    setSelectedArea('');
+    setSelectedUsuarios([]);
+    setPlazoRespuesta(3);
+    setObservacion('');
+    setOpenAsignarDialog(true);
+    fetchAreas();
+    fetchAllUsers();
+  };
+
+  const handleCloseAsignarDialog = () => {
+    setOpenAsignarDialog(false);
+    setCurrentDocumentoForAsignar(null);
+    setSelectedArea('');
+    setSelectedUsuarios([]);
+    setPlazoRespuesta(3);
+    setObservacion('');
+  };
+
+  const fetchAreas = async () => {
+    try {
+      const response = await getAreas();
+      if (response.data && response.data.areas) {
+        setAreas(response.data.areas);
+      }
+    } catch (error) {
+      console.error('Error fetching areas:', error);
+      showSweetAlert({
+        icon: 'error',
+        title: 'Error',
+        text: 'No se pudieron cargar las áreas',
+        timer: 3000,
+        timerProgressBar: true,
+        showConfirmButton: false
+      });
+    }
+  };
+
+  const handleAreaChange = async (e) => {
+    const areaId = e.target.value;
+    setSelectedArea(areaId);
+    setSelectedUsuarios([]);
+    setIsLoadingUsuarios(true);
+    try {
+      if (!areaId) {
+        // Si no hay área seleccionada, cargar todos los usuarios
+        await fetchAllUsers();
+      } else {
+        // Si hay área seleccionada, filtrar usuarios por área
+        const response = await getUsersByAreaId(areaId);
+        if (response.data && response.data.usuarios) {
+          setUsuarios(response.data.usuarios);
+        } else if (Array.isArray(response.data)) {
+          setUsuarios(response.data);
+        } else {
+          console.error('Formato de respuesta inesperado:', response.data);
+          showSweetAlert({
+            icon: 'error',
+            title: 'Error',
+            text: 'Error al filtrar usuarios por área',
+            timer: 3000,
+            timerProgressBar: true,
+            showConfirmButton: false
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching users by area:', error);
+      showSweetAlert({
+        icon: 'error',
+        title: 'Error',
+        text: 'No se pudieron cargar los usuarios para el área seleccionada',
+        timer: 3000,
+        timerProgressBar: true,
+        showConfirmButton: false
+      });
+      // En caso de error, intentar cargar todos los usuarios
+      await fetchAllUsers();
+    } finally {
+      setIsLoadingUsuarios(false);
+    }
+  };
+
+  const fetchAllUsers = async () => {
+    setIsLoadingUsuarios(true);
+    try {
+      const response = await getUsersForSelect();
+      if (response.data) {
+        setUsuarios(response.data);
+      } else {
+        console.error('Formato de respuesta inesperado:', response.data);
+        showSweetAlert({
+          icon: 'error',
+          title: 'Error',
+          text: 'Error al cargar los usuarios',
+          timer: 3000,
+          timerProgressBar: true,
+          showConfirmButton: false
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching all users:', error);
+      showSweetAlert({
+        icon: 'error',
+        title: 'Error',
+        text: 'No se pudieron cargar los usuarios',
+        timer: 3000,
+        timerProgressBar: true,
+        showConfirmButton: false
+      });
+    } finally {
+      setIsLoadingUsuarios(false);
+    }
+  };
+
+  const handleSubmitAsignar = async (e) => {
+    e.preventDefault();
+
+    if (!selectedUsuarios || (Array.isArray(selectedUsuarios) && selectedUsuarios.length === 0)) {
+      showSweetAlert({
+        icon: 'warning',
+        title: 'Advertencia',
+        text: 'Debe seleccionar al menos un usuario para asignar el documento',
+        timer: 3000,
+        timerProgressBar: true,
+        showConfirmButton: false
+      });
+      return;
+    }
+
+    try {
+      // Mostrar indicador de carga
+      showSweetAlert({
+        title: 'Procesando asignación...',
+        text: 'Por favor espere',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      let success = true;
+
+      // Si selectedUsuarios es un array, crear múltiples asignaciones
+      if (Array.isArray(selectedUsuarios)) {
+        // Crear asignaciones para cada usuario seleccionado
+        for (const userId of selectedUsuarios) {
+          const asignacionData = {
+            id_documento: currentDocumentoForAsignar.id,
+            id_asignado: userId,
+            plazo_respuesta: plazoRespuesta,
+            observaciones: observacion.trim()
+          };
+
+          try {
+            await createAsignacion(asignacionData);
+          } catch (error) {
+            console.error(`Error asignando documento al usuario ${userId}:`, error);
+            success = false;
+          }
+        }
+      } else {
+        // Si no es un array, tratar como un solo ID (compatibilidad con versión anterior)
+        const asignacionData = {
+          id_documento: currentDocumentoForAsignar.id,
+          id_asignado: selectedUsuarios,
+          plazo_respuesta: plazoRespuesta,
+          observaciones: observacion.trim()
+        };
+
+        await createAsignacion(asignacionData);
+      }
+
+      if (success) {
+        // Actualizar el estado del documento a "ASIGNADO"
+        const docResponse = await updateDocumentoEstado(currentDocumentoForAsignar.id, 'ASIGNADO');
+
+        if (docResponse.status === 200) {
+          // Actualizar la lista de documentos
+          const updatedDocumentosList = documentosList.map(doc => {
+            if (doc.id === currentDocumentoForAsignar.id) {
+              return { ...doc, estado: 'ASIGNADO' };
+            }
+            return doc;
+          });
+
+          setDocumentosList(updatedDocumentosList);
+
+          Swal.close(); // Cerrar el indicador de carga
+
+          showSweetAlert({
+            icon: 'success',
+            title: 'Éxito',
+            text: 'Documento asignado correctamente',
+            timer: 2500,
+            timerProgressBar: true,
+            showConfirmButton: false
+          });
+
+          handleCloseAsignarDialog();
+        }
+      } else {
+        throw new Error('Hubo errores al asignar el documento a algunos usuarios');
+      }
+    } catch (error) {
+      console.error('Error asignando documento:', error);
+      Swal.close(); // Cerrar el indicador de carga en caso de error
+
+      showSweetAlert({
+        icon: 'error',
+        title: 'Error',
+        text: 'No se pudo asignar el documento. Por favor, intente nuevamente.',
+        timer: 3000,
+        timerProgressBar: true,
+        showConfirmButton: false
+      });
+    }
+  };
+
+  // Función para manejar cambios en el filtro
+  const handleDocumentosFilterChange = (e) => {
+    const filterValue = e.target.value.toLowerCase();
+    setDocumentosFilter(filterValue);
+
+    if (!documentosList) return;
+
+    if (filterValue.trim() === '') {
+      setFilteredDocumentosList(documentosList);
+    } else {
+      const filtered = documentosList.filter(doc =>
+        (doc.numero_documento && doc.numero_documento.toLowerCase().includes(filterValue)) ||
+        (doc.asunto && doc.asunto.toLowerCase().includes(filterValue)) ||
+        (doc.TipoDocumento && doc.TipoDocumento.nombre && doc.TipoDocumento.nombre.toLowerCase().includes(filterValue))
+      );
+      setFilteredDocumentosList(filtered);
+    }
+  };
   const [originalDocumento, setOriginalDocumento] = useState("");
 
   const [isEditingDocumento, setIsEditingDocumento] = useState(false);
-  
+
   const handleEditDocumento = async (documentoId) => {
     try {
       setIsLoadingDocumentos(true);
@@ -818,6 +1109,10 @@ const Expedientes = () => {
     setPagination((prev) => ({ ...prev, pageIndex: 0 }));
   };
 
+  const handleChipClick = (documento) => {
+    console.log(documento);
+  };
+
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
 
@@ -1161,10 +1456,10 @@ const Expedientes = () => {
       }
 
       if (response.status === 200 || response.status === 201) {
-      
+
         handleCloseDocumentoDialog();
-        
-         if (openDocumentosListDialog && currentExpedienteForList) {
+
+        if (openDocumentosListDialog && currentExpedienteForList) {
           handleOpenDocumentosList(currentExpedienteForList);
         }
         showSweetAlert({
@@ -1175,35 +1470,35 @@ const Expedientes = () => {
           timerProgressBar: true,
           showConfirmButton: false
         });
-      
-      // const documento = {
-      //   ...currentDocumento,
-      //   id_tipo_documento:
-      //     typeof currentDocumento.id_tipo_documento === "object"
-      //       ? currentDocumento.id_tipo_documento.id
-      //       : currentDocumento.id_tipo_documento,
-      //   fecha_documento:
-      //     (currentDocumento.fecha_documento
-      //       ? parseISOToLimaDate(currentDocumento.fecha_documento)
-      //       : "") || null,
-      //   id_usuario_creador,
-      //   estado: "PENDIENTE",
-      // };
 
-      // await createDocumento(documento);
-      // handleCloseDocumentoDialog();
-      // showSweetAlert({
-      //   icon: "success",
-      //   title: "Éxito",
-      //   text: "Documento agregado correctamente",
-      //   timer: 2500,
-      //   timerProgressBar: true,
-      //   showConfirmButton: false,
-      // });
+        // const documento = {
+        //   ...currentDocumento,
+        //   id_tipo_documento:
+        //     typeof currentDocumento.id_tipo_documento === "object"
+        //       ? currentDocumento.id_tipo_documento.id
+        //       : currentDocumento.id_tipo_documento,
+        //   fecha_documento:
+        //     (currentDocumento.fecha_documento
+        //       ? parseISOToLimaDate(currentDocumento.fecha_documento)
+        //       : "") || null,
+        //   id_usuario_creador,
+        //   estado: "PENDIENTE",
+        // };
 
-      // // Optionally refresh the expediente data if needed
-      // fetchPaginatedExpedientes(filters, pagination);
-      } 
+        // await createDocumento(documento);
+        // handleCloseDocumentoDialog();
+        // showSweetAlert({
+        //   icon: "success",
+        //   title: "Éxito",
+        //   text: "Documento agregado correctamente",
+        //   timer: 2500,
+        //   timerProgressBar: true,
+        //   showConfirmButton: false,
+        // });
+
+        // // Optionally refresh the expediente data if needed
+        // fetchPaginatedExpedientes(filters, pagination);
+      }
     } catch (error) {
       console.error("Error submitting documento:", error);
       showSweetAlert({
@@ -1414,11 +1709,11 @@ const Expedientes = () => {
                   <StyledTableRow
                     key={expediente.id}
                     tabIndex={0}
-                    // onKeyDown={(e) => {
-                    //   if (e.key === 'Enter') {
-                    //     handleEdit(expediente);
-                    //   }
-                    // }}
+                  // onKeyDown={(e) => {
+                  //   if (e.key === 'Enter') {
+                  //     handleEdit(expediente);
+                  //   }
+                  // }}
                   >
                     <TableCell>
                       {pagination.pageIndex * pagination.pageSize + index + 1}
@@ -1427,9 +1722,8 @@ const Expedientes = () => {
                     <TableCell>{expediente.asunto || ""}</TableCell>
                     <TableCell>{expediente.remitente || ""}</TableCell>
                     <TableCell>
-                      {`${expediente.TipoDocumento?.nombre || ""} ${
-                        expediente.numero_documento || ""
-                      }`.trim()}
+                      {`${expediente.TipoDocumento?.nombre || ""} ${expediente.numero_documento || ""
+                        }`.trim()}
                     </TableCell>
                     <TableCell align="right">
                       <Tooltip title="Listar Documentos">
@@ -1689,7 +1983,7 @@ const Expedientes = () => {
           maxWidth="md">
           <form onSubmit={handleSubmitDocumento}>
             <DialogTitle id="dialog-documento-title">
-              {isEditingDocumento 
+              {isEditingDocumento
                 ? `Editar Documento para Expediente ${currentExpedienteForDocumento?.cut || ""}`
                 : `Agregar Documento para Expediente ${currentExpedienteForDocumento?.cut || ""}`}
             </DialogTitle>
@@ -1804,16 +2098,38 @@ const Expedientes = () => {
               justifyContent: "space-between",
               alignItems: "center",
             }}>
-            <div>
-              {currentExpedienteForList
-                ? `Documentos del Expediente: ${currentExpedienteForList.cut}`
-                : "Documentos del Expediente"}
-            </div>
-            <Typography variant="subtitle2" color="text.secondary">
-              {documentosList.length} documento(s) encontrado(s)
-            </Typography>
+            {/* Reemplazar la estructura anidada con un Box o div para evitar la anidación de encabezados */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+              <div>
+                {currentExpedienteForList
+                  ? `Documentos del Expediente: ${currentExpedienteForList.cut}`
+                  : "Documentos del Expediente"}
+              </div>
+              <Box component="span" sx={{ typography: 'subtitle2', color: 'text.secondary' }}>
+                {filteredDocumentosList.length} documento(s) encontrado(s)
+              </Box>
+            </Box>
           </DialogTitle>
           <DialogContent dividers>
+            {/* Agregar campo de búsqueda */}
+            <Box sx={{ mb: 2 }}>
+              <TextField
+                fullWidth
+                size="small"
+                variant="outlined"
+                placeholder="Buscar documentos..."
+                value={documentosFilter}
+                onChange={handleDocumentosFilterChange}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Box>
+
             {isLoadingDocumentos ? (
               <div
                 style={{
@@ -1823,7 +2139,7 @@ const Expedientes = () => {
                 }}>
                 <CircularProgress />
               </div>
-            ) : documentosList.length > 0 ? (
+            ) : filteredDocumentosList.length > 0 ? (
               <TableContainer component={Paper} sx={{ maxHeight: 440 }}>
                 <Table size="small" stickyHeader>
                   <TableHead>
@@ -1838,7 +2154,7 @@ const Expedientes = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {documentosList.map((documento, index) => (
+                    {filteredDocumentosList.map((documento, index) => (
                       <StyledTableRow key={documento.id}>
                         <TableCell>{index + 1}</TableCell>
                         <TableCell>
@@ -1863,28 +2179,49 @@ const Expedientes = () => {
                               documento.estado === "PENDIENTE"
                                 ? "warning"
                                 : documento.estado === "ASIGNADO"
-                                ? "info"
-                                : documento.estado === "EN_REVISION"
-                                ? "primary"
-                                : documento.estado === "CERRADO"
-                                ? "success"
-                                : documento.estado === "ANULADO"
-                                ? "error"
-                                : documento.estado === "ARCHIVADO"
-                                ? "secondary"
-                                : "default"
+                                  ? "info"
+                                  : documento.estado === "EN_REVISION"
+                                    ? "primary"
+                                    : documento.estado === "CERRADO"
+                                      ? "success"
+                                      : documento.estado === "ANULADO"
+                                        ? "error"
+                                        : documento.estado === "ARCHIVADO"
+                                          ? "secondary"
+                                          : "default"
                             }
+                            onClick={() => handleChipClick(documento)}
+                            clickable={true}
                           />
                         </TableCell>
                         <TableCell>
-                           <Button 
-                            size="small" 
+                          <Button
+                            size="small"
                             color="primary"
                             onClick={() => handleEditDocumento(documento.id)}
+                            startIcon={<EditIcon />}
+                            disabled={documento.estado !== 'PENDIENTE'}
+                            variant="outlined"
+                            style={{
+                              marginRight: '8px',
+                              minWidth: '100px',
+                              padding: '4px 8px'
+                            }}
                           >
                             Editar
                           </Button>
-                          <Button size="small" color="secondary">
+                          <Button
+                            size="small"
+                            color="secondary"
+                            onClick={() => handleOpenAsignarDialog(documento)}
+                            startIcon={<AssignmentIndIcon />}
+                            disabled={documento.estado !== 'PENDIENTE'}
+                            variant="outlined"
+                            style={{
+                              minWidth: '100px',
+                              padding: '4px 8px'
+                            }}
+                          >
                             Asignar
                           </Button>
                         </TableCell>
@@ -1905,10 +2242,14 @@ const Expedientes = () => {
                   sx={{ fontSize: 60, color: "text.disabled", mb: 2 }}
                 />
                 <Typography variant="h6" color="text.secondary">
-                  No hay documentos asociados
+                  {documentosList.length > 0
+                    ? "No se encontraron documentos con el filtro aplicado"
+                    : "No hay documentos asociados"}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Este expediente no tiene documentos registrados.
+                  {documentosList.length > 0
+                    ? "Intente con otros términos de búsqueda."
+                    : "Este expediente no tiene documentos registrados."}
                 </Typography>
               </Box>
             )}
@@ -1929,6 +2270,131 @@ const Expedientes = () => {
               startIcon={<AddIcon />}>
               Agregar Documento
             </Button>
+          </DialogActions>
+        </Dialog>
+        {/* Diálogo para asignar documento */}
+        <Dialog
+          open={openAsignarDialog}
+          onClose={handleCloseAsignarDialog}
+          aria-labelledby="asignar-dialog-title"
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle id="asignar-dialog-title">
+            Asignar Documento
+          </DialogTitle>
+          <DialogContent>
+            {currentDocumentoForAsignar && (
+              <div style={{ marginBottom: '16px' }}>
+                <Typography variant="subtitle1" gutterBottom>
+                  <strong>Documento:</strong> {currentDocumentoForAsignar.numero_documento}
+                </Typography>
+                <Typography variant="subtitle2" gutterBottom>
+                  <strong>Tipo:</strong> {currentDocumentoForAsignar.TipoDocumento?.nombre || 'No especificado'}
+                </Typography>
+                <Typography variant="body2" gutterBottom>
+                  <strong>Asunto:</strong> {currentDocumentoForAsignar.asunto || 'No especificado'}
+                </Typography>
+              </div>
+            )}
+
+            <FormControl fullWidth margin="dense">
+              <InputLabel id="area-select-label">Área</InputLabel>
+              <Select
+                labelId="area-select-label"
+                id="area-select"
+                value={selectedArea}
+                onChange={handleAreaChange}
+                label="Área"
+              >
+                <MenuItem value="">
+                  <em>Todas las áreas</em>
+                </MenuItem>
+                {areas.map((area) => (
+                  <MenuItem key={area.id} value={area.id}>
+                    {area.nombre}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl fullWidth margin="dense">
+              <InputLabel id="usuario-select-label">Usuario</InputLabel>
+              <Select
+                labelId="usuario-select-label"
+                id="usuario-select"
+                multiple
+                value={selectedUsuarios}
+                onChange={(e) => setSelectedUsuarios(e.target.value)}
+                label="Usuarios"
+                disabled={isLoadingUsuarios}
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.map((value) => {
+                      const usuario = usuarios.find(u => u.id === value);
+                      return (
+                        <Chip
+                          key={value}
+                          label={`${usuario?.nombre || ''} ${usuario?.apellido || ''}`}
+                          size="small"
+                        />
+                      );
+                    })}
+                  </Box>
+                )}
+              >
+                <MenuItem value="">
+                  <em>Seleccione usuarios</em>
+                </MenuItem>
+                {usuarios.map((usuario) => (
+                  <MenuItem key={usuario.id} value={usuario.id}>
+                    {usuario.nombre} {usuario.apellido} - {usuario.cargo || 'Sin cargo'}
+                  </MenuItem>
+                ))}
+              </Select>
+              {isLoadingUsuarios && (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '8px' }}>
+                  <CircularProgress size={24} />
+                </div>
+              )}
+            </FormControl>
+
+            <FormControl fullWidth margin="dense">
+              <InputLabel id="plazo-select-label">Plazo de respuesta (días)</InputLabel>
+              <Select
+                labelId="plazo-select-label"
+                id="plazo-select"
+                value={plazoRespuesta}
+                onChange={(e) => setPlazoRespuesta(e.target.value)}
+                label="Plazo de respuesta (días)"
+              >
+                {[1, 2, 3, 5, 7, 10, 15, 30].map((dias) => (
+                  <MenuItem key={dias} value={dias}>
+                    {dias} {dias === 1 ? 'día' : 'días'}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <TextField
+              margin="dense"
+              id="observacion"
+              label="Observaciones"
+              type="text"
+              fullWidth
+              multiline
+              rows={3}
+              value={observacion}
+              onChange={(e) => setObservacion(e.target.value)}
+            />
+          </DialogContent>
+          <DialogActions>
+            <StyledDialogButton onClick={handleCloseAsignarDialog} color="secondary">
+              Cancelar
+            </StyledDialogButton>
+            <StyledDialogButton onClick={handleSubmitAsignar} color="primary">
+              Asignar
+            </StyledDialogButton>
           </DialogActions>
         </Dialog>
       </div>

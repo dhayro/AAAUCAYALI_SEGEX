@@ -1,9 +1,9 @@
 import React from 'react';
 import { Drawer, List, ListItem, ListItemIcon, ListItemText, Box } from '@mui/material';
-import { 
-  Dashboard as DashboardIcon, 
-  Description as DocumentIcon, 
-  Folder as ExpedienteIcon, 
+import {
+  Dashboard as DashboardIcon,
+  Description as DocumentIcon,
+  Folder as ExpedienteIcon,
   Work as CargoIcon,
   AccountTree as AreaIcon,
   People as UserIcon,
@@ -63,8 +63,8 @@ const Sidebar = ({ mobileOpen, handleDrawerToggle, drawerWidth }) => {
         }}
         sx={{
           display: { xs: 'block', sm: 'none' },
-          '& .MuiDrawer-paper': { 
-            boxSizing: 'border-box', 
+          '& .MuiDrawer-paper': {
+            boxSizing: 'border-box',
             width: drawerWidth,
             top: '64px', // Altura del AppBar
             height: 'calc(100% - 64px)' // Resta la altura del AppBar
@@ -77,8 +77,8 @@ const Sidebar = ({ mobileOpen, handleDrawerToggle, drawerWidth }) => {
         variant="permanent"
         sx={{
           display: { xs: 'none', sm: 'block' },
-          '& .MuiDrawer-paper': { 
-            boxSizing: 'border-box', 
+          '& .MuiDrawer-paper': {
+            boxSizing: 'border-box',
             width: drawerWidth,
             top: '64px', // Altura del AppBar
             height: 'calc(100% - 64px)' // Resta la altura del AppBar

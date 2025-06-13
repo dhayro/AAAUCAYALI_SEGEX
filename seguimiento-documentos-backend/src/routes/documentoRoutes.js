@@ -67,56 +67,6 @@ const { authenticateToken } = require('../middleware/auth');
 
 router.use(authenticateToken);
 
-/**
- * @swagger
- * /api/documentos:
- *   get:
- *     summary: Obtener todos los documentos
- *     tags: [Documentos]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Lista de documentos obtenida exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Documento'
- *       401:
- *         description: No autorizado
- */
-router.get('/', documentoController.getAllDocumentos);
-
-/**
- * @swagger
- * /api/documentos/{id}:
- *   get:
- *     summary: Obtener un documento por ID
- *     tags: [Documentos]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: ID del documento
- *     responses:
- *       200:
- *         description: Documento obtenido exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Documento'
- *       401:
- *         description: No autorizado
- *       404:
- *         description: Documento no encontrado
- */
-router.get('/:id', documentoController.getDocumentoById);
 
 /**
  * @swagger
@@ -240,5 +190,109 @@ router.delete('/:id', documentoController.deleteDocumento);
  *         description: Error del servidor
  */
 router.get('/expediente/:expedienteId', documentoController.getDocumentosByExpedienteId);
+
+/**
+ * @swagger
+ * /api/documentos/{id}/estado:
+ *   patch:
+ *     summary: Actualizar el estado de un documento
+ *     tags: [Documentos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del documento a actualizar
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               estado:
+ *                 type: string
+ *                 description: Nuevo estado del documento
+ *                 example: "asignado"
+ *     responses:
+ *       200:
+ *         description: Estado del documento actualizado exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 documento:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     estado:
+ *                       type: string
+ *       400:
+ *         description: Datos inválidos en la solicitud
+ *       401:
+ *         description: No autorizado
+ *       404:
+ *         description: Documento no encontrado
+ */
+router.patch('/:id/estado', authenticateToken, documentoController.actualizarEstadoDocumento);
+
+
+/**
+ * @swagger
+ * /api/documentos:
+ *   get:
+ *     summary: Obtener todos los documentos
+ *     tags: [Documentos]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de documentos obtenida exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Documento'
+ *       401:
+ *         description: No autorizado
+ */
+router.get('/', documentoController.getAllDocumentos);
+
+/**
+ * @swagger
+ * /api/documentos/{id}:
+ *   get:
+ *     summary: Obtener un documento por ID
+ *     tags: [Documentos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del documento
+ *     responses:
+ *       200:
+ *         description: Documento obtenido exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Documento'
+ *       401:
+ *         description: No autorizado
+ *       404:
+ *         description: Documento no encontrado
+ */
+router.get('/:id', documentoController.getDocumentoById);
 
 module.exports = router;

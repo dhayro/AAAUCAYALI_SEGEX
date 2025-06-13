@@ -136,59 +136,7 @@ router.post('/login', usuarioController.loginUsuario);
 // Rutas protegidas
 router.use(authenticateToken);
 
-/**
- * @swagger
- * /api/usuarios:
- *   get:
- *     summary: Obtener todos los usuarios (solo admin)
- *     tags: [Usuarios]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Lista de usuarios obtenida exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Usuario'
- *       401:
- *         description: No autorizado
- *       403:
- *         description: Acceso prohibido
- */
-router.get('/', isAdmin, usuarioController.obtenerTodosLosUsuarios);
 
-/**
- * @swagger
- * /api/usuarios/{id}:
- *   get:
- *     summary: Obtener usuario por ID (admin y jefes)
- *     tags: [Usuarios]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Usuario obtenido exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Usuario'
- *       401:
- *         description: No autorizado
- *       403:
- *         description: Acceso prohibido
- *       404:
- *         description: Usuario no encontrado
- */
-router.get('/:id', isJefeOrAdmin, usuarioController.obtenerUsuarioPorId);
 
 /**
  * @swagger
@@ -453,5 +401,136 @@ router.patch('/:id/actualizar-contrasena', authenticateToken, usuarioController.
  *         description: Error del servidor
  */
 router.get('/verificar/:usuario/:email', usuarioController.verificarUsuarioExistente);
+
+/**
+ * @swagger
+ * /api/usuarios/select:
+ *   get:
+ *     summary: Obtener usuarios formateados para un select
+ *     tags: [Usuarios]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de usuarios formateada para select
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   nombre:
+ *                     type: string
+ *                   usuario:
+ *                     type: string
+ *                   perfil:
+ *                     type: string
+ *       401:
+ *         description: No autorizado
+ *       500:
+ *         description: Error del servidor
+ */
+router.get('/select', authenticateToken, usuarioController.obtenerUsuariosParaSelect);
+
+/**
+ * @swagger
+ * /api/usuarios/area/{areaId}:
+ *   get:
+ *     summary: Obtener usuarios por área
+ *     tags: [Usuarios]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: areaId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del área
+ *     responses:
+ *       200:
+ *         description: Lista de usuarios del área obtenida exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   nombre:
+ *                     type: string
+ *                   usuario:
+ *                     type: string
+ *                   perfil:
+ *                     type: string
+ *                   email:
+ *                     type: string
+ *                   cargo:
+ *                     type: string
+ *       401:
+ *         description: No autorizado
+ *       404:
+ *         description: Área no encontrada
+ */
+router.get('/area/:areaId', authenticateToken, usuarioController.obtenerUsuariosPorArea);
+
+/**
+ * @swagger
+ * /api/usuarios:
+ *   get:
+ *     summary: Obtener todos los usuarios (solo admin)
+ *     tags: [Usuarios]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de usuarios obtenida exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Usuario'
+ *       401:
+ *         description: No autorizado
+ *       403:
+ *         description: Acceso prohibido
+ */
+router.get('/', isAdmin, usuarioController.obtenerTodosLosUsuarios);
+
+/**
+ * @swagger
+ * /api/usuarios/{id}:
+ *   get:
+ *     summary: Obtener usuario por ID (admin y jefes)
+ *     tags: [Usuarios]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Usuario obtenido exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Usuario'
+ *       401:
+ *         description: No autorizado
+ *       403:
+ *         description: Acceso prohibido
+ *       404:
+ *         description: Usuario no encontrado
+ */
+router.get('/:id', isJefeOrAdmin, usuarioController.obtenerUsuarioPorId);
 
 module.exports = router;

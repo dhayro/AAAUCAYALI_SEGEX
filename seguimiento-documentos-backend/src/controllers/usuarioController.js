@@ -295,3 +295,75 @@ exports.verificarUsuarioExistente = async (req, res) => {
     res.status(500).json({ mensaje: error.message });
   }
 };
+
+exports.obtenerUsuariosParaSelect = async (req, res) => {
+  try {
+    // Obtener solo los campos necesarios para un select
+    const usuarios = await Usuario.findAll({
+      attributes: ['id', 'nombre', 'apellido', 'usuario', 'perfil'],
+      include: [
+        {
+          model: Cargo,
+          attributes: ['id', 'nombre']
+        }
+      ],
+      where: { estado: true }, // Solo usuarios activos
+      order: [['nombre', 'ASC']]
+    });
+
+    // Formatear los datos para un select (id y nombre completo)
+    const usuariosFormateados = usuarios.map(usuario => ({
+      id: usuario.id,
+      nombre: `${usuario.nombre} ${usuario.apellido}`,
+      usuario: usuario.usuario,
+      perfil: usuario.perfil,
+      cargo: usuario.Cargo ? usuario.Cargo.nombre : null
+    }));
+
+    res.json(usuariosFormateados);
+  } catch (error) {
+    res.status(500).json({ mensaje: error.message });
+  }
+};
+
+exports.obtenerUsuariosPorArea = async (req, res) => {
+  try {
+    const { areaId } = req.params;
+    
+    // Verificar si el área existe
+    const area = await Area.findByPk(areaId);
+    if (!area) {
+      return res.status(404).json({ mensaje: 'Área no encontrada' });
+    }
+
+    // Obtener usuarios del área específica
+    const usuarios = await Usuario.findAll({
+      where: { 
+        id_area: areaId,
+        estado: true // Solo usuarios activos
+      },
+      attributes: ['id', 'nombre', 'apellido', 'usuario', 'perfil', 'email'],
+      include: [
+        {
+          model: Cargo,
+          attributes: ['id', 'nombre']
+        }
+      ],
+      order: [['nombre', 'ASC']]
+    });
+
+    // Formatear los datos para un select
+    const usuariosFormateados = usuarios.map(usuario => ({
+      id: usuario.id,
+      nombre: `${usuario.nombre} ${usuario.apellido}`,
+      usuario: usuario.usuario,
+      perfil: usuario.perfil,
+      email: usuario.email,
+      cargo: usuario.Cargo ? usuario.Cargo.nombre : null
+    }));
+
+    res.json(usuariosFormateados);
+  } catch (error) {
+    res.status(500).json({ mensaje: error.message });
+  }
+};

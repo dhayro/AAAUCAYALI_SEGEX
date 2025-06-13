@@ -146,3 +146,42 @@ exports.getDocumentosByExpedienteId = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+exports.actualizarEstadoDocumento = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { estado } = req.body;
+    
+    // Validar que se proporcione un estado
+    if (estado === undefined) {
+      return res.status(400).json({ message: 'Se requiere proporcionar un estado' });
+    }
+    
+    // Buscar el documento
+    const documento = await Documento.findByPk(id);
+    if (!documento) {
+      return res.status(404).json({ message: 'Documento no encontrado' });
+    }
+    
+    // Actualizar el estado del documento
+    documento.estado = estado;
+    
+    // Registrar el usuario que modificó el documento
+    if (req.user && req.user.id) {
+      documento.id_usuario_modificador = req.user.id;
+    }
+    
+    // Guardar los cambios
+    await documento.save();
+    
+    res.json({ 
+      message: 'Estado del documento actualizado exitosamente',
+      documento: {
+        id: documento.id,
+        estado: documento.estado
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
