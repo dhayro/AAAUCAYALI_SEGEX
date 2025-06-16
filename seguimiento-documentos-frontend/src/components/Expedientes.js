@@ -2186,7 +2186,7 @@ const Expedientes = () => {
                                       ? "success"
                                       : documento.estado === "ANULADO"
                                         ? "error"
-                                        : documento.estado === "ARCHIVADO"
+                                        : documento.estado === "RESPUESTA"
                                           ? "secondary"
                                           : "default"
                             }

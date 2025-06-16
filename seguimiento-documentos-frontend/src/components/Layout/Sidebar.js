@@ -47,7 +47,7 @@ const Sidebar = ({ mobileOpen, handleDrawerToggle, drawerWidth }) => {
         <ListItemText primary="Usuarios" />
       </ListItem>
       {/* Documentos Prórroga */}
-      <ListItem button component={Link} to="/documentos-prorroga" onClick={handleDrawerToggle}>
+      <ListItem component={Link} to="/documentos-prorroga" onClick={handleDrawerToggle}>
         <ListItemIcon><ProrrogaIcon /></ListItemIcon>
         <ListItemText primary="Documentos Prórroga" />
       </ListItem>

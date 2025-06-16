@@ -22,6 +22,7 @@ import {
   TextField,
   InputAdornment,
   Chip,
+  Box,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import Swal from "sweetalert2";
@@ -37,9 +38,10 @@ const DocumentosProrroga = () => {
   });
   const [totalCount, setTotalCount] = useState(0);
   const [filters, setFilters] = useState({
+    general: '',
     cut: '',
+    documento: '',
     personaAsignada: '',
-    fechaVencimiento: '',
   });
   const [openProrrogaDialog, setOpenProrrogaDialog] = useState(false);
   const [selectedAsignacion, setSelectedAsignacion] = useState(null);
@@ -83,43 +85,41 @@ const DocumentosProrroga = () => {
   }, [fetchAsignacionesConProrrogaPendiente]);
 
   const handleAceptarProrroga = (asignacion) => {
-  setSelectedAsignacion(asignacion);
-  setPlazoProrroga(asignacion.plazo_prorroga || 1); // Set default to 1 if plazo_prorroga is not defined
-  setOpenProrrogaDialog(true);
-};
+    setSelectedAsignacion(asignacion);
+    setPlazoProrroga(asignacion.plazo_prorroga || 1);
+    setOpenProrrogaDialog(true);
+  };
 
-  
-const handleSolicitarProrroga = async (asignacionId) => {
-  try {
-
-    const response = await aceptarProrroga(asignacionId,  plazoProrroga );
-    if (response.status === 200) {
+  const handleSolicitarProrroga = async (asignacionId) => {
+    try {
+      const response = await aceptarProrroga(asignacionId, plazoProrroga);
+      if (response.status === 200) {
+        Swal.fire({
+          icon: "success",
+          title: "Éxito",
+          text: "Prórroga aceptada correctamente",
+          timer: 2500,
+          timerProgressBar: true,
+          showConfirmButton: false,
+        });
+        fetchAsignacionesConProrrogaPendiente();
+      } else {
+        throw new Error("Error al aceptar la prórroga");
+      }
+    } catch (error) {
+      console.error("Error accepting extension:", error);
       Swal.fire({
-        icon: "success",
-        title: "Éxito",
-        text: "Prórroga aceptada correctamente",
-        timer: 2500,
+        icon: "error",
+        title: "Error",
+        text: "Error al aceptar la prórroga. Por favor, intente de nuevo.",
+        timer: 3000,
         timerProgressBar: true,
         showConfirmButton: false,
       });
-      fetchAsignacionesConProrrogaPendiente();
-    } else {
-      throw new Error("Error al aceptar la prórroga");
+    } finally {
+      setOpenProrrogaDialog(false);
     }
-  } catch (error) {
-    console.error("Error accepting extension:", error);
-    Swal.fire({
-      icon: "error",
-      title: "Error",
-      text: "Error al aceptar la prórroga. Por favor, intente de nuevo.",
-      timer: 3000,
-      timerProgressBar: true,
-      showConfirmButton: false,
-    });
-  } finally {
-    setOpenProrrogaDialog(false);
-  }
-};
+  };
 
   const handleCloseProrrogaDialog = () => {
     setOpenProrrogaDialog(false);
@@ -182,18 +182,37 @@ const handleSolicitarProrroga = async (asignacionId) => {
     return "success";
   };
 
+  const filteredAsignaciones = asignaciones.filter((asignacion) => {
+    const generalFilter = filters.general.toLowerCase();
+    const cutFilter = filters.cut.toLowerCase();
+    const documentoFilter = filters.documento.toLowerCase();
+    const personaAsignadaFilter = filters.personaAsignada.toLowerCase();
+
+    const cut = asignacion.Documento.Expediente?.cut.toLowerCase() || "";
+    const documento = `${asignacion.Documento?.TipoDocumento?.nombre || ""} ${asignacion.Documento?.numero_documento || ""}`.toLowerCase();
+    const personaAsignada = `${asignacion.asignado?.nombre || ""} ${asignacion.asignado?.apellido || ""}`.toLowerCase();
+
+    return (
+      (cut.includes(cutFilter) || cutFilter === "") &&
+      (documento.includes(documentoFilter) || documentoFilter === "") &&
+      (personaAsignada.includes(personaAsignadaFilter) || personaAsignadaFilter === "") &&
+      (cut.includes(generalFilter) || documento.includes(generalFilter) || personaAsignada.includes(generalFilter) || generalFilter === "")
+    );
+  });
+
   return (
     <div>
       <h2>Asignaciones con Prórroga Pendiente</h2>
 
-      <div style={{ marginBottom: "1rem", display: "flex", gap: "1rem" }}>
+      <Box sx={{ mb: 2, display: "flex", gap: 2 }}>
         <TextField
-          name="cut"
-          value={filters.cut}
+          name="general"
+          value={filters.general}
           onChange={handleFilterChange}
-          placeholder="Filtrar por CUT"
+          placeholder="Buscar en todos los campos"
           variant="outlined"
           size="small"
+          sx={{ flexGrow: 1 }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -202,46 +221,52 @@ const handleSolicitarProrroga = async (asignacionId) => {
             ),
           }}
         />
-        <TextField
-          name="personaAsignada"
-          value={filters.personaAsignada}
-          onChange={handleFilterChange}
-          placeholder="Filtrar por Persona Asignada"
-          variant="outlined"
-          size="small"
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
-        <TextField
-          name="fechaVencimiento"
-          value={filters.fechaVencimiento}
-          onChange={handleFilterChange}
-          placeholder="Filtrar por Fecha Vencimiento"
-          variant="outlined"
-          size="small"
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
-      </div>
+      </Box>
 
       <TableContainer component={Paper}>
         <Table size="small">
           <TableHead>
             <TableRow>
               <TableCell>Item</TableCell>
-              <TableCell>CUT</TableCell>
-              <TableCell>Documento</TableCell>
-              <TableCell>Persona Asignada</TableCell>
+              <TableCell>
+                CUT
+                <TextField
+                  name="cut"
+                  value={filters.cut}
+                  onChange={handleFilterChange}
+                  placeholder="Filtrar por CUT"
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  margin="dense"
+                />
+              </TableCell>
+              <TableCell>
+                Documento
+                <TextField
+                  name="documento"
+                  value={filters.documento}
+                  onChange={handleFilterChange}
+                  placeholder="Filtrar por Documento"
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  margin="dense"
+                />
+              </TableCell>
+              <TableCell>
+                Persona Asignada
+                <TextField
+                  name="personaAsignada"
+                  value={filters.personaAsignada}
+                  onChange={handleFilterChange}
+                  placeholder="Filtrar por Persona Asignada"
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  margin="dense"
+                />
+              </TableCell>
               <TableCell>Fecha Vencimiento</TableCell>
               <TableCell>Fecha de Prórroga Solicitada</TableCell>
               <TableCell>Plazo de Prórroga Solicitado</TableCell>
@@ -259,8 +284,8 @@ const handleSolicitarProrroga = async (asignacionId) => {
                   </Typography>
                 </TableCell>
               </TableRow>
-            ) : asignaciones.length > 0 ? (
-              asignaciones.map((asignacion, index) => {
+            ) : filteredAsignaciones.length > 0 ? (
+              filteredAsignaciones.map((asignacion, index) => {
                 const daysRemaining = calculateDaysRemaining(asignacion.fecha_limite);
                 const statusColor = getStatusColor(daysRemaining);
 
@@ -349,19 +374,19 @@ const handleSolicitarProrroga = async (asignacionId) => {
               Plazo de prórroga (días)
             </InputLabel>
             <Select
-  labelId="plazo-select-label"
-  id="plazo-select"
-  value={plazoProrroga}
-  onChange={(e) => setPlazoProrroga(e.target.value)}
-  label="Plazo de prórroga (días)"
-  fullWidth
->
-  {[1, 2, 3, 5, 7, 10, 15, 30].map((dias) => (
-    <MenuItem key={dias} value={dias}>
-      {dias} {dias === 1 ? "día" : "días"}
-    </MenuItem>
-  ))}
-</Select>
+              labelId="plazo-select-label"
+              id="plazo-select"
+              value={plazoProrroga}
+              onChange={(e) => setPlazoProrroga(e.target.value)}
+              label="Plazo de prórroga (días)"
+              fullWidth
+            >
+              {[1, 2, 3, 5, 7, 10, 15, 30].map((dias) => (
+                <MenuItem key={dias} value={dias}>
+                  {dias} {dias === 1 ? "día" : "días"}
+                </MenuItem>
+              ))}
+            </Select>
           </FormControl>
         </DialogContent>
         <DialogActions>

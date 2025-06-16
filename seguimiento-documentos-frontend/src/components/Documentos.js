@@ -204,7 +204,8 @@ const Documentos = () => {
     let workingDaysRemaining = 0;
     let currentDate = new Date(today);
 
-    while (currentDate < due) { // Use < to exclude the due date
+    while (currentDate < due) {
+      // Use < to exclude the due date
       const dayOfWeek = currentDate.getDay();
       if (dayOfWeek !== 6 && dayOfWeek !== 0) {
         workingDaysRemaining++; // Count only weekdays
@@ -579,7 +580,10 @@ const Documentos = () => {
                     </TableCell>
                     <TableCell>
                       {formatDateWithTime(
-                        parseISOToLimaDate(asignacion.fecha_prorroga_limite || asignacion.fecha_limite)
+                        parseISOToLimaDate(
+                          asignacion.fecha_prorroga_limite ||
+                            asignacion.fecha_limite
+                        )
                       )}
                     </TableCell>
                     <TableCell>
@@ -639,18 +643,19 @@ const Documentos = () => {
                         }}>
                         Dar Respuesta
                       </StyledButton>
-                      {daysRemaining <= 2 && (
-                        <StyledButton
-                          variant="contained"
-                          color="secondary"
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenProrrogaDialog(asignacion);
-                          }}>
-                        Solicitar Prórroga
-                      </StyledButton>
-                      )}
+                      {daysRemaining <= 2 &&
+                        asignacion.fecha_prorroga === null && (
+                          <StyledButton
+                            variant="contained"
+                            color="secondary"
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenProrrogaDialog(asignacion);
+                            }}>
+                            Solicitar Prórroga
+                          </StyledButton>
+                        )}
                     </TableCell>
                   </StyledTableRow>
                 );
@@ -731,8 +736,40 @@ const Documentos = () => {
               <Typography variant="subtitle2">Fecha de Vencimiento:</Typography>
               <Typography>
                 {formatDateWithTime(
-                  parseISOToLimaDate(selectedAsignacion.fecha_prorroga_limite || selectedAsignacion.fecha_limite)
+                  parseISOToLimaDate(
+                    selectedAsignacion.fecha_prorroga_limite ||
+                      selectedAsignacion.fecha_limite
+                  )
                 )}
+              </Typography>
+
+              <Typography variant="subtitle2">Fecha Prórroga:</Typography>
+              <Typography>
+                {selectedAsignacion.fecha_prorroga
+                  ? formatDateWithTime(
+                      parseISOToLimaDate(selectedAsignacion.fecha_prorroga)
+                    )
+                  : "N/A"}
+              </Typography>
+
+              <Typography variant="subtitle2">Plazo Prórroga:</Typography>
+              <Typography>
+                {selectedAsignacion.plazo_prorroga
+                  ? `${selectedAsignacion.plazo_prorroga} día(s)`
+                  : "N/A"}
+              </Typography>
+
+              <Typography variant="subtitle2">
+                Fecha Prórroga Límite:
+              </Typography>
+              <Typography>
+                {selectedAsignacion.fecha_prorroga_limite
+                  ? formatDateWithTime(
+                      parseISOToLimaDate(
+                        selectedAsignacion.fecha_prorroga_limite
+                      )
+                    )
+                  : "N/A"}
               </Typography>
 
               <Typography variant="subtitle2">Persona Asignada:</Typography>
@@ -750,19 +787,13 @@ const Documentos = () => {
               <Chip
                 size="small"
                 label={
-                  calculateDaysRemaining(selectedAsignacion) ===
-                  null
+                  calculateDaysRemaining(selectedAsignacion) === null
                     ? "Sin fecha"
-                    : calculateDaysRemaining(selectedAsignacion) <
-                      0
+                    : calculateDaysRemaining(selectedAsignacion) < 0
                     ? "Vencido"
-                    : calculateDaysRemaining(
-                        selectedAsignacion
-                      ) === 0
+                    : calculateDaysRemaining(selectedAsignacion) === 0
                     ? "Hoy"
-                    : `${calculateDaysRemaining(
-                        selectedAsignacion
-                      )} día(s)`
+                    : `${calculateDaysRemaining(selectedAsignacion)} día(s)`
                 }
                 color={getStatusColor(
                   calculateDaysRemaining(selectedAsignacion)
