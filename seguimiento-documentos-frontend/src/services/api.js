@@ -93,4 +93,14 @@ export const getDocumentosRelacionados = (expedienteId, numeroDocumento = '', id
 export const getAsignaciones = (params) => api.get('/asignaciones', { params });
 export const createAsignacion = (asignacionData) => api.post('/asignaciones', asignacionData);
 
+// Función para actualizar el estado de una asignación
+export const updateAsignacionEstado = (id, estado) => api.patch(`/asignaciones/${id}/estado`, { estado });
+
+// Función para solicitar una prórroga para una asignación
+export const solicitarProrroga = (id, plazoProrroga) => api.patch(`/asignaciones/${id}/solicitar-prorroga`, { plazo_prorroga: plazoProrroga });
+
+export const getAsignacionesConProrrogaPendiente = () => api.get('/asignaciones/con-prorroga-pendiente');
+
+export const aceptarProrroga = (asignacionId, plazoProrroga) => api.patch(`/asignaciones/${asignacionId}/aceptar-prorroga`, { nuevo_plazo_prorroga: plazoProrroga });
+
 export default api;

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const asignacionDocumentoController = require('../controllers/asignacionDocumentoController');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, isSecretariaOrAbove } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -147,7 +147,10 @@ const { authenticateToken } = require('../middleware/auth');
  *   description: API para gestionar asignaciones de documentos
  */
 
+
 router.use(authenticateToken);
+
+
 
 
 /**
@@ -253,7 +256,32 @@ router.put('/:id', asignacionDocumentoController.updateAsignacion);
  */
 router.delete('/:id', asignacionDocumentoController.deleteAsignacion);
 
-
+/**
+ * @swagger
+ * /api/asignaciones/con-prorroga-pendiente:
+ *   get:
+ *     summary: Obtener asignaciones con prórroga pendiente
+ *     description: Retorna todas las asignaciones de documentos que tienen una solicitud de prórroga pendiente.
+ *     tags: [Asignaciones de Documentos]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de asignaciones con prórroga pendiente obtenida exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/AsignacionDocumento'
+ *       401:
+ *         description: No autorizado
+ *       403:
+ *         description: Acceso prohibido
+ *       500:
+ *         description: Error del servidor
+ */
+router.get('/con-prorroga-pendiente', isSecretariaOrAbove, asignacionDocumentoController.getAsignacionesConProrrogaPendiente);
 /**
  * @swagger
  * /api/asignaciones:
@@ -416,5 +444,166 @@ router.get('/', asignacionDocumentoController.getAllAsignaciones);
  *         description: Asignación no encontrada
  */
 router.get('/:id', asignacionDocumentoController.getAsignacionById);
+
+/**
+ * @swagger
+ * /api/asignaciones/{id}/estado:
+ *   patch:
+ *     summary: Cambiar el estado de una asignación
+ *     tags: [Asignaciones de Documentos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID de la asignación a actualizar
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               estado:
+ *                 type: boolean
+ *                 description: Nuevo estado de la asignación
+ *                 example: true
+ *     responses:
+ *       200:
+ *         description: Estado de la asignación actualizado exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 asignacion:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     estado:
+ *                       type: boolean
+ *       400:
+ *         description: Datos inválidos en la solicitud
+ *       401:
+ *         description: No autorizado
+ *       404:
+ *         description: Asignación no encontrada
+ */
+router.patch('/:id/estado', authenticateToken, asignacionDocumentoController.cambiarEstadoAsignacion);
+
+/**
+ * @swagger
+ * /api/asignaciones/{id}/solicitar-prorroga:
+ *   patch:
+ *     summary: Solicitar una prórroga para una asignación
+ *     tags: [Asignaciones de Documentos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID de la asignación a actualizar
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               plazo_prorroga:
+ *                 type: integer
+ *                 description: Plazo adicional en días hábiles
+ *                 example: 5
+ *     responses:
+ *       200:
+ *         description: Prórroga solicitada exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 asignacion:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     plazo_prorroga:
+ *                       type: integer
+ *       400:
+ *         description: Datos inválidos en la solicitud
+ *       401:
+ *         description: No autorizado
+ *       404:
+ *         description: Asignación no encontrada
+ */
+router.patch('/:id/solicitar-prorroga', authenticateToken, asignacionDocumentoController.solicitarProrroga);
+
+/**
+ * @swagger
+ * /api/asignaciones/{id}/aceptar-prorroga:
+ *   patch:
+ *     summary: Aceptar una prórroga para una asignación y actualizar el plazo
+ *     tags: [Asignaciones de Documentos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID de la asignación a actualizar
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               nuevo_plazo_prorroga:
+ *                 type: integer
+ *                 description: Nuevo plazo adicional en días hábiles
+ *                 example: 5
+ *     responses:
+ *       200:
+ *         description: Prórroga aceptada y plazo actualizado exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 asignacion:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     plazo_prorroga:
+ *                       type: integer
+ *                     fecha_prorroga_limite:
+ *                       type: string
+ *                       format: date-time
+ *       400:
+ *         description: Datos inválidos en la solicitud
+ *       401:
+ *         description: No autorizado
+ *       404:
+ *         description: Asignación no encontrada
+ */
+router.patch('/:id/aceptar-prorroga', authenticateToken, asignacionDocumentoController.aceptarProrroga);
+
+
 
 module.exports = router;

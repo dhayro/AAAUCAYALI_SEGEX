@@ -7,7 +7,8 @@ import {
   Work as CargoIcon,
   AccountTree as AreaIcon,
   People as UserIcon,
-  Description as TipoDocumentoIcon // Import the icon for Tipos de Documentos
+  Description as TipoDocumentoIcon, // Import the icon for Tipos de Documentos
+  AccessTime as ProrrogaIcon // Import the icon for Documentos Prórroga
 } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
 
@@ -44,6 +45,11 @@ const Sidebar = ({ mobileOpen, handleDrawerToggle, drawerWidth }) => {
       <ListItem component={Link} to="/usuarios" onClick={handleDrawerToggle}>
         <ListItemIcon><UserIcon /></ListItemIcon>
         <ListItemText primary="Usuarios" />
+      </ListItem>
+      {/* Documentos Prórroga */}
+      <ListItem button component={Link} to="/documentos-prorroga" onClick={handleDrawerToggle}>
+        <ListItemIcon><ProrrogaIcon /></ListItemIcon>
+        <ListItemText primary="Documentos Prórroga" />
       </ListItem>
     </List>
   );

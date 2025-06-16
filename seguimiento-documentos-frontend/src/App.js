@@ -11,6 +11,7 @@ import Usuarios from './components/Usuarios'; // Asegúrate de importar el compo
 import TiposDocumentos from './components/TiposDocumentos';
 import Expedientes from './components/Expedientes'; // Import the Expedientes component
 import Documentos from './components/Documentos'; // Import the Documentos component
+import DocumentosProrroga from './components/DocumentosProrroga'; // Import the DocumentosProrroga component
 import ProtectedRoute from './components/ProtectedRoute';
 import api from './services/api';
 import './globalStyles.css';
@@ -143,6 +144,14 @@ const App = () => {
               element={
                 <ProtectedRoute user={user}>
                   <Documentos />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/documentos-prorroga"
+              element={
+                <ProtectedRoute user={user}>
+                  <DocumentosProrroga />
                 </ProtectedRoute>
               }
             />

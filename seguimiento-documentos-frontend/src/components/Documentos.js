@@ -1,31 +1,62 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { debounce } from 'lodash';
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { debounce } from "lodash";
 import {
-  Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  TablePagination, TextField, InputAdornment, Box, Typography, Chip,
-  CircularProgress, Button, Dialog, DialogActions, DialogContent, DialogTitle,
-  styled
-} from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-// Remove the unused import
-// import DescriptionIcon from '@mui/icons-material/Description';
-import api from '../services/api';
-// import Swal from 'sweetalert2';
+  formatDate,
+  parseISOToLimaDate,
+  formatDateWithTime,
+  toLimaTimezone,
+} from "../utils/dateUtils";
+import {
+  InputLabel,
+  Select,
+  MenuItem,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TablePagination,
+  TextField,
+  InputAdornment,
+  Box,
+  Typography,
+  Chip,
+  CircularProgress,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  styled,
+  FormControl,
+} from "@mui/material";
+import SearchIcon from "@mui/icons-material/Search";
+import {
+  getAsignaciones,
+  createRespuesta,
+  updateDocumentoEstado,
+  updateAsignacionEstado,
+  solicitarProrroga, // Import the function
+} from "../services/api"; // Import the function
+
+import Swal from "sweetalert2";
 
 // Styled components
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
-  '&:nth-of-type(odd)': {
+  "&:nth-of-type(odd)": {
     backgroundColor: theme.palette.action.hover,
   },
-  '&:hover': {
+  "&:hover": {
     backgroundColor: theme.palette.action.selected,
   },
 }));
 
 const StyledButton = styled(Button)(({ theme }) => ({
-  textTransform: 'none',
+  textTransform: "none",
   margin: theme.spacing(0.5),
-  minWidth: '80px',
+  minWidth: "80px",
 }));
 
 const Documentos = () => {
@@ -38,33 +69,44 @@ const Documentos = () => {
   });
   const [totalCount, setTotalCount] = useState(0);
   const [filters, setFilters] = useState({
-    filtro: '',
-    cut: '',
-    remitente: '',
-    documento: '',
-    usuario: ''
+    filtro: "",
+    cut: "",
+    remitente: "",
+    documento: "",
+    usuario: "",
   });
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState("");
   const [selectedAsignacion, setSelectedAsignacion] = useState(null);
   const [openDetailsDialog, setOpenDetailsDialog] = useState(false);
+  const [openResponseDialog, setOpenResponseDialog] = useState(false);
+  const [responseObservations, setResponseObservations] = useState("");
+
+  const [openProrrogaDialog, setOpenProrrogaDialog] = useState(false);
+  const [plazoProrroga, setPlazoProrroga] = useState(5); // Valor por defecto
+
+  const handleOpenProrrogaDialog = (asignacion) => {
+    setSelectedAsignacion(asignacion); // Establece la asignación seleccionada
+    setOpenProrrogaDialog(true); // Abre el diálogo
+  };
+
+  const handleCloseProrrogaDialog = () => {
+    setOpenProrrogaDialog(false);
+  };
 
   // Function to show error alerts
   const showErrorAlert = useCallback((message) => {
     setErrorMessage(message);
     setTimeout(() => {
-      setErrorMessage('');
+      setErrorMessage("");
     }, 3000);
   }, []);
 
-  // Use the showSweetAlert function directly where needed instead of defining it separately
-  // This will remove the unused variable warning
-  
   // Function to fetch paginated asignaciones
-  const fetchPaginatedAsignaciones = useCallback(async (currentFilters, currentPagination) => {
-    setIsLoading(true);
-    try {
-      const response = await api.get('/asignaciones', {
-        params: {
+  const fetchPaginatedAsignaciones = useCallback(
+    async (currentFilters, currentPagination) => {
+      setIsLoading(true);
+      try {
+        const response = await getAsignaciones({
           page: currentPagination.pageIndex + 1,
           limit: currentPagination.pageSize,
           cut: currentFilters.cut,
@@ -72,23 +114,26 @@ const Documentos = () => {
           documento: currentFilters.documento,
           usuario: currentFilters.usuario,
           filtro: currentFilters.filtro,
-        },
-      });
-      
-      if (response.data && response.data.asignaciones) {
-        setAsignaciones(response.data.asignaciones);
-        setTotalCount(response.data.totalAsignaciones);
-      } else {
-        console.error('Unexpected response format:', response.data);
-        showErrorAlert('Formato de respuesta inesperado del servidor.');
+        });
+
+        if (response.data && response.data.asignaciones) {
+          setAsignaciones(response.data.asignaciones);
+          setTotalCount(response.data.totalAsignaciones);
+        } else {
+          console.error("Unexpected response format:", response.data);
+          showErrorAlert("Formato de respuesta inesperado del servidor.");
+        }
+      } catch (error) {
+        console.error("Error fetching asignaciones:", error);
+        showErrorAlert(
+          "Error al cargar las asignaciones. Por favor, intente de nuevo más tarde."
+        );
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Error fetching asignaciones:', error);
-      showErrorAlert('Error al cargar las asignaciones. Por favor, intente de nuevo más tarde.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [showErrorAlert]);
+    },
+    [showErrorAlert]
+  );
 
   // Debounce the fetch function to avoid too many API calls
   const debouncedFetchAsignaciones = useRef(
@@ -104,7 +149,7 @@ const Documentos = () => {
 
   // Effect to add custom styles for SweetAlert
   useEffect(() => {
-    const style = document.createElement('style');
+    const style = document.createElement("style");
     style.textContent = `
       .my-swal {
         z-index: 9999;
@@ -120,16 +165,16 @@ const Documentos = () => {
   // Handle filter changes
   const handleFilterChange = (event) => {
     const { name, value } = event.target;
-    setFilters(prevFilters => ({
+    setFilters((prevFilters) => ({
       ...prevFilters,
-      [name]: value
+      [name]: value,
     }));
-    setPagination(prev => ({ ...prev, pageIndex: 0 }));
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
   };
 
   // Handle pagination changes
   const handleChangePage = (event, newPage) => {
-    setPagination(old => ({ ...old, pageIndex: newPage }));
+    setPagination((old) => ({ ...old, pageIndex: newPage }));
   };
 
   const handleChangeRowsPerPage = (event) => {
@@ -137,31 +182,74 @@ const Documentos = () => {
     setPagination({ pageIndex: 0, pageSize: newPageSize });
   };
 
-  // Format date function
-  const formatDate = (dateString) => {
-    if (!dateString) return "No especificada";
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-PE', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
+  // Calculate days remaining
+  const calculateDaysRemaining = (asignacion) => {
+    const dueDate = asignacion.fecha_prorroga_limite || asignacion.fecha_limite;
+    if (!dueDate) return null;
+
+    // Convert today's date and due date to Lima timezone
+    let today = toLimaTimezone(new Date());
+    const due = parseISOToLimaDate(dueDate);
+
+    // If today is Saturday, move to next Monday
+    if (today.getDay() === 6) {
+      today.setDate(today.getDate() + 2);
+    }
+    // If today is Sunday, move to next Monday
+    else if (today.getDay() === 0) {
+      today.setDate(today.getDate() + 1);
+    }
+
+    // Calculate the total number of days between today and the due date
+    let workingDaysRemaining = 0;
+    let currentDate = new Date(today);
+
+    while (currentDate < due) { // Use < to exclude the due date
+      const dayOfWeek = currentDate.getDay();
+      if (dayOfWeek !== 6 && dayOfWeek !== 0) {
+        workingDaysRemaining++; // Count only weekdays
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // If today is the due date, return 0
+    if (today.toDateString() === due.toDateString()) {
+      return 0;
+    }
+
+    return workingDaysRemaining;
   };
 
-  // Calculate days remaining
-  const calculateDaysRemaining = (dueDate) => {
-    if (!dueDate) return null;
-    
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const due = new Date(dueDate);
-    due.setHours(0, 0, 0, 0);
-    
-    const diffTime = due - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    return diffDays;
+  const handleUpdateAsignacionEstado = async (asignacionId, nuevoEstado) => {
+    try {
+      const response = await updateAsignacionEstado(asignacionId, nuevoEstado);
+
+      if (response.status === 200) {
+        Swal.fire({
+          icon: "success",
+          title: "Éxito",
+          text: "Estado de la asignación actualizado correctamente",
+          timer: 2500,
+          timerProgressBar: true,
+          showConfirmButton: false,
+        });
+        fetchPaginatedAsignaciones(filters, pagination);
+
+        // Aquí puedes actualizar el estado local o volver a cargar los datos si es necesario
+      } else {
+        throw new Error("Error al actualizar el estado de la asignación");
+      }
+    } catch (error) {
+      console.error("Error updating assignment state:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Error al actualizar el estado de la asignación. Por favor, intente de nuevo.",
+        timer: 3000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+      });
+    }
   };
 
   // Get status color based on days remaining
@@ -174,9 +262,45 @@ const Documentos = () => {
   };
 
   // Handle opening details dialog
-  const handleOpenDetails = (asignacion) => {
+  const handleOpenDetails = async (asignacion) => {
     setSelectedAsignacion(asignacion);
     setOpenDetailsDialog(true);
+    if (asignacion.Documento.estado === "ASIGNADO") {
+      try {
+        const docResponse = await updateDocumentoEstado(
+          asignacion.Documento.id,
+          "EN_REVISION"
+        );
+
+        if (docResponse.status === 200) {
+          asignacion.Documento.estado = "EN_REVISION";
+          Swal.fire({
+            icon: "success",
+            title: "Éxito",
+            text: "Estado del documento actualizado a EN_REVISION",
+            timer: 2500,
+            timerProgressBar: true,
+            showConfirmButton: false,
+          });
+        } else {
+          console.error(
+            "Error al actualizar el estado del documento:",
+            docResponse
+          );
+          throw new Error("Error al actualizar el estado del documento");
+        }
+      } catch (error) {
+        console.error("Error updating document state:", error);
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: "Error al actualizar el estado del documento. Por favor, intente de nuevo.",
+          timer: 3000,
+          timerProgressBar: true,
+          showConfirmButton: false,
+        });
+      }
+    }
   };
 
   // Handle closing details dialog
@@ -185,12 +309,130 @@ const Documentos = () => {
     setSelectedAsignacion(null);
   };
 
+  // Handle opening response dialog
+  const handleOpenResponseDialog = async (asignacion) => {
+    setSelectedAsignacion(asignacion);
+    setOpenResponseDialog(true);
+  };
+
+  // Handle closing response dialog
+  const handleCloseResponseDialog = () => {
+    setOpenResponseDialog(false);
+    setSelectedAsignacion(null);
+    setResponseObservations("");
+  };
+
+  // Function to handle the API call for creating a new response
+  const handleCreateResponse = async () => {
+    if (!selectedAsignacion) return;
+
+    try {
+      const response = await createRespuesta({
+        id_asignacion: selectedAsignacion.id,
+        fecha_respuesta: new Date().toISOString(),
+        observaciones: responseObservations,
+        id_usuario_creador: 1, // Replace with actual user ID
+        estado: true,
+      });
+
+      if (response.status === 200 || response.status === 201) {
+        // Update the document state to "RESPUESTA"
+        const docResponse = await updateDocumentoEstado(
+          selectedAsignacion.Documento.id,
+          "RESPUESTA"
+        );
+        handleUpdateAsignacionEstado(selectedAsignacion.id, false);
+
+        if (docResponse.status === 200) {
+          // Optionally update the local state or UI to reflect the change
+
+          Swal.fire({
+            icon: "success",
+            title: "Éxito",
+            text: "Respuesta creada correctamente y estado del documento actualizado a RESPUESTA",
+            timer: 2500,
+            timerProgressBar: true,
+            showConfirmButton: false,
+          });
+          handleCloseResponseDialog();
+        } else {
+          throw new Error("Error al actualizar el estado del documento");
+        }
+      } else {
+        throw new Error("Error al crear la respuesta");
+      }
+    } catch (error) {
+      console.error(
+        "Error creating response or updating document state:",
+        error
+      );
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Error al crear la respuesta o actualizar el estado del documento. Por favor, intente de nuevo.",
+        timer: 3000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+      });
+    }
+  };
+
+  const handleSolicitarProrroga = async () => {
+    if (!selectedAsignacion || !selectedAsignacion.id) {
+      console.error("Asignación no seleccionada o inválida");
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "No se ha seleccionado una asignación válida.",
+        timer: 3000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+      });
+      return;
+    }
+
+    try {
+      const response = await solicitarProrroga(
+        selectedAsignacion.id,
+        plazoProrroga
+      );
+
+      if (response.status === 200) {
+        Swal.fire({
+          icon: "success",
+          title: "Éxito",
+          text: "Prórroga solicitada correctamente",
+          timer: 2500,
+          timerProgressBar: true,
+          showConfirmButton: false,
+        });
+
+        // Actualiza la tabla de asignaciones
+        fetchPaginatedAsignaciones(filters, pagination);
+      } else {
+        throw new Error("Error al solicitar la prórroga");
+      }
+    } catch (error) {
+      console.error("Error requesting extension:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Error al solicitar la prórroga. Por favor, intente de nuevo.",
+        timer: 3000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+      });
+    } finally {
+      handleCloseProrrogaDialog();
+    }
+  };
+
   return (
     <div>
       <h2>Documentos Asignados</h2>
-      
+
       {/* Search and filter section */}
-      <Box sx={{ mb: 2, display: 'flex', gap: 2 }}>
+      <Box sx={{ mb: 2, display: "flex", gap: 2 }}>
         <TextField
           name="filtro"
           value={filters.filtro}
@@ -211,7 +453,14 @@ const Documentos = () => {
 
       {/* Error message display */}
       {errorMessage && (
-        <Box sx={{ mb: 2, p: 1, bgcolor: 'error.light', color: 'error.contrastText', borderRadius: 1 }}>
+        <Box
+          sx={{
+            mb: 2,
+            p: 1,
+            bgcolor: "error.light",
+            color: "error.contrastText",
+            borderRadius: 1,
+          }}>
           {errorMessage}
         </Box>
       )}
@@ -278,6 +527,7 @@ const Documentos = () => {
                 />
               </TableCell>
               <TableCell>Estado</TableCell>
+              <TableCell>Prórroga</TableCell>
               <TableCell>Acciones</TableCell>
             </TableRow>
           </TableHead>
@@ -293,40 +543,90 @@ const Documentos = () => {
               </TableRow>
             ) : asignaciones.length > 0 ? (
               asignaciones.map((asignacion, index) => {
-                const daysRemaining = calculateDaysRemaining(asignacion.fecha_vencimiento);
+                const daysRemaining = calculateDaysRemaining(asignacion);
                 const statusColor = getStatusColor(daysRemaining);
-                
+
                 return (
-                  <StyledTableRow 
+                  <StyledTableRow
                     key={asignacion.id}
                     hover
                     onClick={() => handleOpenDetails(asignacion)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <TableCell>{pagination.pageIndex * pagination.pageSize + index + 1}</TableCell>
-                    <TableCell>{asignacion.expediente?.cut || 'N/A'}</TableCell>
-                    <TableCell>{asignacion.expediente?.remitente || 'N/A'}</TableCell>
+                    style={{ cursor: "pointer" }}>
                     <TableCell>
-                      {asignacion.documento?.TipoDocumento?.nombre || 'N/A'} {asignacion.documento?.numero_documento || ''}
+                      {pagination.pageIndex * pagination.pageSize + index + 1}
                     </TableCell>
-                    <TableCell>{formatDate(asignacion.documento?.fecha_documento)}</TableCell>
-                    <TableCell>{formatDate(asignacion.fecha_asignacion)}</TableCell>
-                    <TableCell>{formatDate(asignacion.fecha_vencimiento)}</TableCell>
                     <TableCell>
-                    {asignacion.usuario?.nombre || ''} {asignacion.usuario?.apellido || ''}
+                      {asignacion.Documento.Expediente?.cut || "N/A"}
+                    </TableCell>
+                    <TableCell>
+                      {asignacion.Documento.Expediente?.remitente || "N/A"}
+                    </TableCell>
+                    <TableCell>
+                      {asignacion.Documento?.TipoDocumento?.nombre || "N/A"}{" "}
+                      {asignacion.Documento?.numero_documento || ""}
+                    </TableCell>
+                    <TableCell>
+                      {formatDate(
+                        parseISOToLimaDate(
+                          asignacion.Documento?.fecha_documento
+                        )
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {formatDateWithTime(
+                        parseISOToLimaDate(asignacion.fecha_asignacion)
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {formatDateWithTime(
+                        parseISOToLimaDate(asignacion.fecha_prorroga_limite || asignacion.fecha_limite)
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {asignacion.asignado?.nombre || ""}{" "}
+                      {asignacion.asignado?.apellido || ""}
                     </TableCell>
                     <TableCell>
                       <Chip
                         size="small"
-                        label={daysRemaining === null 
-                          ? "Sin fecha"
-                          : daysRemaining < 0 
-                            ? "Vencido" 
-                            : daysRemaining === 0 
-                              ? "Hoy" 
-                              : `${daysRemaining} día(s)`}
+                        label={
+                          daysRemaining === null
+                            ? "Sin fecha"
+                            : daysRemaining < 0
+                            ? "Vencido"
+                            : daysRemaining === 0
+                            ? "Hoy"
+                            : `${daysRemaining} día(s)`
+                        }
                         color={statusColor}
+                        onClick={() => console.log("Estado:", statusColor)}
+                        clickable={true}
                       />
+                    </TableCell>
+                    <TableCell>
+                      {asignacion.fecha_prorroga_limite ? (
+                        <Chip
+                          size="small"
+                          label="Prórroga Aceptada"
+                          color="success"
+                          onClick={() =>
+                            console.log("Estado: Prórroga Aceptada")
+                          }
+                          clickable={true}
+                        />
+                      ) : asignacion.fecha_prorroga ? (
+                        <Chip
+                          size="small"
+                          label="Prórroga Solicitada"
+                          color="info"
+                          onClick={() =>
+                            console.log("Estado: Prórroga Solicitada")
+                          }
+                          clickable={true}
+                        />
+                      ) : (
+                        "No"
+                      )}
                     </TableCell>
                     <TableCell>
                       <StyledButton
@@ -335,11 +635,22 @@ const Documentos = () => {
                         size="small"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleOpenDetails(asignacion);
-                        }}
-                      >
-                        Ver Detalles
+                          handleOpenResponseDialog(asignacion);
+                        }}>
+                        Dar Respuesta
                       </StyledButton>
+                      {daysRemaining <= 2 && (
+                        <StyledButton
+                          variant="contained"
+                          color="secondary"
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenProrrogaDialog(asignacion);
+                          }}>
+                        Solicitar Prórroga
+                      </StyledButton>
+                      )}
                     </TableCell>
                   </StyledTableRow>
                 );
@@ -354,7 +665,7 @@ const Documentos = () => {
           </TableBody>
         </Table>
       </TableContainer>
-      
+
       <TablePagination
         component="div"
         count={totalCount}
@@ -363,7 +674,9 @@ const Documentos = () => {
         rowsPerPage={pagination.pageSize}
         onRowsPerPageChange={handleChangeRowsPerPage}
         rowsPerPageOptions={[5, 10, 25, 50]}
-        labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`}
+        labelDisplayedRows={({ from, to, count }) =>
+          `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
+        }
         labelRowsPerPage="Filas por página:"
       />
 
@@ -372,59 +685,89 @@ const Documentos = () => {
         open={openDetailsDialog}
         onClose={handleCloseDetails}
         maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          Detalles del Documento
-        </DialogTitle>
+        fullWidth>
+        <DialogTitle>Detalles del Documento</DialogTitle>
         <DialogContent dividers>
           {selectedAsignacion && (
-            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+            <Box
+              sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
               <Typography variant="subtitle2">CUT:</Typography>
-              <Typography>{selectedAsignacion.expediente?.cut || 'N/A'}</Typography>
-              
+              <Typography>
+                {selectedAsignacion.Documento.Expediente?.cut || "N/A"}
+              </Typography>
+
               <Typography variant="subtitle2">Remitente:</Typography>
-              <Typography>{selectedAsignacion.expediente?.remitente || 'N/A'}</Typography>
-              
+              <Typography>
+                {selectedAsignacion.Documento.Expediente?.remitente || "N/A"}
+              </Typography>
+
               <Typography variant="subtitle2">Documento:</Typography>
               <Typography>
-                {selectedAsignacion.documento?.TipoDocumento?.nombre || 'N/A'} {selectedAsignacion.documento?.numero_documento || ''}
+                {selectedAsignacion.Documento?.TipoDocumento?.nombre || "N/A"}{" "}
+                {selectedAsignacion.Documento?.numero_documento || ""}
               </Typography>
-              
+
               <Typography variant="subtitle2">Asunto:</Typography>
-              <Typography>{selectedAsignacion.documento?.asunto || 'N/A'}</Typography>
-              
+              <Typography>
+                {selectedAsignacion.Documento?.asunto || "N/A"}
+              </Typography>
+
               <Typography variant="subtitle2">Fecha del Documento:</Typography>
-              <Typography>{formatDate(selectedAsignacion.documento?.fecha_documento)}</Typography>
-              
+              <Typography>
+                {formatDate(
+                  parseISOToLimaDate(
+                    selectedAsignacion.Documento?.fecha_documento
+                  )
+                )}
+              </Typography>
+
               <Typography variant="subtitle2">Fecha de Asignación:</Typography>
-              <Typography>{formatDate(selectedAsignacion.fecha_asignacion)}</Typography>
-              
+              <Typography>
+                {formatDateWithTime(
+                  parseISOToLimaDate(selectedAsignacion.fecha_asignacion)
+                )}
+              </Typography>
+
               <Typography variant="subtitle2">Fecha de Vencimiento:</Typography>
-              <Typography>{formatDate(selectedAsignacion.fecha_vencimiento)}</Typography>
-              
+              <Typography>
+                {formatDateWithTime(
+                  parseISOToLimaDate(selectedAsignacion.fecha_prorroga_limite || selectedAsignacion.fecha_limite)
+                )}
+              </Typography>
+
               <Typography variant="subtitle2">Persona Asignada:</Typography>
               <Typography>
-                {selectedAsignacion.usuario?.nombre || ''} {selectedAsignacion.usuario?.apellido || ''}
+                {selectedAsignacion.asignado?.nombre || ""}{" "}
+                {selectedAsignacion.asignado?.apellido || ""}
               </Typography>
-              
+
               <Typography variant="subtitle2">Instrucciones:</Typography>
-              <Typography>{selectedAsignacion.instrucciones || 'Sin instrucciones'}</Typography>
-              
-              <Typography variant="subtitle2">Estado:</Typography>
               <Typography>
-                <Chip
-                  size="small"
-                  label={calculateDaysRemaining(selectedAsignacion.fecha_vencimiento) === null 
-                    ? "Sin fecha" 
-                    : calculateDaysRemaining(selectedAsignacion.fecha_vencimiento) < 0 
-                      ? "Vencido" 
-                      : calculateDaysRemaining(selectedAsignacion.fecha_vencimiento) === 0 
-                        ? "Hoy" 
-                        : `${calculateDaysRemaining(selectedAsignacion.fecha_vencimiento)} día(s)`}
-                  color={getStatusColor(calculateDaysRemaining(selectedAsignacion.fecha_vencimiento))}
-                />
+                {selectedAsignacion.observaciones || "Sin instrucciones"}
               </Typography>
+
+              <Typography variant="subtitle2">Estado:</Typography>
+              <Chip
+                size="small"
+                label={
+                  calculateDaysRemaining(selectedAsignacion) ===
+                  null
+                    ? "Sin fecha"
+                    : calculateDaysRemaining(selectedAsignacion) <
+                      0
+                    ? "Vencido"
+                    : calculateDaysRemaining(
+                        selectedAsignacion
+                      ) === 0
+                    ? "Hoy"
+                    : `${calculateDaysRemaining(
+                        selectedAsignacion
+                      )} día(s)`
+                }
+                color={getStatusColor(
+                  calculateDaysRemaining(selectedAsignacion)
+                )}
+              />
             </Box>
           )}
         </DialogContent>
@@ -432,6 +775,72 @@ const Documentos = () => {
           <Button onClick={handleCloseDetails} color="primary">
             Cerrar
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Response Dialog */}
+      <Dialog
+        open={openResponseDialog}
+        onClose={handleCloseResponseDialog}
+        maxWidth="sm"
+        fullWidth>
+        <DialogTitle>Dar Respuesta</DialogTitle>
+        <DialogContent dividers>
+          <TextField
+            label="Observaciones"
+            multiline
+            rows={4}
+            fullWidth
+            value={responseObservations}
+            onChange={(e) => setResponseObservations(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseResponseDialog} color="secondary">
+            Cancelar
+          </Button>
+          <Button onClick={handleCreateResponse} color="primary">
+            Enviar Respuesta
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog
+        open={openProrrogaDialog}
+        onClose={handleCloseProrrogaDialog}
+        maxWidth="sm"
+        fullWidth>
+        <DialogTitle>Solicitar Prórroga</DialogTitle>
+        <DialogContent>
+          <FormControl fullWidth margin="dense">
+            <InputLabel id="plazo-select-label">
+              Plazo de prórroga (días)
+            </InputLabel>
+            <Select
+              labelId="plazo-select-label"
+              id="plazo-select"
+              value={plazoProrroga}
+              onChange={(e) => setPlazoProrroga(e.target.value)}
+              label="Plazo de prórroga (días)"
+              fullWidth>
+              {[1, 2, 3, 5, 7, 10, 15, 30].map((dias) => (
+                <MenuItem key={dias} value={dias}>
+                  {dias} {dias === 1 ? "día" : "días"}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseProrrogaDialog} color="secondary">
+            Cancelar
+          </Button>
+          {selectedAsignacion && (
+            <Button
+              onClick={() => handleSolicitarProrroga(selectedAsignacion.id)}
+              color="primary">
+              Solicitar
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </div>
