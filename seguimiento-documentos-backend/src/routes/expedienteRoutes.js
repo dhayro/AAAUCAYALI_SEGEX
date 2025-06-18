@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const expedienteController = require('../controllers/expedienteController');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken,isSecretariaOrAbove } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -109,7 +109,7 @@ router.use(authenticateToken);
  *       401:
  *         description: No autorizado
  */
-router.get('/', expedienteController.getAllExpedientes);
+router.get('/',isSecretariaOrAbove, expedienteController.getAllExpedientes);
 
 /**
  * @swagger
@@ -290,5 +290,57 @@ router.patch('/procedimientos', expedienteController.getUniqueProcedimientos);
  *         description: Error del servidor
  */
 router.get('/:id/documentos-relacionados', expedienteController.getDocumentosRelacionados);
+
+/**
+ * @swagger
+ * /api/expedientes/{id}/estado:
+ *   patch:
+ *     summary: Cambiar el estado de un expediente
+ *     tags: [Expedientes]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del expediente a actualizar
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               estado:
+ *                 type: boolean
+ *                 description: Nuevo estado del expediente
+ *                 example: true
+ *     responses:
+ *       200:
+ *         description: Estado del expediente actualizado exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 expediente:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     estado:
+ *                       type: boolean
+ *       400:
+ *         description: No se puede cambiar el estado debido a documentos no terminados
+ *       401:
+ *         description: No autorizado
+ *       404:
+ *         description: Expediente no encontrado
+ */
+router.patch('/:id/estado', authenticateToken, expedienteController.cambiarEstadoExpediente);
 
 module.exports = router;

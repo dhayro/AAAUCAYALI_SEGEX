@@ -533,4 +533,41 @@ router.get('/', isAdmin, usuarioController.obtenerTodosLosUsuarios);
  */
 router.get('/:id', isJefeOrAdmin, usuarioController.obtenerUsuarioPorId);
 
+/**
+ * @swagger
+ * /api/usuarios/{id}/cambiar-perfil:
+ *   patch:
+ *     summary: Cambiar el perfil de un usuario
+ *     tags: [Usuarios]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del usuario
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               nuevoPerfil:
+ *                 type: string
+ *                 description: Nuevo perfil del usuario
+ *     responses:
+ *       200:
+ *         description: Perfil del usuario actualizado exitosamente
+ *       400:
+ *         description: Error en los datos proporcionados
+ *       401:
+ *         description: No autorizado
+ *       404:
+ *         description: Usuario no encontrado
+ */
+router.patch('/:id/cambiar-perfil', authenticateToken, isAdmin, usuarioController.cambiarPerfilUsuario);
+
 module.exports = router;

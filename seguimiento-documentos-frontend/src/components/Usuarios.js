@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import {
+import {Chip,
   Button, TextField, Dialog, DialogActions, DialogContent, DialogTitle,
   Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   TablePagination, InputAdornment, Select, MenuItem, FormControl, InputLabel
@@ -515,6 +515,55 @@ const Usuarios = () => {
     setPagination(prev => ({ ...prev, pageIndex: 0 }));
   };
 
+  const handleChangePerfil = async (usuario) => {
+    const { value: newPerfil } = await Swal.fire({
+      title: 'Cambiar Perfil',
+      input: 'select',
+      inputOptions: {
+        admin: 'Admin',
+        jefe: 'Jefe',
+        secretaria: 'Secretaria',
+        personal: 'Personal'
+      },
+      inputPlaceholder: 'Selecciona un nuevo perfil',
+      showCancelButton: true,
+      inputValidator: (value) => {
+        if (!value) {
+          return 'Debes seleccionar un perfil';
+        }
+      }
+    });
+
+    if (newPerfil) {
+      try {
+        const response = await api.patch(`/usuarios/${usuario.id}/cambiar-perfil`, { nuevoPerfil: newPerfil });
+        if (response.status === 200) {
+          fetchPaginatedUsuarios(filters, pagination);
+          Swal.fire({
+            icon: 'success',
+            title: 'Perfil Actualizado',
+            text: 'El perfil del usuario ha sido actualizado correctamente.',
+            timer: 2500,
+            timerProgressBar: true,
+            showConfirmButton: false
+          });
+        } else {
+          throw new Error('Error al actualizar el perfil');
+        }
+      } catch (error) {
+        console.error('Error updating perfil:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'No se pudo actualizar el perfil. Por favor, intente de nuevo.',
+          timer: 3000,
+          timerProgressBar: true,
+          showConfirmButton: false
+        });
+      }
+    }
+  };
+
   return (
     <div>
       <h2>Gestión de Usuarios</h2>
@@ -596,6 +645,9 @@ const Usuarios = () => {
                   margin="dense"
                 />
               </TableCell>
+              <TableCell>
+                Perfil
+              </TableCell>
               <TableCell align="right">Acciones</TableCell>
             </TableRow>
           </TableHead>
@@ -620,6 +672,15 @@ const Usuarios = () => {
                   <TableCell>{usuario.email || ''}</TableCell>
                   <TableCell>{cargos.find(cargo => cargo.id === usuario.id_cargo)?.nombre || ''}</TableCell>
                   <TableCell>{areas.find(area => area.id === usuario.id_area)?.nombre || ''}</TableCell>
+                  <TableCell>
+                    <Chip
+                      size="small"
+                      label={usuario.perfil || ''}
+                      color={"secondary"}
+                      clickable={true}
+                      onClick={() => handleChangePerfil(usuario)}
+                    />
+                  </TableCell>
                   <TableCell align="right">
                     <BootstrapButton
                       color="success"

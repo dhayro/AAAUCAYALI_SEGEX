@@ -17,7 +17,9 @@ exports.getAllExpedientes = async (req, res) => {
     const documento = req.query.documento ? req.query.documento.trim() : null;
     const filtro = req.query.filtro ? req.query.filtro.trim() : null;
 
-    let whereClause = {};
+    let whereClause = {
+      estado: 1
+    };
 
     if (filtro) {
       whereClause[Op.or] = [
@@ -247,6 +249,67 @@ exports.getDocumentosRelacionados = async (req, res) => {
     res.json(documentosRelacionados);
   } catch (error) {
     console.error('Error al buscar documentos relacionados:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.cambiarEstadoExpediente = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { estado } = req.body; // Suponiendo que el nuevo estado se envía en el cuerpo de la solicitud
+
+    if (estado === false) {
+      // Validar si existen documentos que no están en el estado "TERMINADO"
+      const documentosNoTerminados = await Documento.findAll({
+        where: {
+          id_expediente: id,
+          estado: { [Op.ne]: 'TERMINADO' }
+        }
+      });
+
+      // Si hay documentos que no están terminados, no permitir el cambio de estado
+      if (documentosNoTerminados.length > 0) {
+        res.json({
+          message: 'expediente no puede ser cambiado a estado "false" porque hay documentos no terminados',
+          expediente: id
+        });
+      }else{
+        // Actualizar el estado del expediente
+    const [updated] = await Expediente.update({ estado }, {
+      where: { id }
+    });
+
+    if (updated) {
+      const updatedExpediente = await Expediente.findByPk(id);
+      res.json({
+        message: 'Estado del expediente actualizado exitosamente',
+        expediente: updatedExpediente
+      });
+    } else {
+      res.status(404).json({ message: 'Expediente no encontrado' });
+    }
+
+      }
+
+    }else{
+      // Actualizar el estado del expediente
+    const [updated] = await Expediente.update({ estado }, {
+      where: { id }
+    });
+
+    if (updated) {
+      const updatedExpediente = await Expediente.findByPk(id);
+      res.json({
+        message: 'Estado del expediente actualizado exitosamente',
+        expediente: updatedExpediente
+      });
+    } else {
+      res.status(404).json({ message: 'Expediente no encontrado' });
+    }
+    }
+
+    
+  } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };

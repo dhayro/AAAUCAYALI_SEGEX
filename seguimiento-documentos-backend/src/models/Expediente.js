@@ -41,10 +41,9 @@ const Expediente = sequelize.define(
       type: DataTypes.DATE,
     },
     estado: {
-      type: DataTypes.ENUM("abierto", "cerrado", "pendiente", "en_revision"),
-      defaultValue: "abierto",
-      allowNull: false,
-    },
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+    }
   },
   {
     tableName: "expedientes",

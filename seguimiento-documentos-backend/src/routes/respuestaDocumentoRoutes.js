@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const respuestaDocumentoController = require('../controllers/respuestaDocumentoController');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken,isSecretariaOrAbove } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -57,6 +57,7 @@ const { authenticateToken } = require('../middleware/auth');
  *   description: API para gestionar respuestas de documentos
  */
 
+// Use authentication middleware for all routes
 router.use(authenticateToken);
 
 /**
@@ -67,6 +68,17 @@ router.use(authenticateToken);
  *     tags: [Respuestas de Documentos]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: Número de página para la paginación
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Número de elementos por página
  *     responses:
  *       200:
  *         description: Lista de respuestas obtenida exitosamente
@@ -79,7 +91,7 @@ router.use(authenticateToken);
  *       401:
  *         description: No autorizado
  */
-router.get('/', respuestaDocumentoController.getAllRespuestas);
+router.get('/', isSecretariaOrAbove,respuestaDocumentoController.getAllRespuestas);
 
 /**
  * @swagger
@@ -199,5 +211,57 @@ router.put('/:id', respuestaDocumentoController.updateRespuesta);
  *         description: Respuesta no encontrada
  */
 router.delete('/:id', respuestaDocumentoController.deleteRespuesta);
+
+/**
+ * @swagger
+ * /api/respuestas/{id}/estado:
+ *   patch:
+ *     summary: Cambiar el estado de una respuesta de documento
+ *     tags: [Respuestas de Documentos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID de la respuesta a actualizar
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               estado:
+ *                 type: boolean
+ *                 description: Nuevo estado de la respuesta
+ *                 example: true
+ *     responses:
+ *       200:
+ *         description: Estado de la respuesta actualizado exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 respuesta:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     estado:
+ *                       type: boolean
+ *       400:
+ *         description: Datos inválidos en la solicitud
+ *       401:
+ *         description: No autorizado
+ *       404:
+ *         description: Respuesta no encontrada
+ */
+router.patch('/:id/estado', respuestaDocumentoController.cambiarEstadoRespuesta);
 
 module.exports = router;

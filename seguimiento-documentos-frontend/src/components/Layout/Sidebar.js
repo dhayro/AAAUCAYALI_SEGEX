@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Drawer, List, ListItem, ListItemIcon, ListItemText, Box } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
@@ -7,50 +7,76 @@ import {
   Work as CargoIcon,
   AccountTree as AreaIcon,
   People as UserIcon,
-  Description as TipoDocumentoIcon, // Import the icon for Tipos de Documentos
-  AccessTime as ProrrogaIcon // Import the icon for Documentos Prórroga
+  Description as TipoDocumentoIcon,
+  AccessTime as ProrrogaIcon,
+  QuestionAnswer as RespuestaIcon
 } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
+import {jwtDecode} from "jwt-decode";
 
 const Sidebar = ({ mobileOpen, handleDrawerToggle, drawerWidth }) => {
+  const [currentUserperfil, setCurrentUserperfil] = useState(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const decodedToken = jwtDecode(token);
+        setCurrentUserperfil(decodedToken.perfil);
+      } catch (error) {
+        console.error("Error al decodificar el token:", error);
+      }
+    }
+  }, []); // Empty dependency array means this effect runs once on mount
+
   const drawerContent = (
     <List>
       <ListItem component={Link} to="/" onClick={handleDrawerToggle}>
         <ListItemIcon><DashboardIcon /></ListItemIcon>
         <ListItemText primary="Dashboard" />
       </ListItem>
-      <ListItem component={Link} to="/documentos" onClick={handleDrawerToggle}>
-        <ListItemIcon><DocumentIcon /></ListItemIcon>
-        <ListItemText primary="Documentos" />
-      </ListItem>
-      <ListItem component={Link} to="/expedientes" onClick={handleDrawerToggle}>
-        <ListItemIcon><ExpedienteIcon /></ListItemIcon>
-        <ListItemText primary="Expedientes" />
-      </ListItem>
-      <ListItem component={Link} to="/cargos" onClick={handleDrawerToggle}>
-        <ListItemIcon><CargoIcon /></ListItemIcon>
-        <ListItemText primary="Cargos" />
-      </ListItem>
-      {/* Nuevo elemento para Áreas */}
-      <ListItem component={Link} to="/areas" onClick={handleDrawerToggle}>
-        <ListItemIcon><AreaIcon /></ListItemIcon>
-        <ListItemText primary="Áreas" />
-      </ListItem>
-      {/* Nuevo elemento para Tipos de Documentos */}
-      <ListItem component={Link} to="/tipos-documentos" onClick={handleDrawerToggle}>
-        <ListItemIcon><TipoDocumentoIcon /></ListItemIcon>
-        <ListItemText primary="Tipos de Documentos" />
-      </ListItem>
-      {/* Nuevo elemento para Usuarios */}
-      <ListItem component={Link} to="/usuarios" onClick={handleDrawerToggle}>
-        <ListItemIcon><UserIcon /></ListItemIcon>
-        <ListItemText primary="Usuarios" />
-      </ListItem>
-      {/* Documentos Prórroga */}
-      <ListItem component={Link} to="/documentos-prorroga" onClick={handleDrawerToggle}>
-        <ListItemIcon><ProrrogaIcon /></ListItemIcon>
-        <ListItemText primary="Documentos Prórroga" />
-      </ListItem>
+      {(currentUserperfil === 'personal' || currentUserperfil === 'jefe' || currentUserperfil === 'secretaria' || currentUserperfil === 'admin') && (
+        <ListItem component={Link} to="/documentos" onClick={handleDrawerToggle}>
+          <ListItemIcon><DocumentIcon /></ListItemIcon>
+          <ListItemText primary="Documentos" />
+        </ListItem>
+      )}
+      {(currentUserperfil === 'jefe' || currentUserperfil === 'secretaria' || currentUserperfil === 'admin') && (
+        <>
+          <ListItem component={Link} to="/expedientes" onClick={handleDrawerToggle}>
+            <ListItemIcon><ExpedienteIcon /></ListItemIcon>
+            <ListItemText primary="Expedientes" />
+          </ListItem>
+          <ListItem component={Link} to="/documentos-prorroga" onClick={handleDrawerToggle}>
+            <ListItemIcon><ProrrogaIcon /></ListItemIcon>
+            <ListItemText primary="Documentos Prórroga" />
+          </ListItem>
+          <ListItem component={Link} to="/documentos-respuestas" onClick={handleDrawerToggle}>
+            <ListItemIcon><RespuestaIcon /></ListItemIcon>
+            <ListItemText primary="Documentos Respuestas" />
+          </ListItem>
+        </>
+      )}
+      {currentUserperfil === 'admin' && (
+        <>
+          <ListItem component={Link} to="/cargos" onClick={handleDrawerToggle}>
+            <ListItemIcon><CargoIcon /></ListItemIcon>
+            <ListItemText primary="Cargos" />
+          </ListItem>
+          <ListItem component={Link} to="/areas" onClick={handleDrawerToggle}>
+            <ListItemIcon><AreaIcon /></ListItemIcon>
+            <ListItemText primary="Áreas" />
+          </ListItem>
+          <ListItem component={Link} to="/tipos-documentos" onClick={handleDrawerToggle}>
+            <ListItemIcon><TipoDocumentoIcon /></ListItemIcon>
+            <ListItemText primary="Tipos de Documentos" />
+          </ListItem>
+          <ListItem component={Link} to="/usuarios" onClick={handleDrawerToggle}>
+            <ListItemIcon><UserIcon /></ListItemIcon>
+            <ListItemText primary="Usuarios" />
+          </ListItem>
+        </>
+      )}
     </List>
   );
 

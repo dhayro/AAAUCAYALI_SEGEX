@@ -27,7 +27,7 @@ const RespuestaDocumento = sequelize.define('RespuestaDocumento', {
   updatedAt: 'fecha_modificacion'
 });
 
-RespuestaDocumento.belongsTo(AsignacionDocumento, { foreignKey: 'id_asignacion' });
+RespuestaDocumento.belongsTo(AsignacionDocumento, { as: 'AsignacionDocumento', foreignKey: 'id_asignacion' });
 RespuestaDocumento.belongsTo(Usuario, { as: 'creador', foreignKey: 'id_usuario_creador' });
 RespuestaDocumento.belongsTo(Usuario, { as: 'modificador', foreignKey: 'id_usuario_modificador' });
 

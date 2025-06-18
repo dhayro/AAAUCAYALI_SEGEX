@@ -2182,7 +2182,7 @@ const Expedientes = () => {
                                   ? "info"
                                   : documento.estado === "EN_REVISION"
                                     ? "primary"
-                                    : documento.estado === "CERRADO"
+                                    : documento.estado === "TERMINADO"
                                       ? "success"
                                       : documento.estado === "ANULADO"
                                         ? "error"
@@ -2343,9 +2343,7 @@ const Expedientes = () => {
                   </Box>
                 )}
               >
-                <MenuItem value="">
-                  <em>Seleccione usuarios</em>
-                </MenuItem>
+                
                 {usuarios.map((usuario) => (
                   <MenuItem key={usuario.id} value={usuario.id}>
                     {usuario.nombre} {usuario.apellido} - {usuario.cargo || 'Sin cargo'}

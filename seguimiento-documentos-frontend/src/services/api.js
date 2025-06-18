@@ -103,4 +103,11 @@ export const getAsignacionesConProrrogaPendiente = () => api.get('/asignaciones/
 
 export const aceptarProrroga = (asignacionId, plazoProrroga) => api.patch(`/asignaciones/${asignacionId}/aceptar-prorroga`, { nuevo_plazo_prorroga: plazoProrroga });
 
+export const updateRespuestaEstado = (id, estado) => api.patch(`/respuestas/${id}/estado`, { estado });
+
+export const getPendingAsignacionesByDocumentoId = (documentoId) => api.get(`/asignaciones/documento/${documentoId}/pendientes`);
+
+// Function to update the state of an expediente
+export const updateExpedienteEstado = (id, estado) => api.patch(`/expedientes/${id}/estado`, { estado });
+
 export default api;

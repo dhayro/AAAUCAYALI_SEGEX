@@ -367,3 +367,24 @@ exports.obtenerUsuariosPorArea = async (req, res) => {
     res.status(500).json({ mensaje: error.message });
   }
 };
+
+exports.cambiarPerfilUsuario = async (req, res) => {
+  try {
+    const { id } = req.params; // Get user ID from the request parameters
+    const { nuevoPerfil } = req.body; // Get the new profile from the request body
+
+    // Find the user by ID
+    const user = await Usuario.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+    }
+
+    // Update the user's profile
+    user.perfil = nuevoPerfil;
+    await user.save();
+
+    res.json({ mensaje: 'Perfil del usuario actualizado exitosamente' });
+  } catch (error) {
+    res.status(500).json({ mensaje: error.message });
+  }
+};

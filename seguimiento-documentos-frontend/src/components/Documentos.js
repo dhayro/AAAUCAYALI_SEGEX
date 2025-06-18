@@ -42,6 +42,7 @@ import {
 } from "../services/api"; // Import the function
 
 import Swal from "sweetalert2";
+import { jwtDecode } from "jwt-decode";
 
 // Styled components
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
@@ -262,11 +263,28 @@ const Documentos = () => {
     return "success";
   };
 
+  let token = localStorage.getItem("token");
+  let currentUserId = null;
+
+  if (token) {
+    try {
+      let decodedToken = jwtDecode(token);
+      currentUserId = decodedToken.id;
+    } catch (error) {
+      console.error("Error al decodificar el token:", error);
+    }
+  }
+
   // Handle opening details dialog
   const handleOpenDetails = async (asignacion) => {
     setSelectedAsignacion(asignacion);
     setOpenDetailsDialog(true);
-    if (asignacion.Documento.estado === "ASIGNADO") {
+
+    // Retrieve and decode the token to get the current user's ID
+
+
+    // Check if the current user is the one assigned to the task
+    if (asignacion.Documento.estado === "ASIGNADO" && asignacion.asignado.id === currentUserId) {
       try {
         const docResponse = await updateDocumentoEstado(
           asignacion.Documento.id,
@@ -582,7 +600,7 @@ const Documentos = () => {
                       {formatDateWithTime(
                         parseISOToLimaDate(
                           asignacion.fecha_prorroga_limite ||
-                            asignacion.fecha_limite
+                          asignacion.fecha_limite
                         )
                       )}
                     </TableCell>
@@ -597,10 +615,10 @@ const Documentos = () => {
                           daysRemaining === null
                             ? "Sin fecha"
                             : daysRemaining < 0
-                            ? "Vencido"
-                            : daysRemaining === 0
-                            ? "Hoy"
-                            : `${daysRemaining} día(s)`
+                              ? "Vencido"
+                              : daysRemaining === 0
+                                ? "Hoy"
+                                : `${daysRemaining} día(s)`
                         }
                         color={statusColor}
                         onClick={() => console.log("Estado:", statusColor)}
@@ -633,18 +651,20 @@ const Documentos = () => {
                       )}
                     </TableCell>
                     <TableCell>
-                      <StyledButton
-                        variant="contained"
-                        color="primary"
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenResponseDialog(asignacion);
-                        }}>
-                        Dar Respuesta
-                      </StyledButton>
+                      {asignacion.Documento.estado === 'EN_REVISION' && (
+                        <StyledButton
+                          variant="contained"
+                          color="primary"
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenResponseDialog(asignacion);
+                          }}>
+                          Dar Respuesta
+                        </StyledButton>
+                      )}
                       {daysRemaining <= 2 &&
-                        asignacion.fecha_prorroga === null && (
+                        asignacion.fecha_prorroga === null && asignacion.Documento.estado === 'EN_REVISION' && (
                           <StyledButton
                             variant="contained"
                             color="secondary"
@@ -738,7 +758,7 @@ const Documentos = () => {
                 {formatDateWithTime(
                   parseISOToLimaDate(
                     selectedAsignacion.fecha_prorroga_limite ||
-                      selectedAsignacion.fecha_limite
+                    selectedAsignacion.fecha_limite
                   )
                 )}
               </Typography>
@@ -747,8 +767,8 @@ const Documentos = () => {
               <Typography>
                 {selectedAsignacion.fecha_prorroga
                   ? formatDateWithTime(
-                      parseISOToLimaDate(selectedAsignacion.fecha_prorroga)
-                    )
+                    parseISOToLimaDate(selectedAsignacion.fecha_prorroga)
+                  )
                   : "N/A"}
               </Typography>
 
@@ -765,10 +785,10 @@ const Documentos = () => {
               <Typography>
                 {selectedAsignacion.fecha_prorroga_limite
                   ? formatDateWithTime(
-                      parseISOToLimaDate(
-                        selectedAsignacion.fecha_prorroga_limite
-                      )
+                    parseISOToLimaDate(
+                      selectedAsignacion.fecha_prorroga_limite
                     )
+                  )
                   : "N/A"}
               </Typography>
 
@@ -790,10 +810,10 @@ const Documentos = () => {
                   calculateDaysRemaining(selectedAsignacion) === null
                     ? "Sin fecha"
                     : calculateDaysRemaining(selectedAsignacion) < 0
-                    ? "Vencido"
-                    : calculateDaysRemaining(selectedAsignacion) === 0
-                    ? "Hoy"
-                    : `${calculateDaysRemaining(selectedAsignacion)} día(s)`
+                      ? "Vencido"
+                      : calculateDaysRemaining(selectedAsignacion) === 0
+                        ? "Hoy"
+                        : `${calculateDaysRemaining(selectedAsignacion)} día(s)`
                 }
                 color={getStatusColor(
                   calculateDaysRemaining(selectedAsignacion)
@@ -808,8 +828,7 @@ const Documentos = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Response Dialog */}
+      
       <Dialog
         open={openResponseDialog}
         onClose={handleCloseResponseDialog}
@@ -817,22 +836,34 @@ const Documentos = () => {
         fullWidth>
         <DialogTitle>Dar Respuesta</DialogTitle>
         <DialogContent dividers>
-          <TextField
-            label="Observaciones"
-            multiline
-            rows={4}
-            fullWidth
-            value={responseObservations}
-            onChange={(e) => setResponseObservations(e.target.value)}
-          />
+          {selectedAsignacion && selectedAsignacion.asignado && selectedAsignacion.asignado.id === currentUserId ? (
+            <TextField
+              label="Observaciones"
+              multiline
+              rows={4}
+              fullWidth
+              value={responseObservations}
+              onChange={(e) => setResponseObservations(e.target.value)}
+            />
+          ) : (
+            <Typography variant="body2" color="textSecondary">
+              No tiene permiso para responder a esta asignación.
+            </Typography>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseResponseDialog} color="secondary">
             Cancelar
           </Button>
-          <Button onClick={handleCreateResponse} color="primary">
-            Enviar Respuesta
-          </Button>
+          {selectedAsignacion && selectedAsignacion.asignado && selectedAsignacion.asignado.id === currentUserId && (
+            <Button
+              onClick={handleCreateResponse}
+              color="primary"
+              disabled={!(selectedAsignacion && selectedAsignacion.asignado && selectedAsignacion.asignado.id === currentUserId)}
+            >
+              Enviar Respuesta
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
       <Dialog
@@ -842,30 +873,36 @@ const Documentos = () => {
         fullWidth>
         <DialogTitle>Solicitar Prórroga</DialogTitle>
         <DialogContent>
-          <FormControl fullWidth margin="dense">
-            <InputLabel id="plazo-select-label">
-              Plazo de prórroga (días)
-            </InputLabel>
-            <Select
-              labelId="plazo-select-label"
-              id="plazo-select"
-              value={plazoProrroga}
-              onChange={(e) => setPlazoProrroga(e.target.value)}
-              label="Plazo de prórroga (días)"
-              fullWidth>
-              {[1, 2, 3, 5, 7, 10, 15, 30].map((dias) => (
-                <MenuItem key={dias} value={dias}>
-                  {dias} {dias === 1 ? "día" : "días"}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          {selectedAsignacion && selectedAsignacion.asignado && selectedAsignacion.asignado.id === currentUserId ? (
+            <FormControl fullWidth margin="dense">
+              <InputLabel id="plazo-select-label">
+                Plazo de prórroga (días)
+              </InputLabel>
+              <Select
+                labelId="plazo-select-label"
+                id="plazo-select"
+                value={plazoProrroga}
+                onChange={(e) => setPlazoProrroga(e.target.value)}
+                label="Plazo de prórroga (días)"
+                fullWidth>
+                {[1, 2, 3, 5, 7, 10, 15, 30].map((dias) => (
+                  <MenuItem key={dias} value={dias}>
+                    {dias} {dias === 1 ? "día" : "días"}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          ) : (
+            <Typography variant="body2" color="textSecondary">
+              No tiene permiso para solicitar una prórroga para esta asignación.
+            </Typography>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseProrrogaDialog} color="secondary">
             Cancelar
           </Button>
-          {selectedAsignacion && (
+          {selectedAsignacion && selectedAsignacion.asignado && selectedAsignacion.asignado.id === currentUserId && (
             <Button
               onClick={() => handleSolicitarProrroga(selectedAsignacion.id)}
               color="primary">

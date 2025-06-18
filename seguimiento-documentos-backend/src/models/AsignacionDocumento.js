@@ -30,9 +30,6 @@ const AsignacionDocumento = sequelize.define('AsignacionDocumento', {
   fecha_prorroga_limite: {
     type: DataTypes.DATE,
   },
-  fecha_respuesta: {
-    type: DataTypes.DATE,
-  },
   observaciones: {
     type: DataTypes.TEXT,
   },

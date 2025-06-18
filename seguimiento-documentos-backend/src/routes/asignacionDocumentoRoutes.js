@@ -604,6 +604,40 @@ router.patch('/:id/solicitar-prorroga', authenticateToken, asignacionDocumentoCo
  */
 router.patch('/:id/aceptar-prorroga', authenticateToken, asignacionDocumentoController.aceptarProrroga);
 
-
+/**
+ * @swagger
+ * /api/asignaciones/documento/{documentoId}/pendientes:
+ *   get:
+ *     summary: Obtener el número de asignaciones pendientes para un documento específico
+ *     tags: [Asignaciones de Documentos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: documentoId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del documento
+ *     responses:
+ *       200:
+ *         description: Número de asignaciones pendientes obtenido exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 pendientes:
+ *                   type: integer
+ *       401:
+ *         description: No autorizado
+ *       404:
+ *         description: Documento no encontrado
+ *       500:
+ *         description: Error del servidor
+ */
+router.get('/documento/:documentoId/pendientes', authenticateToken, asignacionDocumentoController.getPendientesAsignacionesByDocumentoId);
 
 module.exports = router;

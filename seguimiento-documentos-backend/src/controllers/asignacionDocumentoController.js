@@ -431,6 +431,27 @@ exports.aceptarProrroga = async (req, res) => {
   }
 };
 
+exports.getPendientesAsignacionesByDocumentoId = async (req, res) => {
+  try {
+    const { documentoId } = req.params; // Obtener el ID del documento de los parámetros de la solicitud
+
+    const pendientesCount = await AsignacionDocumento.count({
+      where: {
+        id_documento: documentoId, // Filtrar por el ID del documento
+        estado: true // Asumiendo que 'true' representa el estado pendiente
+      }
+    });
+
+    res.json({
+      message: 'Número de asignaciones pendientes para el documento obtenido exitosamente',
+      pendientes: pendientesCount
+    });
+  } catch (error) {
+    console.error('Error al obtener asignaciones pendientes para el documento:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
 /**
  * Calcula la fecha límite sumando días hábiles (excluyendo sábados y domingos)
  * @param {Date} fechaInicio - Fecha de inicio

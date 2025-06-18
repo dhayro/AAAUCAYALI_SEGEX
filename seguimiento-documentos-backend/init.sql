@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS expedientes (
     remitente VARCHAR(100),
     fecha_cierre DATETIME,
     fecha_ultima_respuesta DATETIME,
-    estado ENUM('abierto', 'cerrado', 'pendiente', 'en_revision') DEFAULT 'abierto' NOT NULL,
+    estado BOOLEAN DEFAULT TRUE,
     id_usuario_creador INT,
     id_usuario_modificador INT,
     fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
