@@ -71,6 +71,22 @@ CREATE TABLE IF NOT EXISTS expedientes (
     UNIQUE (cut, periodo)   -- Asegurar que el CUT y el periodo sean únicos
 );
 
+-- Crear tabla de antecedentes
+CREATE TABLE IF NOT EXISTS antecedentes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_expediente INT NOT NULL,
+    fecha_incidente DATETIME NOT NULL,
+    persona_involucrada VARCHAR(200) NOT NULL,
+    telefono VARCHAR(20),
+    resumen TEXT NOT NULL,
+    fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+    fecha_modificacion DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_expediente) REFERENCES expedientes(id)
+);
+
+-- Índices para la tabla antecedentes
+CREATE INDEX idx_antecedentes_id_expediente ON antecedentes(id_expediente);
+
 -- Crear tabla de documentos
 CREATE TABLE IF NOT EXISTS documentos (
     id INT AUTO_INCREMENT PRIMARY KEY,
