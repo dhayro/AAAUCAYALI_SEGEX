@@ -44,6 +44,20 @@ export const toISOLimaDate = (date) => {
   return `${year}-${month}-${day}`;
 };
 
+export const toISOLimaDateTime = (date) => {
+  if (!date) return null;
+  
+  const limaDate = toLimaTimezone(date);
+  
+  const year = limaDate.getFullYear();
+  const month = String(limaDate.getMonth() + 1).padStart(2, '0');
+  const day = String(limaDate.getDate()).padStart(2, '0');
+  const hours = String(limaDate.getHours()).padStart(2, '0');
+  const minutes = String(limaDate.getMinutes()).padStart(2, '0');
+  
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
+};
+
 /**
  * Formatea una fecha en formato DD/MM/YYYY HH:MM:SS según la zona horaria de Lima
  * @param {Date|string} date - Fecha a formatear

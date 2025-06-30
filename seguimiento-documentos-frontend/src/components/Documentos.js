@@ -194,33 +194,37 @@ const Documentos = () => {
 
     // If today is Saturday, move to next Monday
     if (today.getDay() === 6) {
-      today.setDate(today.getDate() + 2);
+        today.setDate(today.getDate() + 2);
     }
     // If today is Sunday, move to next Monday
     else if (today.getDay() === 0) {
-      today.setDate(today.getDate() + 1);
+        today.setDate(today.getDate() + 1);
     }
 
-    // Calculate the total number of days between today and the due date
+    // Calculate the total number of working days between today and the due date
     let workingDaysRemaining = 0;
     let currentDate = new Date(today);
 
-    while (currentDate < due) {
-      // Use < to exclude the due date
-      const dayOfWeek = currentDate.getDay();
-      if (dayOfWeek !== 6 && dayOfWeek !== 0) {
-        workingDaysRemaining++; // Count only weekdays
-      }
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-
-    // If today is the due date, return 0
-    if (today.toDateString() === due.toDateString()) {
-      return 0;
+    if (currentDate <= due) {
+        while (currentDate < due) {
+            const dayOfWeek = currentDate.getDay();
+            if (dayOfWeek !== 6 && dayOfWeek !== 0) {
+                workingDaysRemaining++; // Count only weekdays
+            }
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+    } else {
+        while (currentDate > due) {
+            const dayOfWeek = due.getDay();
+            if (dayOfWeek !== 6 && dayOfWeek !== 0) {
+                workingDaysRemaining--; // Count only weekdays
+            }
+            due.setDate(due.getDate() + 1);
+        }
     }
 
     return workingDaysRemaining;
-  };
+};
 
   const handleUpdateAsignacionEstado = async (asignacionId, nuevoEstado) => {
     try {
@@ -615,7 +619,7 @@ const Documentos = () => {
                           daysRemaining === null
                             ? "Sin fecha"
                             : daysRemaining < 0
-                              ? "Vencido"
+                              ? "Vencido "+ daysRemaining*(-1) +" día(s)"
                               : daysRemaining === 0
                                 ? "Hoy"
                                 : `${daysRemaining} día(s)`

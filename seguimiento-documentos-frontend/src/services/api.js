@@ -110,4 +110,16 @@ export const getPendingAsignacionesByDocumentoId = (documentoId) => api.get(`/as
 // Function to update the state of an expediente
 export const updateExpedienteEstado = (id, estado) => api.patch(`/expedientes/${id}/estado`, { estado });
 
+export const getAntecedentesByExpedienteId = (expedienteId) => {
+  return api.get('/antecedentes', { params: { id_expediente: expedienteId } });
+};
+
+export const createAntecedente = (antecedenteData) => {
+  return api.post('/antecedentes', antecedenteData);
+};
+
+export const deleteAntecedente = (id) => {
+  return api.delete(`/antecedentes/${id}`);
+};
+
 export default api;

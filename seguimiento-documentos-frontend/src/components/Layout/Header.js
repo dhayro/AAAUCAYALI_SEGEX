@@ -107,7 +107,7 @@ const Header = ({ handleDrawerToggle, onLogout }) => {
           <MenuIcon />
         </IconButton>
         <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-          Sistema de Seguimiento de Documentos AAA HUALLAGA
+          Sistema de Seguimiento de Documentos AAA 
         </Typography>
         <Typography variant="subtitle1" sx={{ mr: 2 }}>
           Bienvenido, {userName}

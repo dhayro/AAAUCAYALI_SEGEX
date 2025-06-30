@@ -3,10 +3,12 @@ import {
   formatDate,
   parseISOToLimaDate,
   toISOLimaDate,
-  // formatDateWithTime,
+  toISOLimaDateTime,
+  formatDateWithTime
 } from "../utils/dateUtils";
 
 import {
+  Card, CardContent, Divider, IconButton,
   Box,
   Chip,
   Button,
@@ -53,7 +55,8 @@ import {
   getUsersByAreaId,
   getUsersForSelect,
   createAsignacion,
-  updateDocumentoEstado
+  updateDocumentoEstado,
+  getAntecedentesByExpedienteId, createAntecedente, deleteAntecedente
 } from "../services/api";
 import Swal from "sweetalert2";
 import SearchIcon from "@mui/icons-material/Search";
@@ -61,6 +64,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import NoteAddIcon from "@mui/icons-material/NoteAdd";
 import ListAltIcon from "@mui/icons-material/ListAlt";
+import PhoneIcon from '@mui/icons-material/Phone';
 import { debounce } from "lodash";
 import { readExcelFile } from "../utils/excelUtils";
 import { jwtDecode } from "jwt-decode";
@@ -80,6 +84,8 @@ const isEqual = (obj1, obj2) => {
 };
 
 // Definimos estilos personalizados para los botones
+
+// Definimos estilos personalizados para los botones
 const BootstrapButton = styled(Button)(({ theme, color }) => ({
   boxShadow: "none",
   textTransform: "none",
@@ -96,7 +102,9 @@ const BootstrapButton = styled(Button)(({ theme, color }) => ({
           ? "#28a745"
           : color === "celeste"
             ? "#00bfff"
-            : "#0063cc", // Add celeste color
+            : color === "warning"
+              ? "#ffc107" // Add warning color
+              : "#0063cc",
   borderColor:
     color === "primary"
       ? "#0063cc"
@@ -106,7 +114,9 @@ const BootstrapButton = styled(Button)(({ theme, color }) => ({
           ? "#28a745"
           : color === "celeste"
             ? "#00bfff"
-            : "#0063cc",
+            : color === "warning"
+              ? "#ffc107" // Add warning border color
+              : "#0063cc",
   color: "#ffffff",
   fontFamily: [
     "-apple-system",
@@ -130,7 +140,9 @@ const BootstrapButton = styled(Button)(({ theme, color }) => ({
             ? "#218838"
             : color === "celeste"
               ? "#00a3cc"
-              : "#0069d9", // Add hover color for celeste
+              : color === "warning"
+                ? "#e0a800" // Add hover color for warning
+                : "#0069d9",
     borderColor:
       color === "primary"
         ? "#0062cc"
@@ -140,7 +152,9 @@ const BootstrapButton = styled(Button)(({ theme, color }) => ({
             ? "#1e7e34"
             : color === "celeste"
               ? "#00a3cc"
-              : "#0062cc",
+              : color === "warning"
+                ? "#e0a800" // Add hover border color for warning
+                : "#0062cc",
   },
   "&:active": {
     boxShadow: "none",
@@ -153,7 +167,9 @@ const BootstrapButton = styled(Button)(({ theme, color }) => ({
             ? "#1e7e34"
             : color === "celeste"
               ? "#0099cc"
-              : "#0062cc", // Add active color for celeste
+              : color === "warning"
+                ? "#d39e00" // Add active color for warning
+                : "#0062cc",
     borderColor:
       color === "primary"
         ? "#005cbf"
@@ -163,7 +179,9 @@ const BootstrapButton = styled(Button)(({ theme, color }) => ({
             ? "#1c7e30"
             : color === "celeste"
               ? "#0099cc"
-              : "#005cbf",
+              : color === "warning"
+                ? "#d39e00" // Add active border color for warning
+                : "#005cbf",
   },
   "&:focus": {
     boxShadow: `0 0 0 0.2rem ${color === "primary"
@@ -174,7 +192,9 @@ const BootstrapButton = styled(Button)(({ theme, color }) => ({
           ? "rgba(40,167,69,.5)"
           : color === "celeste"
             ? "rgba(0,191,255,.5)"
-            : "rgba(0,123,255,.5)"
+            : color === "warning"
+              ? "rgba(255,193,7,.5)" // Add focus color for warning
+              : "rgba(0,123,255,.5)"
       }`,
   },
 }));
@@ -265,16 +285,7 @@ const StyledDialogButton = styled(Button)(({ theme, color }) => ({
   },
 }));
 
-let id_usuario_creador = 0;
-let token = localStorage.getItem("token");
-if (token) {
-  try {
-    let decodedToken = jwtDecode(token);
-    id_usuario_creador = decodedToken.id;
-  } catch (error) {
-    console.error("Error al decodificar el token:", error);
-  }
-}
+
 
 // const formatDate = (dateString) => {
 //   if (!dateString) return '';
@@ -300,6 +311,8 @@ if (token) {
 
 const Expedientes = () => {
   const [expedientes, setExpedientes] = useState([]);
+  const [idUsuarioCreador, setIdUsuarioCreador] = useState(null); // State to store the user ID
+
   const [open, setOpen] = useState(false);
   const [currentExpediente, setCurrentExpediente] = useState({});
   const [isEditing, setIsEditing] = useState(false);
@@ -330,6 +343,13 @@ const Expedientes = () => {
   const [originalIdTipoDocumento, setOriginalIdTipoDocumento] = useState("");
   // Primero, agrega un nuevo estado para el filtro de documentos
   const [documentosFilter, setDocumentosFilter] = useState('');
+
+  const [newAntecedente, setNewAntecedente] = useState({
+    fecha_incidente: toISOLimaDateTime(new Date()),
+    persona_involucrada: '',
+    telefono: '',
+    resumen: '',
+  });
 
 
   // Añade este estado junto con tus otros estados
@@ -368,6 +388,29 @@ const Expedientes = () => {
   const [isLoadingUsuarios, setIsLoadingUsuarios] = useState(false);
 
   const [selectedUsuarios, setSelectedUsuarios] = useState([]);
+
+  const [openAntecedentesDialog, setOpenAntecedentesDialog] = useState(false);
+  const [antecedentesList, setAntecedentesList] = useState([]);
+
+  const [currentExpedienteIdForAntecedentes, setCurrentExpedienteIdForAntecedentes] = useState(null);
+
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const decodedToken = jwtDecode(token);
+        setIdUsuarioCreador(decodedToken.id); // Set the user ID in state
+      } catch (error) {
+        console.error("Error al decodificar el token:", error);
+      }
+    }
+  }, []);
+  useEffect(() => {
+    if (idUsuarioCreador !== null) {
+      console.log("Updated idUsuarioCreador:", idUsuarioCreador);
+    }
+  }, [idUsuarioCreador]);
 
 
   // Agregar estas funciones para manejar la asignación
@@ -591,6 +634,61 @@ const Expedientes = () => {
     }
   };
 
+  const handleOpenAntecedentesList = async (expediente) => {
+    try {
+      const response = await getAntecedentesByExpedienteId(expediente.id);
+
+      if (response.status === 200) {
+        const antecedentes = response.data;
+        setAntecedentesList(antecedentes);
+        setCurrentExpedienteIdForAntecedentes(expediente.id); // Set the current expediente ID
+        setOpenAntecedentesDialog(true);
+      } else {
+        console.error("Failed to fetch antecedentes");
+      }
+    } catch (error) {
+      console.error("Error fetching antecedentes:", error);
+    }
+  };
+
+  const handleCreateAntecedente = async () => {
+    try {
+      const response = await createAntecedente({
+        ...newAntecedente,
+        id_expediente: currentExpedienteIdForAntecedentes, // Include the expediente ID
+      });
+      if (response.status === 201) {
+        setAntecedentesList([...antecedentesList, response.data]);
+        setNewAntecedente({
+          fecha_incidente: toISOLimaDateTime(new Date()),
+          persona_involucrada: '',
+          telefono: '',
+          resumen: '',
+        });
+        showSweetAlert({
+          icon: 'success',
+          title: 'Éxito',
+          text: 'Antecedente creado correctamente',
+          timer: 2500,
+          timerProgressBar: true,
+          showConfirmButton: false,
+        });
+      } else {
+        throw new Error('Error al crear el antecedente');
+      }
+    } catch (error) {
+      console.error('Error creating antecedente:', error);
+      showSweetAlert({
+        icon: 'error',
+        title: 'Error',
+        text: 'No se pudo crear el antecedente. Por favor, intente de nuevo.',
+        timer: 3000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+      });
+    }
+  };
+
   // Función para manejar cambios en el filtro
   const handleDocumentosFilterChange = (e) => {
     const filterValue = e.target.value.toLowerCase();
@@ -802,6 +900,7 @@ const Expedientes = () => {
       numero_documento: "",
       asunto: "",
       fecha_documento: null,
+      id_usuario_creador: "",
     });
     setOpen(true);
   };
@@ -903,7 +1002,7 @@ const Expedientes = () => {
       const expediente = {
         ...currentExpediente,
         id_tipo_documento: currentExpediente.id_tipo_documento.id || "", // Extract ID from tipo_documento object
-        id_usuario_creador, // Usar el ID del usuario obtenido del token
+        id_usuario_creador: idUsuarioCreador, // Usar el ID del usuario obtenido del token
       };
 
       let expedienteId;
@@ -927,7 +1026,7 @@ const Expedientes = () => {
           return;
         }
 
-        expediente.id_usuario_modificador = id_usuario_creador; // Actualizar el usuario modificador
+        expediente.id_usuario_modificador = idUsuarioCreador; // Actualizar el usuario modificador
         await updateExpediente(currentExpediente.id, expediente);
         expedienteId = currentExpediente.id;
         expedienteId_tipo_documento = expediente.id_tipo_documento;
@@ -954,7 +1053,7 @@ const Expedientes = () => {
                 (originalDocumento.fecha_documento
                   ? parseISOToLimaDate(originalDocumento.fecha_documento)
                   : "") || null,
-              id_usuario_modificador: id_usuario_creador,
+              id_usuario_modificador: idUsuarioCreador,
             };
 
             await updateDocumento(documentoId, documentoActualizado);
@@ -979,7 +1078,7 @@ const Expedientes = () => {
                 ? parseISOToLimaDate(originalDocumento.fecha_documento)
                 : "") || null,
             estado: "PENDIENTE",
-            id_usuario_creador,
+            id_usuario_creador: idUsuarioCreador,
           };
 
           await createDocumento(documento);
@@ -1001,6 +1100,44 @@ const Expedientes = () => {
         icon: "error",
         title: "Error",
         text: "Error al procesar la solicitud. Por favor, intente de nuevo.",
+      });
+    }
+  };
+
+  const handleDeleteAntecedente = async (id) => {
+    try {
+      const result = await Swal.fire({
+        title: '¿Está seguro?',
+        text: "No podrá revertir esta acción",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+      });
+
+      if (result.isConfirmed) {
+        await deleteAntecedente(id);
+        setAntecedentesList(prevList => prevList.filter(antecedente => antecedente.id !== id));
+        Swal.fire({
+          icon: 'success',
+          title: 'Eliminado',
+          text: 'El antecedente ha sido eliminado.',
+          timer: 2500,
+          timerProgressBar: true,
+          showConfirmButton: false
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting antecedente:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Error al eliminar el antecedente. Por favor, intente de nuevo.',
+        timer: 3000,
+        timerProgressBar: true,
+        showConfirmButton: false
       });
     }
   };
@@ -1271,7 +1408,7 @@ const Expedientes = () => {
             asunto: row[9] || "",
             fecha_documento: null,
             remitente: row[11] || "",
-            id_usuario_creador,
+            id_usuario_creador: idUsuarioCreador,
           };
 
           if (!expediente.cut) {
@@ -1300,7 +1437,7 @@ const Expedientes = () => {
                 : null,
               bandeja: row[18] || "",
               estado: "PENDIENTE",
-              id_usuario_creador,
+              id_usuario_creador: idUsuarioCreador,
               brecha: fechaBrechaISO,
             };
 
@@ -1445,7 +1582,10 @@ const Expedientes = () => {
           (currentDocumento.fecha_documento
             ? parseISOToLimaDate(currentDocumento.fecha_documento)
             : "") || null,
-        estado: currentDocumento.estado || 'PENDIENTE'
+        estado: currentDocumento.estado || 'PENDIENTE',
+        ...(isEditingDocumento
+          ? { id_usuario_modificador: idUsuarioCreador }
+          : { id_usuario_creador: idUsuarioCreador }),
       };
 
       let response;
@@ -1481,7 +1621,7 @@ const Expedientes = () => {
         //     (currentDocumento.fecha_documento
         //       ? parseISOToLimaDate(currentDocumento.fecha_documento)
         //       : "") || null,
-        //   id_usuario_creador,
+        // //   id_usuario_creador,
         //   estado: "PENDIENTE",
         // };
 
@@ -1725,43 +1865,55 @@ const Expedientes = () => {
                       {`${expediente.TipoDocumento?.nombre || ""} ${expediente.numero_documento || ""
                         }`.trim()}
                     </TableCell>
+
                     <TableCell align="right">
-                      <Tooltip title="Listar Documentos">
-                        <BootstrapButton
-                          color="celeste"
-                          onClick={() => handleOpenDocumentosList(expediente)}
-                          style={{ marginRight: "8px", padding: "4px 8px" }}
-                          size="small">
-                          <ListAltIcon fontSize="small" />
-                        </BootstrapButton>
-                      </Tooltip>
-                      <Tooltip title="Agregar Documento">
-                        <BootstrapButton
-                          color="primary"
-                          onClick={() => handleOpenDocumentoDialog(expediente)}
-                          style={{ marginRight: "8px", padding: "4px 8px" }}
-                          size="small">
-                          <NoteAddIcon fontSize="small" />
-                        </BootstrapButton>
-                      </Tooltip>
-                      <Tooltip title="Editar Expediente">
-                        <BootstrapButton
-                          color="success"
-                          onClick={() => handleEdit(expediente)}
-                          style={{ marginRight: "8px", padding: "4px 8px" }}
-                          size="small">
-                          <EditIcon fontSize="small" />
-                        </BootstrapButton>
-                      </Tooltip>
-                      <Tooltip title="Eliminar Expediente">
-                        <BootstrapButton
-                          color="secondary"
-                          onClick={() => handleDelete(expediente.id)}
-                          style={{ padding: "4px 8px" }}
-                          size="small">
-                          <DeleteIcon fontSize="small" />
-                        </BootstrapButton>
-                      </Tooltip>
+                      <Box display="flex" flexWrap="wrap" justifyContent="flex-end" gap={1}>
+                        <Tooltip title="Listar Documentos">
+                          <BootstrapButton
+                            color="celeste"
+                            onClick={() => handleOpenDocumentosList(expediente)}
+                            size="small"
+                          >
+                            <ListAltIcon fontSize="small" />
+                          </BootstrapButton>
+                        </Tooltip>
+                        <Tooltip title="Listar Antecedentes">
+                          <BootstrapButton
+                            color="warning"
+                            onClick={() => handleOpenAntecedentesList(expediente)}
+                            size="small"
+                          >
+                            <PhoneIcon fontSize="small" />
+                          </BootstrapButton>
+                        </Tooltip>
+                        <Tooltip title="Agregar Documento">
+                          <BootstrapButton
+                            color="primary"
+                            onClick={() => handleOpenDocumentoDialog(expediente)}
+                            size="small"
+                          >
+                            <NoteAddIcon fontSize="small" />
+                          </BootstrapButton>
+                        </Tooltip>
+                        <Tooltip title="Editar Expediente">
+                          <BootstrapButton
+                            color="success"
+                            onClick={() => handleEdit(expediente)}
+                            size="small"
+                          >
+                            <EditIcon fontSize="small" />
+                          </BootstrapButton>
+                        </Tooltip>
+                        <Tooltip title="Eliminar Expediente">
+                          <BootstrapButton
+                            color="secondary"
+                            onClick={() => handleDelete(expediente.id)}
+                            size="small"
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </BootstrapButton>
+                        </Tooltip>
+                      </Box>
                     </TableCell>
                   </StyledTableRow>
                 ))
@@ -2343,7 +2495,7 @@ const Expedientes = () => {
                   </Box>
                 )}
               >
-                
+
                 {usuarios.map((usuario) => (
                   <MenuItem key={usuario.id} value={usuario.id}>
                     {usuario.nombre} {usuario.apellido} - {usuario.cargo || 'Sin cargo'}
@@ -2393,6 +2545,102 @@ const Expedientes = () => {
             <StyledDialogButton onClick={handleSubmitAsignar} color="primary">
               Asignar
             </StyledDialogButton>
+          </DialogActions>
+        </Dialog>
+        <Dialog open={openAntecedentesDialog} onClose={() => setOpenAntecedentesDialog(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>Listado de Antecedentes</DialogTitle>
+          <DialogContent dividers>
+            {/* Input fields for new antecedent */}
+            <TextField
+              margin="dense"
+              label="Fecha Incidente"
+              type="datetime-local"
+              fullWidth
+              value={newAntecedente.fecha_incidente}
+              onChange={(e) => setNewAntecedente({ ...newAntecedente, fecha_incidente: e.target.value })}
+            />
+            <TextField
+              margin="dense"
+              label="Persona Involucrada"
+              type="text"
+              fullWidth
+              value={newAntecedente.persona_involucrada}
+              onChange={(e) => setNewAntecedente({ ...newAntecedente, persona_involucrada: e.target.value })}
+            />
+            <TextField
+              margin="dense"
+              label="Teléfono"
+              type="text"
+              fullWidth
+              value={newAntecedente.telefono}
+              onChange={(e) => setNewAntecedente({ ...newAntecedente, telefono: e.target.value })}
+            />
+            <TextField
+              margin="dense"
+              label="Resumen"
+              type="text"
+              fullWidth
+              multiline
+              rows={3}
+              value={newAntecedente.resumen}
+              onChange={(e) => setNewAntecedente({ ...newAntecedente, resumen: e.target.value })}
+            />
+            {antecedentesList.length > 0 ? (
+              antecedentesList.map((antecedente, index) => (
+                <Card key={index} variant="outlined" style={{ marginBottom: '16px', backgroundColor: '#f5f5f5' }}>
+                  <CardContent>
+                    <Box display="flex" justifyContent="space-between" alignItems="center">
+                      <Typography variant="h6" gutterBottom style={{ color: '#3f51b5' }}>
+                        Antecedente {index + 1}
+                      </Typography>
+                      <IconButton
+                        size="small"
+                        color="secondary"
+                        onClick={() => handleDeleteAntecedente(antecedente.id)}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Box>
+                    <Divider style={{ marginBottom: '8px' }} />
+                    <Typography variant="subtitle2" color="textSecondary">
+                      Fecha Incidente:
+                    </Typography>
+                    <Typography variant="body1" gutterBottom>
+                      {formatDateWithTime(antecedente.fecha_incidente)}
+                    </Typography>
+                    <Typography variant="subtitle2" color="textSecondary">
+                      Persona Involucrada:
+                    </Typography>
+                    <Typography variant="body1" gutterBottom>
+                      {antecedente.persona_involucrada}
+                    </Typography>
+                    <Typography variant="subtitle2" color="textSecondary">
+                      Teléfono:
+                    </Typography>
+                    <Typography variant="body1" gutterBottom>
+                      {antecedente.telefono || 'N/A'}
+                    </Typography>
+                    <Typography variant="subtitle2" color="textSecondary">
+                      Resumen:
+                    </Typography>
+                    <Typography variant="body1">
+                      {antecedente.resumen}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <Typography>No hay antecedentes disponibles</Typography>
+            )}
+
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCreateAntecedente} color="primary">
+              Crear Antecedente
+            </Button>
+            <Button onClick={() => setOpenAntecedentesDialog(false)} color="secondary">
+              Cerrar
+            </Button>
           </DialogActions>
         </Dialog>
       </div>
