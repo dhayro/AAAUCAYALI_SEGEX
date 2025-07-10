@@ -688,4 +688,59 @@ router.get('/documento/:documentoId/pendientes', authenticateToken, asignacionDo
  */
 router.post('/calendario', asignacionDocumentoController.createAsignacionCalendario);
 
+/**
+ * @swagger
+ * /api/asignaciones/{id}/aceptar-prorroga-calendario:
+ *   patch:
+ *     summary: Aceptar una prórroga para una asignación y actualizar el plazo usando días calendario
+ *     tags: [Asignaciones de Documentos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID de la asignación a actualizar
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               nuevo_plazo_prorroga:
+ *                 type: integer
+ *                 description: Nuevo plazo adicional en días calendario
+ *                 example: 5
+ *     responses:
+ *       200:
+ *         description: Prórroga con días calendario aceptada y plazo actualizado exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 asignacion:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     plazo_prorroga:
+ *                       type: integer
+ *                     fecha_prorroga_limite:
+ *                       type: string
+ *                       format: date-time
+ *       400:
+ *         description: Datos inválidos en la solicitud
+ *       401:
+ *         description: No autorizado
+ *       404:
+ *         description: Asignación no encontrada
+ */
+router.patch('/:id/aceptar-prorroga-calendario', authenticateToken, asignacionDocumentoController.aceptarProrrogaCalendario);
+
 module.exports = router;

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+
 import {
   formatDate,
   parseISOToLimaDate,
@@ -2510,20 +2511,59 @@ const Expedientes = () => {
             </FormControl>
 
             <FormControl fullWidth margin="dense">
-              <InputLabel id="plazo-select-label">Plazo de respuesta (días)</InputLabel>
-              <Select
-                labelId="plazo-select-label"
+              <Autocomplete
                 id="plazo-select"
+                freeSolo
+                options={[1, 2, 3, 5, 7, 10, 15, 30]}
                 value={plazoRespuesta}
-                onChange={(e) => setPlazoRespuesta(e.target.value)}
-                label="Plazo de respuesta (días)"
-              >
-                {[1, 2, 3, 5, 7, 10, 15, 30].map((dias) => (
-                  <MenuItem key={dias} value={dias}>
-                    {dias} {dias === 1 ? 'día' : 'días'}
-                  </MenuItem>
-                ))}
-              </Select>
+                onChange={(event, newValue) => {
+                  // Handle both string input and option selection
+                  if (typeof newValue === 'string') {
+                    // Try to convert to number if it's a valid number
+                    const numValue = parseInt(newValue, 10);
+                    if (!isNaN(numValue) && numValue > 0) {
+                      setPlazoRespuesta(numValue);
+                    } else if (newValue === '') {
+                      setPlazoRespuesta('');
+                    }
+                  } else {
+                    setPlazoRespuesta(newValue);
+                  }
+                }}
+                onInputChange={(event, newInputValue) => {
+                  // Handle input changes
+                  if (newInputValue === '') {
+                    setPlazoRespuesta('');
+                    return;
+                  }
+                  
+                  const numValue = parseInt(newInputValue, 10);
+                  if (!isNaN(numValue) && numValue > 0) {
+                    setPlazoRespuesta(numValue);
+                  }
+                }}
+                renderInput={(params) => (
+                  <TextField 
+                    {...params} 
+                    label="Plazo de respuesta (días)" 
+                    type="text"
+                    InputProps={{
+                      ...params.InputProps,
+                      inputMode: 'numeric',
+                      pattern: '[0-9]*'
+                    }}
+                  />
+                )}
+                renderOption={(props, option) => (
+                  <li {...props}>
+                    {option} {option === 1 ? 'día' : 'días'}
+                  </li>
+                )}
+                getOptionLabel={(option) => {
+                  if (option === '') return '';
+                  return option.toString();
+                }}
+              />
             </FormControl>
 
             <TextField

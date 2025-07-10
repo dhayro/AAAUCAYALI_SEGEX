@@ -7,9 +7,7 @@ import {
   toLimaTimezone,
 } from "../utils/dateUtils";
 import {
-  InputLabel,
-  Select,
-  MenuItem,
+
   Paper,
   Table,
   TableBody,
@@ -30,8 +28,10 @@ import {
   DialogContent,
   DialogTitle,
   styled,
-  FormControl,
+  FormControl
 } from "@mui/material";
+import { Autocomplete } from '@mui/material';
+
 import SearchIcon from "@mui/icons-material/Search";
 import {
   getAsignaciones,
@@ -183,8 +183,7 @@ const Documentos = () => {
     setPagination({ pageIndex: 0, pageSize: newPageSize });
   };
 
-  // Calculate days remaining
-  const calculateDaysRemaining = (asignacion) => {
+  const calculateCalendarDaysRemaining = (asignacion) => {
     const dueDate = asignacion.fecha_prorroga_limite || asignacion.fecha_limite;
     if (!dueDate) return null;
 
@@ -192,39 +191,57 @@ const Documentos = () => {
     let today = toLimaTimezone(new Date());
     const due = parseISOToLimaDate(dueDate);
 
-    // If today is Saturday, move to next Monday
-    if (today.getDay() === 6) {
-        today.setDate(today.getDate() + 2);
-    }
-    // If today is Sunday, move to next Monday
-    else if (today.getDay() === 0) {
-        today.setDate(today.getDate() + 1);
-    }
+    // Calculate the difference in milliseconds
+    const diffTime = due - today;
 
-    // Calculate the total number of working days between today and the due date
-    let workingDaysRemaining = 0;
-    let currentDate = new Date(today);
+    // Convert milliseconds to days (including partial days)
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    if (currentDate <= due) {
-        while (currentDate < due) {
-            const dayOfWeek = currentDate.getDay();
-            if (dayOfWeek !== 6 && dayOfWeek !== 0) {
-                workingDaysRemaining++; // Count only weekdays
-            }
-            currentDate.setDate(currentDate.getDate() + 1);
-        }
-    } else {
-        while (currentDate > due) {
-            const dayOfWeek = due.getDay();
-            if (dayOfWeek !== 6 && dayOfWeek !== 0) {
-                workingDaysRemaining--; // Count only weekdays
-            }
-            due.setDate(due.getDate() + 1);
-        }
-    }
+    return diffDays;
+  };
 
-    return workingDaysRemaining;
-};
+  // Calculate days remaining kong
+  //   const calculateDaysRemaining = (asignacion) => {
+  //     const dueDate = asignacion.fecha_prorroga_limite || asignacion.fecha_limite;
+  //     if (!dueDate) return null;
+
+  //     // Convert today's date and due date to Lima timezone
+  //     let today = toLimaTimezone(new Date());
+  //     const due = parseISOToLimaDate(dueDate);
+
+  //     // If today is Saturday, move to next Monday
+  //     if (today.getDay() === 6) {
+  //         today.setDate(today.getDate() + 2);
+  //     }
+  //     // If today is Sunday, move to next Monday
+  //     else if (today.getDay() === 0) {
+  //         today.setDate(today.getDate() + 1);
+  //     }
+
+  //     // Calculate the total number of working days between today and the due date
+  //     let workingDaysRemaining = 0;
+  //     let currentDate = new Date(today);
+
+  //     if (currentDate <= due) {
+  //         while (currentDate < due) {
+  //             const dayOfWeek = currentDate.getDay();
+  //             if (dayOfWeek !== 6 && dayOfWeek !== 0) {
+  //                 workingDaysRemaining++; // Count only weekdays
+  //             }
+  //             currentDate.setDate(currentDate.getDate() + 1);
+  //         }
+  //     } else {
+  //         while (currentDate > due) {
+  //             const dayOfWeek = due.getDay();
+  //             if (dayOfWeek !== 6 && dayOfWeek !== 0) {
+  //                 workingDaysRemaining--; // Count only weekdays
+  //             }
+  //             due.setDate(due.getDate() + 1);
+  //         }
+  //     }
+
+  //     return workingDaysRemaining;
+  // };
 
   const handleUpdateAsignacionEstado = async (asignacionId, nuevoEstado) => {
     try {
@@ -566,7 +583,7 @@ const Documentos = () => {
               </TableRow>
             ) : asignaciones.length > 0 ? (
               asignaciones.map((asignacion, index) => {
-                const daysRemaining = calculateDaysRemaining(asignacion);
+                const daysRemaining = calculateCalendarDaysRemaining(asignacion);
                 const statusColor = getStatusColor(daysRemaining);
 
                 return (
@@ -619,7 +636,7 @@ const Documentos = () => {
                           daysRemaining === null
                             ? "Sin fecha"
                             : daysRemaining < 0
-                              ? "Vencido "+ daysRemaining*(-1) +" día(s)"
+                              ? "Vencido " + daysRemaining * (-1) + " día(s)"
                               : daysRemaining === 0
                                 ? "Hoy"
                                 : `${daysRemaining} día(s)`
@@ -811,16 +828,16 @@ const Documentos = () => {
               <Chip
                 size="small"
                 label={
-                  calculateDaysRemaining(selectedAsignacion) === null
+                  calculateCalendarDaysRemaining(selectedAsignacion) === null
                     ? "Sin fecha"
-                    : calculateDaysRemaining(selectedAsignacion) < 0
+                    : calculateCalendarDaysRemaining(selectedAsignacion) < 0
                       ? "Vencido"
-                      : calculateDaysRemaining(selectedAsignacion) === 0
+                      : calculateCalendarDaysRemaining(selectedAsignacion) === 0
                         ? "Hoy"
-                        : `${calculateDaysRemaining(selectedAsignacion)} día(s)`
+                        : `${calculateCalendarDaysRemaining(selectedAsignacion)} día(s)`
                 }
                 color={getStatusColor(
-                  calculateDaysRemaining(selectedAsignacion)
+                  calculateCalendarDaysRemaining(selectedAsignacion)
                 )}
               />
             </Box>
@@ -832,7 +849,7 @@ const Documentos = () => {
           </Button>
         </DialogActions>
       </Dialog>
-      
+
       <Dialog
         open={openResponseDialog}
         onClose={handleCloseResponseDialog}
@@ -879,22 +896,59 @@ const Documentos = () => {
         <DialogContent>
           {selectedAsignacion && selectedAsignacion.asignado && selectedAsignacion.asignado.id === currentUserId ? (
             <FormControl fullWidth margin="dense">
-              <InputLabel id="plazo-select-label">
-                Plazo de prórroga (días)
-              </InputLabel>
-              <Select
-                labelId="plazo-select-label"
+              <Autocomplete
                 id="plazo-select"
+                freeSolo
+                options={[1, 2, 3, 5, 7, 10, 15, 30]}
                 value={plazoProrroga}
-                onChange={(e) => setPlazoProrroga(e.target.value)}
-                label="Plazo de prórroga (días)"
-                fullWidth>
-                {[1, 2, 3, 5, 7, 10, 15, 30].map((dias) => (
-                  <MenuItem key={dias} value={dias}>
-                    {dias} {dias === 1 ? "día" : "días"}
-                  </MenuItem>
-                ))}
-              </Select>
+                onChange={(event, newValue) => {
+                  // Handle both string input and option selection
+                  if (typeof newValue === 'string') {
+                    // Try to convert to number if it's a valid number
+                    const numValue = parseInt(newValue, 10);
+                    if (!isNaN(numValue) && numValue > 0) {
+                      setPlazoProrroga(numValue);
+                    } else if (newValue === '') {
+                      setPlazoProrroga('');
+                    }
+                  } else {
+                    setPlazoProrroga(newValue);
+                  }
+                }}
+                onInputChange={(event, newInputValue) => {
+                  // Handle input changes
+                  if (newInputValue === '') {
+                    setPlazoProrroga('');
+                    return;
+                  }
+
+                  const numValue = parseInt(newInputValue, 10);
+                  if (!isNaN(numValue) && numValue > 0) {
+                    setPlazoProrroga(numValue);
+                  }
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Plazo de prórroga (días)"
+                    type="text"
+                    InputProps={{
+                      ...params.InputProps,
+                      inputMode: 'numeric',
+                      pattern: '[0-9]*'
+                    }}
+                  />
+                )}
+                renderOption={(props, option) => (
+                  <li {...props}>
+                    {option} {option === 1 ? 'día' : 'días'}
+                  </li>
+                )}
+                getOptionLabel={(option) => {
+                  if (option === '') return '';
+                  return option.toString();
+                }}
+              />
             </FormControl>
           ) : (
             <Typography variant="body2" color="textSecondary">

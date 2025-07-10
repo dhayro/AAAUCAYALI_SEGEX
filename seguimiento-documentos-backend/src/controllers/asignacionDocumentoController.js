@@ -464,6 +464,50 @@ exports.aceptarProrroga = async (req, res) => {
   }
 };
 
+exports.aceptarProrrogaCalendario = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nuevo_plazo_prorroga } = req.body;
+
+    // Validar que se proporcione un nuevo plazo de prórroga válido
+    if (nuevo_plazo_prorroga === undefined || nuevo_plazo_prorroga <= 0) {
+      return res.status(400).json({ message: 'Se requiere proporcionar un nuevo plazo de prórroga válido' });
+    }
+
+    // Buscar la asignación
+    const asignacion = await AsignacionDocumento.findByPk(id);
+    if (!asignacion) {
+      return res.status(404).json({ message: 'Asignación no encontrada' });
+    }
+
+    // Calcular la nueva fecha límite con prórroga usando días calendario
+    const nuevaFechaLimite = calcularFechaLimiteCalendario(asignacion.fecha_limite, nuevo_plazo_prorroga);
+
+    // Actualizar los campos de prórroga de la asignación
+    asignacion.plazo_prorroga = nuevo_plazo_prorroga;
+    asignacion.fecha_prorroga_limite = nuevaFechaLimite;
+
+    // Registrar el usuario que aceptó la prórroga
+    if (req.user && req.user.id) {
+      asignacion.id_usuario_modificador = req.user.id;
+    }
+
+    // Guardar los cambios
+    await asignacion.save();
+
+    res.json({ 
+      message: 'Prórroga con días calendario aceptada y plazo actualizado exitosamente',
+      asignacion: {
+        id: asignacion.id,
+        plazo_prorroga: asignacion.plazo_prorroga,
+        fecha_prorroga_limite: asignacion.fecha_prorroga_limite
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 exports.getPendientesAsignacionesByDocumentoId = async (req, res) => {
   try {
     const { documentoId } = req.params; // Obtener el ID del documento de los parámetros de la solicitud

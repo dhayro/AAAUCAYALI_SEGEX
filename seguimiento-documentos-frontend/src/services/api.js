@@ -102,6 +102,8 @@ export const solicitarProrroga = (id, plazoProrroga) => api.patch(`/asignaciones
 
 export const getAsignacionesConProrrogaPendiente = () => api.get('/asignaciones/con-prorroga-pendiente');
 
+export const aceptarProrrogaCalendario = (asignacionId, plazoProrroga) => api.patch(`/asignaciones/${asignacionId}/aceptar-prorroga-calendario`, { nuevo_plazo_prorroga: plazoProrroga });
+
 export const aceptarProrroga = (asignacionId, plazoProrroga) => api.patch(`/asignaciones/${asignacionId}/aceptar-prorroga`, { nuevo_plazo_prorroga: plazoProrroga });
 
 export const updateRespuestaEstado = (id, estado) => api.patch(`/respuestas/${id}/estado`, { estado });
