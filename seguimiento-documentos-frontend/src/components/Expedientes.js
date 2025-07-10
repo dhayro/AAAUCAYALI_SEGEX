@@ -54,7 +54,7 @@ import {
   getAreas,
   getUsersByAreaId,
   getUsersForSelect,
-  createAsignacion,
+  createAsignacionCalendario,
   updateDocumentoEstado,
   getAntecedentesByExpedienteId, createAntecedente, deleteAntecedente
 } from "../services/api";
@@ -570,7 +570,7 @@ const Expedientes = () => {
           };
 
           try {
-            await createAsignacion(asignacionData);
+            await createAsignacionCalendario(asignacionData);
           } catch (error) {
             console.error(`Error asignando documento al usuario ${userId}:`, error);
             success = false;
@@ -585,7 +585,7 @@ const Expedientes = () => {
           observaciones: observacion.trim()
         };
 
-        await createAsignacion(asignacionData);
+        await createAsignacionCalendario(asignacionData);
       }
 
       if (success) {

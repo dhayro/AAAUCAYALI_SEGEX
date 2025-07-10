@@ -275,6 +275,39 @@ exports.createAsignacion = async (req, res) => {
   }
 };
 
+exports.createAsignacionCalendario = async (req, res) => {
+  try {
+    // Obtener los datos del cuerpo de la solicitud
+    const datosAsignacion = { ...req.body };
+    
+    // Establecer la fecha de asignación como la fecha actual
+    datosAsignacion.fecha_asignacion = new Date();
+    
+    // Calcular la fecha límite sumando días calendario (incluyendo sábados y domingos)
+    const plazoRespuesta = parseInt(datosAsignacion.plazo_respuesta);
+    if (isNaN(plazoRespuesta) || plazoRespuesta <= 0) {
+      return res.status(400).json({ message: 'El plazo de respuesta debe ser un número positivo' });
+    }
+    
+    // Función para calcular la fecha límite incluyendo fines de semana (días calendario)
+    const fechaLimite = calcularFechaLimiteCalendario(datosAsignacion.fecha_asignacion, plazoRespuesta);
+    datosAsignacion.fecha_limite = fechaLimite;
+    
+    // Crear la asignación con los datos calculados
+    const nuevaAsignacion = await AsignacionDocumento.create(datosAsignacion);
+    
+    // Registrar el usuario que creó la asignación
+    if (req.user && req.user.id) {
+      nuevaAsignacion.id_usuario_creador = req.user.id;
+      await nuevaAsignacion.save();
+    }
+    
+    res.status(201).json(nuevaAsignacion);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
 exports.updateAsignacion = async (req, res) => {
   try {
     const [updated] = await AsignacionDocumento.update(req.body, {
@@ -474,6 +507,22 @@ function calcularFechaLimite(fechaInicio, diasHabiles) {
       diasAgregados++;
     }
   }
+  
+  return fecha;
+}
+
+/**
+ * Calcula la fecha límite sumando días calendario (incluyendo sábados y domingos)
+ * @param {Date} fechaInicio - Fecha de inicio
+ * @param {Number} diasCalendario - Número de días calendario a sumar
+ * @returns {Date} - Fecha límite resultante
+ */
+function calcularFechaLimiteCalendario(fechaInicio, diasCalendario) {
+  // Crear una copia de la fecha de inicio para no modificar la original
+  const fecha = new Date(fechaInicio);
+  
+  // Simplemente sumar los días calendario a la fecha
+  fecha.setDate(fecha.getDate() + diasCalendario);
   
   return fecha;
 }

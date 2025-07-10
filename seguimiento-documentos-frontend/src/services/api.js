@@ -92,6 +92,7 @@ export const getDocumentosRelacionados = (expedienteId, numeroDocumento = '', id
 // Asignaciones API
 export const getAsignaciones = (params) => api.get('/asignaciones', { params });
 export const createAsignacion = (asignacionData) => api.post('/asignaciones', asignacionData);
+export const createAsignacionCalendario = (asignacionData) => api.post('/asignaciones/calendario', asignacionData);
 
 // Función para actualizar el estado de una asignación
 export const updateAsignacionEstado = (id, estado) => api.patch(`/asignaciones/${id}/estado`, { estado });

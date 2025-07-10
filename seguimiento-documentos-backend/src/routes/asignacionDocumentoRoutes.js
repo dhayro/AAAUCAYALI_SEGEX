@@ -640,4 +640,52 @@ router.patch('/:id/aceptar-prorroga', authenticateToken, asignacionDocumentoCont
  */
 router.get('/documento/:documentoId/pendientes', authenticateToken, asignacionDocumentoController.getPendientesAsignacionesByDocumentoId);
 
+/**
+ * @swagger
+ * /api/asignaciones/calendario:
+ *   post:
+ *     summary: Crear una nueva asignación de documento con plazo en días calendario
+ *     description: Crea una nueva asignación de documento calculando la fecha límite en días calendario (incluyendo fines de semana).
+ *     tags: [Asignaciones de Documentos]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - id_documento
+ *               - id_asignado
+ *               - plazo_respuesta
+ *             properties:
+ *               id_documento:
+ *                 type: integer
+ *                 description: ID del documento a asignar
+ *               id_asignado:
+ *                 type: integer
+ *                 description: ID del usuario al que se asigna el documento
+ *               plazo_respuesta:
+ *                 type: integer
+ *                 description: Plazo de respuesta en días calendario
+ *               observaciones:
+ *                 type: string
+ *                 description: Observaciones o instrucciones para la asignación
+ *     responses:
+ *       201:
+ *         description: Asignación creada exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AsignacionDocumento'
+ *       400:
+ *         description: Datos inválidos o plazo de respuesta no válido
+ *       401:
+ *         description: No autorizado
+ *       500:
+ *         description: Error del servidor
+ */
+router.post('/calendario', asignacionDocumentoController.createAsignacionCalendario);
+
 module.exports = router;

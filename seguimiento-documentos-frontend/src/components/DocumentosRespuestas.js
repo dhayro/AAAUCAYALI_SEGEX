@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { debounce } from "lodash";
-import { getRespuestas, getAreas, getUsersForSelect, getUsersByAreaId, createAsignacion, updateDocumentoEstado,updateRespuestaEstado,getPendingAsignacionesByDocumentoId, updateExpedienteEstado } from '../services/api';
+import { getRespuestas, getAreas, getUsersForSelect, getUsersByAreaId, createAsignacionCalendario, updateDocumentoEstado,updateRespuestaEstado,getPendingAsignacionesByDocumentoId, updateExpedienteEstado } from '../services/api';
 import {
   Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   TablePagination, CircularProgress, Typography, Button, TextField,
@@ -373,7 +373,7 @@ const DocumentosRespuestas = () => {
                 };
 
                 try {
-                    await createAsignacion(asignacionData);
+                    await createAsignacionCalendario(asignacionData);
                 } catch (error) {
                     console.error(`Error asignando documento al usuario ${userId}:`, error);
                     success = false;
@@ -388,7 +388,7 @@ const DocumentosRespuestas = () => {
                 observaciones: observacion.trim()
             };
 
-            await createAsignacion(asignacionData);
+            await createAsignacionCalendario(asignacionData);
         }
 
         if (success) {
