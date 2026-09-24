@@ -25,15 +25,17 @@ export default function TestMenu() {
     idPerfil: "16",
   });
 
+  const BACKEND_URL = "http://localhost:3003";
+
   const endpoints = {
     general: {
-      url: "http://localhost:3003/api/sisged/general",
+      url: `${BACKEND_URL}/api/sisged/general`,
       externalUrl: "https://sisgedpiloto.ana.gob.pe/apiRestSG/api/SISGED/general",
       method: "GET",
       description: "Obtener datos generales de SISGED (a través del proxy)",
     },
     trazabilidad: {
-      url: "http://localhost:3003/api/sisged/trazabilidad",
+      url: `${BACKEND_URL}/api/sisged/trazabilidad`,
       externalUrl: "https://sisgedpiloto.ana.gob.pe/apiRestSG/api/SISGED/trazabilidad",
       method: "GET",
       description: "Obtener trazabilidad de un CUT (a través del proxy)",
