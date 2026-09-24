@@ -116,4 +116,6 @@ router.post('/test-post', (req, res) => {
  */
 router.post('/sincronizar', sisgedController.sincronizar);
 
+router.post('/sincronizar-con-parametros', sisgedController.sincronizarConParametros);
+
 module.exports = router;

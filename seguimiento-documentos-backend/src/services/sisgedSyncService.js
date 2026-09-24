@@ -5,17 +5,21 @@ const path = require('path');
 const POSTMAN_API_KEY = process.env.POSTMAN_API_KEY;
 
 async function obtenerDatosDeSISGED() {
+  console.log('[SERVICE] obtenerDatosDeSISGED iniciado');
+
   if (!POSTMAN_API_KEY) {
     throw new Error('POSTMAN_API_KEY no configurada en .env');
   }
 
   try {
     // 1. Obtener colecciones
+    console.log('[SERVICE] Obteniendo colecciones de Postman...');
     const collectionsRes = await fetch('https://api.getpostman.com/collections', {
       headers: {
         'X-API-Key': POSTMAN_API_KEY
       }
     });
+    console.log('[SERVICE] Respuesta colecciones:', collectionsRes.status);
 
     if (!collectionsRes.ok) {
       throw new Error(`Error obteniendo colecciones: ${collectionsRes.status}`);

@@ -1,5 +1,6 @@
 const SISGED_BASE_URL = 'https://sisgedpiloto.ana.gob.pe/apiRestSG/api/SISGED';
 const sisgedSyncService = require('../services/sisgedSyncService');
+const postmanUpdateService = require('../services/postmanUpdateService');
 
 const fetchWithTimeout = (url, options = {}, timeout = 30000) => {
   return Promise.race([
@@ -217,11 +218,12 @@ exports.getTrazabilidad = async (req, res) => {
 };
 
 exports.sincronizar = async (req, res) => {
-  try {
-    console.log('[SINCRONIZAR] Obteniendo datos de SISGED...');
-    const datos = await sisgedSyncService.obtenerDatosDeSISGED();
+  console.log('[SYNC] POST /sincronizar recibido');
+  console.log('[SYNC] Intentando obtener datos de SISGED...');
 
-    console.log(`[SINCRONIZAR] ✅ ${datos.length} registros obtenidos`);
+  try {
+    const datos = await sisgedSyncService.obtenerDatosDeSISGED();
+    console.log('[SYNC] Datos obtenidos exitosamente:', datos?.length || 0);
 
     res.status(200).json({
       success: true,
@@ -230,7 +232,41 @@ exports.sincronizar = async (req, res) => {
       data: datos
     });
   } catch (error) {
-    console.error('[SINCRONIZAR] ❌ Error:', error.message);
+    console.error('[SYNC] ERROR:', error.message);
+    console.error('[SYNC] Stack:', error.stack);
+
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
+
+exports.sincronizarConParametros = async (req, res) => {
+  console.log('[SYNC-PARAMS] POST /sincronizar-con-parametros recibido');
+
+  try {
+    const { params, token } = req.body;
+
+    console.log('[SYNC-PARAMS] Parámetros recibidos');
+    console.log('[SYNC-PARAMS] Actualizando Postman...');
+
+    await postmanUpdateService.actualizarColeccionPostman({ params, token });
+
+    console.log('[SYNC-PARAMS] Obteniendo datos de SISGED...');
+    const datos = await sisgedSyncService.obtenerDatosDeSISGED();
+
+    console.log('[SYNC-PARAMS] ✅ Completado:', datos?.length || 0, 'registros');
+
+    res.status(200).json({
+      success: true,
+      message: 'Parámetros actualizados en Postman y datos obtenidos',
+      total: datos.length,
+      data: datos
+    });
+  } catch (error) {
+    console.error('[SYNC-PARAMS] ERROR:', error.message);
+
     res.status(500).json({
       success: false,
       error: error.message

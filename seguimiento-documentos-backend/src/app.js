@@ -55,16 +55,9 @@ const swaggerOptions = {
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
-// CORS configuration - allow requests from frontend
+// CORS configuration
 const corsOptions = {
-  origin: function(origin, callback) {
-    const allowedOrigins = ['http://localhost:3003', 'http://localhost:3004', 'http://localhost:5173'];
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: ['http://localhost:3003', 'http://localhost:3004', 'http://localhost:5173'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
