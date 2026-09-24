@@ -28,17 +28,26 @@ export default function TestMenu() {
   const BACKEND_URL = "http://localhost:3003";
 
   const endpoints = {
+    test: {
+      url: `${BACKEND_URL}/api/sisged/test`,
+      externalUrl: "Local Test Data",
+      method: "GET",
+      description: "🧪 Datos de prueba locales (sin token requerido)",
+      requiresToken: false,
+    },
     general: {
       url: `${BACKEND_URL}/api/sisged/general`,
       externalUrl: "https://sisgedpiloto.ana.gob.pe/apiRestSG/api/SISGED/general",
       method: "GET",
-      description: "Obtener datos generales de SISGED (a través del proxy)",
+      description: "Obtener datos generales de SISGED (requiere token válido)",
+      requiresToken: true,
     },
     trazabilidad: {
       url: `${BACKEND_URL}/api/sisged/trazabilidad`,
       externalUrl: "https://sisgedpiloto.ana.gob.pe/apiRestSG/api/SISGED/trazabilidad",
       method: "GET",
-      description: "Obtener trazabilidad de un CUT (a través del proxy)",
+      description: "Obtener trazabilidad de un CUT (requiere token válido)",
+      requiresToken: true,
     },
   };
 
@@ -85,27 +94,33 @@ export default function TestMenu() {
   };
 
   const testEndpoint = async (endpoint: string) => {
-    if (!token) {
-      toast.error("Token requerido");
+    const config = endpoints[endpoint as keyof typeof endpoints] as any;
+
+    if (config.requiresToken && !token) {
+      toast.error("Token SISGED requerido para este endpoint");
       return;
     }
 
     setLoading(true);
     try {
       const urls = buildUrl(endpoint);
-      const config = endpoints[endpoint as keyof typeof endpoints];
+
+      const headers: Record<string, string> = {
+        "Accept": "application/json, text/javascript, */*; q=0.01",
+        "Accept-Language": "es-ES,es;q=0.9",
+        "X-Requested-With": "XMLHttpRequest",
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "same-site",
+      };
+
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
 
       const response = await fetch(urls.local, {
         method: config.method,
-        headers: {
-          "Accept": "application/json, text/javascript, */*; q=0.01",
-          "Accept-Language": "es-ES,es;q=0.9",
-          "Authorization": `Bearer ${token}`,
-          "X-Requested-With": "XMLHttpRequest",
-          "Sec-Fetch-Dest": "empty",
-          "Sec-Fetch-Mode": "cors",
-          "Sec-Fetch-Site": "same-site",
-        },
+        headers,
         credentials: "include",
         mode: "cors",
       });

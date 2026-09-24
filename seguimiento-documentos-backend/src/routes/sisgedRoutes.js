@@ -55,4 +55,17 @@ router.get('/general', authenticateToken, sisgedController.getGeneral);
  */
 router.get('/trazabilidad', authenticateToken, sisgedController.getTrazabilidad);
 
+/**
+ * @swagger
+ * /api/sisged/test:
+ *   get:
+ *     summary: Test endpoint with mock data
+ *     tags: [SISGED]
+ *     description: Returns mock SISGED data for testing without external API
+ *     responses:
+ *       200:
+ *         description: Mock test data
+ */
+router.get('/test', sisgedController.getTestData);
+
 module.exports = router;

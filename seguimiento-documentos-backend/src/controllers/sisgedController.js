@@ -1,5 +1,55 @@
 const SISGED_BASE_URL = 'https://sisgedpiloto.ana.gob.pe/apiRestSG/api/SISGED';
 
+exports.getTestData = async (req, res) => {
+  try {
+    const mockData = {
+      success: true,
+      statusCode: 200,
+      data: [
+        {
+          id: 1,
+          nroCut: '187610-2026',
+          asunto: 'Solicitud de información sobre proyectos',
+          remitente: 'aliaga romayna',
+          numeroDocumento: 'DOC-001-2026',
+          estado: 'En trámite',
+          fechaIngreso: '2026-09-01',
+        },
+        {
+          id: 2,
+          nroCut: '187611-2026',
+          asunto: 'Consulta sobre permisos',
+          remitente: 'juan perez',
+          numeroDocumento: 'DOC-002-2026',
+          estado: 'En trámite',
+          fechaIngreso: '2026-09-15',
+        },
+        {
+          id: 3,
+          nroCut: '187612-2026',
+          asunto: 'Documentación requerida',
+          remitente: 'maria garcia',
+          numeroDocumento: 'DOC-003-2026',
+          estado: 'Pendiente',
+          fechaIngreso: '2026-09-20',
+        },
+      ],
+      contentType: 'application/json',
+      timestamp: new Date().toISOString(),
+      note: 'This is test/mock data for development purposes',
+    };
+
+    res.status(200).json(mockData);
+  } catch (error) {
+    console.error('[SISGED] getTestData error:', error.message);
+    res.status(500).json({
+      error: error.message,
+      type: error.name,
+      timestamp: new Date().toISOString(),
+    });
+  }
+};
+
 exports.getGeneral = async (req, res) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
