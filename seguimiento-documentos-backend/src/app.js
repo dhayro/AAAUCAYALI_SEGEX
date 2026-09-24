@@ -12,6 +12,7 @@ const documentoRoutes = require('./routes/documentoRoutes');
 const asignacionDocumentoRoutes = require('./routes/asignacionDocumentoRoutes');
 const respuestaDocumentoRoutes = require('./routes/respuestaDocumentoRoutes');
 const antecedenteRoutes = require('./routes/antecedenteRoutes');
+const sisgedRoutes = require('./routes/sisgedRoutes');
 const initAdmin = require('./utils/initAdmin');
 const initTipoDocumentos = require('./utils/initTipoDocumentos');
 
@@ -59,6 +60,7 @@ app.use('/api/documentos', documentoRoutes);
 app.use('/api/asignaciones', asignacionDocumentoRoutes);
 app.use('/api/respuestas', respuestaDocumentoRoutes);
 app.use('/api/antecedentes', antecedenteRoutes);
+app.use('/api/sisged', sisgedRoutes);
 
 
 const PORT = process.env.PORT || 3000;
