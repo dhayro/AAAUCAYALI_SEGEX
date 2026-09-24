@@ -31,6 +31,7 @@ import DocumentosRespuestas from "./pages/DocumentosRespuestas";
 import ReporteAsignaciones from "./pages/ReporteAsignaciones";
 import ReporteDocumentosRespuestas from "./pages/ReporteDocumentosRespuestas";
 import TestMenu from "./pages/TestMenu";
+import Diagnostico from "./pages/Diagnostico";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem("token");
@@ -79,6 +80,7 @@ export default function App() {
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/blank" element={<Blank />} />
             <Route path="/test-menu" element={<TestMenu />} />
+            <Route path="/diagnostico" element={<Diagnostico />} />
 
             {/* Forms */}
             <Route path="/form-elements" element={<FormElements />} />

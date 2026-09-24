@@ -56,6 +56,11 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'OK', timestamp: new Date().toISOString(), port: PORT });
+});
+
 // Ruta para la documentación de Swagger
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 

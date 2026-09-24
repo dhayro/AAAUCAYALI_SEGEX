@@ -125,6 +125,12 @@ const othersItems: NavItem[] = [
     key: "test-menu",
     path: "/test-menu",
   },
+  {
+    icon: <GridIcon fontSize={24} />,
+    name: "Diagnóstico",
+    key: "diagnostico",
+    path: "/diagnostico",
+  },
 ];
 
 const AppSidebar: React.FC = () => {
