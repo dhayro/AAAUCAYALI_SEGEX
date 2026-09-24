@@ -32,6 +32,7 @@ exports.getGeneral = async (req, res) => {
     params.append('FLG_ANEXO', req.query.FLG_ANEXO || '0');
 
     const url = `${SISGED_BASE_URL}/general?${params.toString()}`;
+    console.log(`[SISGED] Fetching general: ${url.substring(0, 100)}...`);
 
     const response = await fetch(url, {
       method: 'GET',
@@ -44,19 +45,29 @@ exports.getGeneral = async (req, res) => {
       },
     });
 
-    const data = await response.json();
+    console.log(`[SISGED] Response status: ${response.status}`);
 
-    res.status(response.status).json({
+    let data;
+    try {
+      data = await response.json();
+    } catch (parseError) {
+      console.error('[SISGED] JSON parse error:', parseError.message);
+      const text = await response.text();
+      data = { rawResponse: text.substring(0, 200) };
+    }
+
+    return res.status(response.status).json({
       success: response.ok,
       statusCode: response.status,
       data,
       contentType: response.headers.get('content-type'),
     });
   } catch (error) {
-    console.error('SISGED getGeneral error:', error);
-    res.status(500).json({
+    console.error('[SISGED] getGeneral error:', error.message);
+    return res.status(500).json({
       error: error.message,
       type: error.name,
+      timestamp: new Date().toISOString(),
     });
   }
 };
@@ -77,6 +88,7 @@ exports.getTrazabilidad = async (req, res) => {
     params.append('FLG_ANULADO', req.query.FLG_ANULADO || '1');
 
     const url = `${SISGED_BASE_URL}/trazabilidad?${params.toString()}`;
+    console.log(`[SISGED] Fetching trazabilidad: ${url}`);
 
     const response = await fetch(url, {
       method: 'GET',
@@ -89,19 +101,29 @@ exports.getTrazabilidad = async (req, res) => {
       },
     });
 
-    const data = await response.json();
+    console.log(`[SISGED] Response status: ${response.status}`);
 
-    res.status(response.status).json({
+    let data;
+    try {
+      data = await response.json();
+    } catch (parseError) {
+      console.error('[SISGED] JSON parse error:', parseError.message);
+      const text = await response.text();
+      data = { rawResponse: text.substring(0, 200) };
+    }
+
+    return res.status(response.status).json({
       success: response.ok,
       statusCode: response.status,
       data,
       contentType: response.headers.get('content-type'),
     });
   } catch (error) {
-    console.error('SISGED getTrazabilidad error:', error);
-    res.status(500).json({
+    console.error('[SISGED] getTrazabilidad error:', error.message);
+    return res.status(500).json({
       error: error.message,
       type: error.name,
+      timestamp: new Date().toISOString(),
     });
   }
 };
