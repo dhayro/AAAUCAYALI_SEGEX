@@ -1,6 +1,6 @@
 const express = require('express');
 const sisgedController = require('../controllers/sisgedController');
-const authMiddleware = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -35,7 +35,7 @@ const router = express.Router();
  *       401:
  *         description: Unauthorized
  */
-router.get('/general', authMiddleware, sisgedController.getGeneral);
+router.get('/general', authenticateToken, sisgedController.getGeneral);
 
 /**
  * @swagger
@@ -53,6 +53,6 @@ router.get('/general', authMiddleware, sisgedController.getGeneral);
  *       401:
  *         description: Unauthorized
  */
-router.get('/trazabilidad', authMiddleware, sisgedController.getTrazabilidad);
+router.get('/trazabilidad', authenticateToken, sisgedController.getTrazabilidad);
 
 module.exports = router;
