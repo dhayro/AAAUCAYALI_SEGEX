@@ -22,6 +22,15 @@ require('dotenv').config();
 process.env.TZ = 'America/Lima';
 console.log(`Application timezone set to: ${process.env.TZ}`);
 
+// Manejo de errores no capturados
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[UNHANDLED REJECTION]', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('[UNCAUGHT EXCEPTION]', error);
+});
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -86,7 +95,6 @@ app.use('/api/sisged', sisgedRoutes);
 
 // Importar la función de inicialización de la base de datos
 const { initDatabaseFromSQL } = require('./config/database');
-const db = require('./models');
 
 // Inicializar la base de datos antes de sincronizar los modelos
 (async () => {
@@ -98,7 +106,7 @@ const db = require('./models');
     await sequelize.sync();
 
     // Hacer los models accesibles desde el app
-    app.set('models', db);
+    app.set('models', sequelize.models);
 
     // Inicializar usuario admin y tipos de documentos
     await initAdmin();

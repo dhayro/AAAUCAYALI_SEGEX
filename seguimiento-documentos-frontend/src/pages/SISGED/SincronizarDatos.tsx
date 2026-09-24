@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sonner, toast } from 'sonner';
+import { toast } from 'sonner';
 import api from '../../utils/api';
 
 export default function SincronizarDatos() {

@@ -218,33 +218,19 @@ exports.getTrazabilidad = async (req, res) => {
 
 exports.sincronizar = async (req, res) => {
   try {
-    console.log('[SINCRONIZAR] Iniciando sincronización...');
-
-    // Obtener datos de SISGED
+    console.log('[SINCRONIZAR] Obteniendo datos de SISGED...');
     const datos = await sisgedSyncService.obtenerDatosDeSISGED();
 
-    if (!datos || datos.length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'No se obtuvieron datos de SISGED',
-        data: []
-      });
-    }
-
-    console.log(`[SINCRONIZAR] ${datos.length} registros obtenidos de SISGED`);
-
-    // Importar a la BD
-    const { Expediente } = req.app.get('models');
-    const resultado = await sisgedSyncService.importarExpedientesABD(datos, { Expediente });
+    console.log(`[SINCRONIZAR] ✅ ${datos.length} registros obtenidos`);
 
     res.status(200).json({
       success: true,
-      message: 'Sincronización completada',
-      resultado,
-      datos: datos.slice(0, 5) // Primeros 5 registros como preview
+      message: 'Datos obtenidos de SISGED',
+      total: datos.length,
+      data: datos
     });
   } catch (error) {
-    console.error('[SINCRONIZAR] Error:', error.message);
+    console.error('[SINCRONIZAR] ❌ Error:', error.message);
     res.status(500).json({
       success: false,
       error: error.message

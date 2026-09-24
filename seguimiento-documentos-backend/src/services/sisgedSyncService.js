@@ -99,18 +99,23 @@ async function importarExpedientesABD(datos, models) {
     return { exitosos: 0, errores: 0, total: 0 };
   }
 
+  if (!models || !models.Expediente) {
+    throw new Error('Expediente model not available');
+  }
+
   let exitosos = 0;
   let errores = 0;
+  const erroresList = [];
 
   for (let i = 0; i < datos.length; i++) {
     try {
       const item = datos[i];
+      const cut = item.ncut || item.CUT || `EXP-${i}`;
 
-      // Crear o actualizar expediente
-      await models.Expediente.findOrCreate({
-        where: { cut: item.ncut || item.CUT },
+      const [expediente, created] = await models.Expediente.findOrCreate({
+        where: { cut },
         defaults: {
-          cut: item.ncut || item.CUT || `EXP-${i}`,
+          cut,
           asunto: item.asunto || item.ASUNTO || "Sin asunto",
           remitente: (item.usurem || item.USUARIO || "").split('\n')?.[0] || "Desconocido",
           numero_documento: item.ndoc || item.DOCUMENTO || "",
@@ -122,12 +127,15 @@ async function importarExpedientesABD(datos, models) {
       });
 
       exitosos++;
+      console.log(`[IMPORT] ${i + 1}/${datos.length}: ${cut} - ${created ? 'CREADO' : 'EXISTENTE'}`);
     } catch (err) {
       errores++;
+      erroresList.push({ index: i, error: err.message });
+      console.error(`[IMPORT] Error en registro ${i + 1}:`, err.message);
     }
   }
 
-  return { exitosos, errores, total: datos.length };
+  return { exitosos, errores, total: datos.length, erroresList };
 }
 
 module.exports = {

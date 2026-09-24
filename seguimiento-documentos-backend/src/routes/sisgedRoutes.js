@@ -95,6 +95,12 @@ router.get('/test', sisgedController.getTestData);
  */
 router.post('/proxy', sisgedController.proxyRequest);
 
+// Test simple POST
+router.post('/test-post', (req, res) => {
+  console.log('[POST TEST]', req.body);
+  res.json({ success: true, message: 'POST test works' });
+});
+
 /**
  * @swagger
  * /api/sisged/sincronizar:
