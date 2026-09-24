@@ -1,5 +1,57 @@
 const SISGED_BASE_URL = 'https://sisgedpiloto.ana.gob.pe/apiRestSG/api/SISGED';
 
+exports.proxyRequest = async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+
+    if (!token) {
+      return res.status(401).json({ error: 'Token requerido en Authorization header' });
+    }
+
+    const { url } = req.body;
+
+    if (!url) {
+      return res.status(400).json({ error: 'URL requerida en body' });
+    }
+
+    console.log(`[SISGED] Proxy request a: ${url.substring(0, 100)}...`);
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json, text/javascript, */*; q=0.01',
+        'Accept-Language': 'es-ES,es;q=0.9',
+        'Authorization': `Bearer ${token}`,
+        'X-Requested-With': 'XMLHttpRequest',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
+    });
+
+    console.log(`[SISGED] Response status: ${response.status}`);
+
+    let data;
+    try {
+      data = await response.json();
+    } catch (parseError) {
+      const text = await response.text();
+      data = { rawResponse: text.substring(0, 500) };
+    }
+
+    return res.status(response.status).json({
+      success: response.ok,
+      statusCode: response.status,
+      data,
+      contentType: response.headers.get('content-type'),
+    });
+  } catch (error) {
+    console.error('[SISGED] Proxy error:', error.message);
+    return res.status(500).json({
+      error: error.message,
+      type: error.name,
+    });
+  }
+};
+
 exports.getTestData = async (req, res) => {
   try {
     const mockData = {

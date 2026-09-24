@@ -68,4 +68,31 @@ router.get('/trazabilidad', authenticateToken, sisgedController.getTrazabilidad)
  */
 router.get('/test', sisgedController.getTestData);
 
+/**
+ * @swagger
+ * /api/sisged/proxy:
+ *   post:
+ *     summary: Proxy any SISGED URL request
+ *     tags: [SISGED]
+ *     description: Forward a SISGED URL request to backend (avoids CORS)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               url:
+ *                 type: string
+ *                 example: "https://sisgedpiloto.ana.gob.pe/apiRestSG/api/SISGED/general?..."
+ *     responses:
+ *       200:
+ *         description: SISGED response data
+ *       401:
+ *         description: Token required
+ *       400:
+ *         description: URL required
+ */
+router.post('/proxy', authenticateToken, sisgedController.proxyRequest);
+
 module.exports = router;
