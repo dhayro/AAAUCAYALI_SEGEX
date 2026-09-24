@@ -30,9 +30,9 @@ import DocumentosProrroga from "./pages/DocumentosProrroga";
 import DocumentosRespuestas from "./pages/DocumentosRespuestas";
 import ReporteAsignaciones from "./pages/ReporteAsignaciones";
 import ReporteDocumentosRespuestas from "./pages/ReporteDocumentosRespuestas";
-import TestMenu from "./pages/TestMenu";
-import Diagnostico from "./pages/Diagnostico";
-import SincronizarSISGED from "./pages/SincronizarSISGED";
+import SISGED from "./pages/SISGED";
+import ImportarSISGED from "./pages/ImportarSISGED";
+import SincronizarDatos from "./pages/SISGED/SincronizarDatos";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem("token");
@@ -80,9 +80,9 @@ export default function App() {
             <Route path="/profile" element={<UserProfiles />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/blank" element={<Blank />} />
-            <Route path="/test-menu" element={<TestMenu />} />
-            <Route path="/diagnostico" element={<Diagnostico />} />
-            <Route path="/sincronizar-sisged" element={<SincronizarSISGED />} />
+            <Route path="/sisged" element={<SISGED />} />
+            <Route path="/importar-sisged" element={<ImportarSISGED />} />
+            <Route path="/sincronizar-sisged" element={<SincronizarDatos />} />
 
             {/* Forms */}
             <Route path="/form-elements" element={<FormElements />} />

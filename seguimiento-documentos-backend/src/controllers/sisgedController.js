@@ -1,4 +1,5 @@
 const SISGED_BASE_URL = 'https://sisgedpiloto.ana.gob.pe/apiRestSG/api/SISGED';
+const sisgedSyncService = require('../services/sisgedSyncService');
 
 const fetchWithTimeout = (url, options = {}, timeout = 30000) => {
   return Promise.race([
@@ -18,7 +19,12 @@ exports.proxyRequest = async (req, res) => {
       return res.status(401).json({ error: 'Token requerido en Authorization header' });
     }
 
-    const { url } = req.body;
+    let url;
+    try {
+      url = req.body?.url || req.body?.[0]?.url;
+    } catch (e) {
+      url = null;
+    }
 
     if (!url) {
       return res.status(400).json({ error: 'URL requerida en body como { "url": "..." }' });
@@ -206,6 +212,42 @@ exports.getTrazabilidad = async (req, res) => {
       success: false,
       error: error.message || 'Error al conectar con SISGED',
       statusCode: 502,
+    });
+  }
+};
+
+exports.sincronizar = async (req, res) => {
+  try {
+    console.log('[SINCRONIZAR] Iniciando sincronización...');
+
+    // Obtener datos de SISGED
+    const datos = await sisgedSyncService.obtenerDatosDeSISGED();
+
+    if (!datos || datos.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No se obtuvieron datos de SISGED',
+        data: []
+      });
+    }
+
+    console.log(`[SINCRONIZAR] ${datos.length} registros obtenidos de SISGED`);
+
+    // Importar a la BD
+    const { Expediente } = req.app.get('models');
+    const resultado = await sisgedSyncService.importarExpedientesABD(datos, { Expediente });
+
+    res.status(200).json({
+      success: true,
+      message: 'Sincronización completada',
+      resultado,
+      datos: datos.slice(0, 5) // Primeros 5 registros como preview
+    });
+  } catch (error) {
+    console.error('[SINCRONIZAR] Error:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message
     });
   }
 };

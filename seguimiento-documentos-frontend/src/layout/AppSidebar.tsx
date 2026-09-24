@@ -121,15 +121,15 @@ const othersItems: NavItem[] = [
   },
   {
     icon: <PieChartIcon fontSize={24} />,
-    name: "Test SISGED",
-    key: "test-menu",
-    path: "/test-menu",
+    name: "SISGED",
+    key: "sisged",
+    path: "/sisged",
   },
   {
-    icon: <GridIcon fontSize={24} />,
-    name: "Diagnóstico",
-    key: "diagnostico",
-    path: "/diagnostico",
+    icon: <TableIcon fontSize={24} />,
+    name: "Importar SISGED",
+    key: "importar-sisged",
+    path: "/importar-sisged",
   },
   {
     icon: <PieChartIcon fontSize={24} />,

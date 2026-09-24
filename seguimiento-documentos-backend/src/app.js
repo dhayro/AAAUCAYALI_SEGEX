@@ -48,10 +48,18 @@ const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
 // CORS configuration - allow requests from frontend
 const corsOptions = {
-  origin: ['http://localhost:3003', 'http://localhost:3004', 'http://localhost:5173'],
+  origin: function(origin, callback) {
+    const allowedOrigins = ['http://localhost:3003', 'http://localhost:3004', 'http://localhost:5173'];
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 200
 };
 
 app.use(cors(corsOptions));
@@ -78,16 +86,20 @@ app.use('/api/sisged', sisgedRoutes);
 
 // Importar la función de inicialización de la base de datos
 const { initDatabaseFromSQL } = require('./config/database');
+const db = require('./models');
 
 // Inicializar la base de datos antes de sincronizar los modelos
 (async () => {
   try {
     // Inicializar la base de datos desde el script SQL si es necesario
     await initDatabaseFromSQL();
-    
+
     // Sincronizar los modelos con la base de datos
     await sequelize.sync();
-    
+
+    // Hacer los models accesibles desde el app
+    app.set('models', db);
+
     // Inicializar usuario admin y tipos de documentos
     await initAdmin();
     await initTipoDocumentos();

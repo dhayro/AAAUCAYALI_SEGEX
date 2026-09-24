@@ -93,6 +93,21 @@ router.get('/test', sisgedController.getTestData);
  *       400:
  *         description: URL required
  */
-router.post('/proxy', authenticateToken, sisgedController.proxyRequest);
+router.post('/proxy', sisgedController.proxyRequest);
+
+/**
+ * @swagger
+ * /api/sisged/sincronizar:
+ *   post:
+ *     summary: Sincronizar datos de SISGED
+ *     tags: [SISGED]
+ *     description: Obtiene datos de SISGED y los importa a la BD automáticamente
+ *     responses:
+ *       200:
+ *         description: Sincronización completada
+ *       500:
+ *         description: Error en sincronización
+ */
+router.post('/sincronizar', sisgedController.sincronizar);
 
 module.exports = router;
