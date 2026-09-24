@@ -23,6 +23,7 @@ process.env.TZ = 'America/Lima';
 console.log(`Application timezone set to: ${process.env.TZ}`);
 
 const app = express();
+const PORT = process.env.PORT || 3000;
 
 // Opciones de Swagger
 const swaggerOptions = {
@@ -74,9 +75,6 @@ app.use('/api/asignaciones', asignacionDocumentoRoutes);
 app.use('/api/respuestas', respuestaDocumentoRoutes);
 app.use('/api/antecedentes', antecedenteRoutes);
 app.use('/api/sisged', sisgedRoutes);
-
-
-const PORT = process.env.PORT || 3000;
 
 // Importar la función de inicialización de la base de datos
 const { initDatabaseFromSQL } = require('./config/database');
