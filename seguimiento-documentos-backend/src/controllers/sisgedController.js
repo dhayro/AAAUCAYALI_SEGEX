@@ -11,43 +11,49 @@ exports.proxyRequest = async (req, res) => {
     const { url } = req.body;
 
     if (!url) {
-      return res.status(400).json({ error: 'URL requerida en body' });
+      return res.status(400).json({ error: 'URL requerida en body como { "url": "..." }' });
     }
 
-    console.log(`[SISGED] Proxy request a: ${url.substring(0, 100)}...`);
+    console.log(`[SISGED-PROXY] Request a: ${url.substring(0, 80)}...`);
 
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json, text/javascript, */*; q=0.01',
-        'Accept-Language': 'es-ES,es;q=0.9',
-        'Authorization': `Bearer ${token}`,
-        'X-Requested-With': 'XMLHttpRequest',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      },
-    });
-
-    console.log(`[SISGED] Response status: ${response.status}`);
-
-    let data;
     try {
-      data = await response.json();
-    } catch (parseError) {
-      const text = await response.text();
-      data = { rawResponse: text.substring(0, 500) };
-    }
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'User-Agent': 'Node.js Proxy',
+        },
+        timeout: 30000,
+      });
 
-    return res.status(response.status).json({
-      success: response.ok,
-      statusCode: response.status,
-      data,
-      contentType: response.headers.get('content-type'),
-    });
+      console.log(`[SISGED-PROXY] Status: ${response.status}`);
+
+      let data;
+      const contentType = response.headers.get('content-type');
+
+      if (contentType?.includes('application/json')) {
+        data = await response.json();
+      } else {
+        data = await response.text();
+      }
+
+      return res.status(response.status).json({
+        success: response.ok,
+        statusCode: response.status,
+        data,
+      });
+    } catch (fetchError) {
+      console.error('[SISGED-PROXY] Fetch error:', fetchError.message);
+      return res.status(502).json({
+        error: 'Error al contactar SISGED',
+        message: fetchError.message,
+      });
+    }
   } catch (error) {
-    console.error('[SISGED] Proxy error:', error.message);
+    console.error('[SISGED-PROXY] Error:', error.message);
     return res.status(500).json({
       error: error.message,
-      type: error.name,
     });
   }
 };
@@ -86,19 +92,13 @@ exports.getTestData = async (req, res) => {
           fechaIngreso: '2026-09-20',
         },
       ],
-      contentType: 'application/json',
       timestamp: new Date().toISOString(),
-      note: 'This is test/mock data for development purposes',
     };
 
     res.status(200).json(mockData);
   } catch (error) {
-    console.error('[SISGED] getTestData error:', error.message);
-    res.status(500).json({
-      error: error.message,
-      type: error.name,
-      timestamp: new Date().toISOString(),
-    });
+    console.error('[TEST-DATA] Error:', error.message);
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -139,11 +139,9 @@ exports.getGeneral = async (req, res) => {
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'Accept': 'application/json, text/javascript, */*; q=0.01',
-        'Accept-Language': 'es-ES,es;q=0.9',
+        'Accept': 'application/json',
         'Authorization': `Bearer ${token}`,
-        'X-Requested-With': 'XMLHttpRequest',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': 'Node.js Client',
       },
     });
 
@@ -162,15 +160,10 @@ exports.getGeneral = async (req, res) => {
       success: response.ok,
       statusCode: response.status,
       data,
-      contentType: response.headers.get('content-type'),
     });
   } catch (error) {
     console.error('[SISGED] getGeneral error:', error.message);
-    return res.status(500).json({
-      error: error.message,
-      type: error.name,
-      timestamp: new Date().toISOString(),
-    });
+    return res.status(500).json({ error: error.message });
   }
 };
 
@@ -195,11 +188,9 @@ exports.getTrazabilidad = async (req, res) => {
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'Accept': 'application/json, text/javascript, */*; q=0.01',
-        'Accept-Language': 'es-ES,es;q=0.9',
+        'Accept': 'application/json',
         'Authorization': `Bearer ${token}`,
-        'X-Requested-With': 'XMLHttpRequest',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': 'Node.js Client',
       },
     });
 
@@ -218,14 +209,9 @@ exports.getTrazabilidad = async (req, res) => {
       success: response.ok,
       statusCode: response.status,
       data,
-      contentType: response.headers.get('content-type'),
     });
   } catch (error) {
     console.error('[SISGED] getTrazabilidad error:', error.message);
-    return res.status(500).json({
-      error: error.message,
-      type: error.name,
-      timestamp: new Date().toISOString(),
-    });
+    return res.status(500).json({ error: error.message });
   }
 };
