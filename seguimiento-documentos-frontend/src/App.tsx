@@ -32,6 +32,7 @@ import ReporteAsignaciones from "./pages/ReporteAsignaciones";
 import ReporteDocumentosRespuestas from "./pages/ReporteDocumentosRespuestas";
 import TestMenu from "./pages/TestMenu";
 import Diagnostico from "./pages/Diagnostico";
+import SincronizarSISGED from "./pages/SincronizarSISGED";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem("token");
@@ -81,6 +82,7 @@ export default function App() {
             <Route path="/blank" element={<Blank />} />
             <Route path="/test-menu" element={<TestMenu />} />
             <Route path="/diagnostico" element={<Diagnostico />} />
+            <Route path="/sincronizar-sisged" element={<SincronizarSISGED />} />
 
             {/* Forms */}
             <Route path="/form-elements" element={<FormElements />} />

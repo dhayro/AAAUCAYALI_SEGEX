@@ -1,8 +1,18 @@
 const SISGED_BASE_URL = 'https://sisgedpiloto.ana.gob.pe/apiRestSG/api/SISGED';
 
+const fetchWithTimeout = (url, options = {}, timeout = 30000) => {
+  return Promise.race([
+    fetch(url, options),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Timeout')), timeout)
+    )
+  ]);
+};
+
 exports.proxyRequest = async (req, res) => {
+  let token;
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
+    token = req.headers.authorization?.replace('Bearer ', '');
 
     if (!token) {
       return res.status(401).json({ error: 'Token requerido en Authorization header' });
@@ -14,46 +24,37 @@ exports.proxyRequest = async (req, res) => {
       return res.status(400).json({ error: 'URL requerida en body como { "url": "..." }' });
     }
 
-    console.log(`[SISGED-PROXY] Request a: ${url.substring(0, 80)}...`);
+    console.log(`[PROXY] Request a: ${url.substring(0, 80)}...`);
 
+    const response = await fetchWithTimeout(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'User-Agent': 'Node.js',
+      },
+    }, 30000);
+
+    console.log(`[PROXY] Status: ${response.status}`);
+
+    let data;
     try {
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'User-Agent': 'Node.js Proxy',
-        },
-        timeout: 30000,
-      });
-
-      console.log(`[SISGED-PROXY] Status: ${response.status}`);
-
-      let data;
-      const contentType = response.headers.get('content-type');
-
-      if (contentType?.includes('application/json')) {
-        data = await response.json();
-      } else {
-        data = await response.text();
-      }
-
-      return res.status(response.status).json({
-        success: response.ok,
-        statusCode: response.status,
-        data,
-      });
-    } catch (fetchError) {
-      console.error('[SISGED-PROXY] Fetch error:', fetchError.message);
-      return res.status(502).json({
-        error: 'Error al contactar SISGED',
-        message: fetchError.message,
-      });
+      data = await response.json();
+    } catch (e) {
+      data = await response.text();
     }
+
+    return res.status(response.status).json({
+      success: response.ok,
+      statusCode: response.status,
+      data,
+    });
   } catch (error) {
-    console.error('[SISGED-PROXY] Error:', error.message);
-    return res.status(500).json({
-      error: error.message,
+    console.error('[PROXY] Error:', error.message);
+    return res.status(502).json({
+      success: false,
+      error: error.message || 'Error al conectar con SISGED',
+      statusCode: 502,
     });
   }
 };
@@ -65,39 +66,31 @@ exports.getTestData = async (req, res) => {
       statusCode: 200,
       data: [
         {
-          id: 1,
-          nroCut: '187610-2026',
+          idoc: 1,
+          ncut: '187610-2026',
           asunto: 'Solicitud de información sobre proyectos',
-          remitente: 'aliaga romayna',
-          numeroDocumento: 'DOC-001-2026',
-          estado: 'En trámite',
-          fechaIngreso: '2026-09-01',
+          proced: 'SOLICITUD',
+          ndoc: 'DOC-001-2026',
+          usurem: 'aliaga romayna',
+          ofirem: 'ANA',
+          estupa: 'NO TUPA',
         },
         {
-          id: 2,
-          nroCut: '187611-2026',
+          idoc: 2,
+          ncut: '187611-2026',
           asunto: 'Consulta sobre permisos',
-          remitente: 'juan perez',
-          numeroDocumento: 'DOC-002-2026',
-          estado: 'En trámite',
-          fechaIngreso: '2026-09-15',
-        },
-        {
-          id: 3,
-          nroCut: '187612-2026',
-          asunto: 'Documentación requerida',
-          remitente: 'maria garcia',
-          numeroDocumento: 'DOC-003-2026',
-          estado: 'Pendiente',
-          fechaIngreso: '2026-09-20',
+          proced: 'CONSULTA',
+          ndoc: 'DOC-002-2026',
+          usurem: 'juan perez',
+          ofirem: 'ANA',
+          estupa: 'TUPA',
         },
       ],
-      timestamp: new Date().toISOString(),
     };
 
     res.status(200).json(mockData);
   } catch (error) {
-    console.error('[TEST-DATA] Error:', error.message);
+    console.error('[TEST] Error:', error.message);
     res.status(500).json({ error: error.message });
   }
 };
@@ -134,26 +127,24 @@ exports.getGeneral = async (req, res) => {
     params.append('FLG_ANEXO', req.query.FLG_ANEXO || '0');
 
     const url = `${SISGED_BASE_URL}/general?${params.toString()}`;
-    console.log(`[SISGED] Fetching general: ${url.substring(0, 100)}...`);
+    console.log(`[GENERAL] Fetching: ${url.substring(0, 100)}...`);
 
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
         'Authorization': `Bearer ${token}`,
-        'User-Agent': 'Node.js Client',
+        'User-Agent': 'Node.js',
       },
-    });
+    }, 30000);
 
-    console.log(`[SISGED] Response status: ${response.status}`);
+    console.log(`[GENERAL] Status: ${response.status}`);
 
     let data;
     try {
       data = await response.json();
-    } catch (parseError) {
-      console.error('[SISGED] JSON parse error:', parseError.message);
-      const text = await response.text();
-      data = { rawResponse: text.substring(0, 200) };
+    } catch (e) {
+      data = await response.text();
     }
 
     return res.status(response.status).json({
@@ -162,8 +153,12 @@ exports.getGeneral = async (req, res) => {
       data,
     });
   } catch (error) {
-    console.error('[SISGED] getGeneral error:', error.message);
-    return res.status(500).json({ error: error.message });
+    console.error('[GENERAL] Error:', error.message);
+    return res.status(502).json({
+      success: false,
+      error: error.message || 'Error al conectar con SISGED',
+      statusCode: 502,
+    });
   }
 };
 
@@ -183,26 +178,21 @@ exports.getTrazabilidad = async (req, res) => {
     params.append('FLG_ANULADO', req.query.FLG_ANULADO || '1');
 
     const url = `${SISGED_BASE_URL}/trazabilidad?${params.toString()}`;
-    console.log(`[SISGED] Fetching trazabilidad: ${url}`);
 
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
         'Authorization': `Bearer ${token}`,
-        'User-Agent': 'Node.js Client',
+        'User-Agent': 'Node.js',
       },
-    });
-
-    console.log(`[SISGED] Response status: ${response.status}`);
+    }, 30000);
 
     let data;
     try {
       data = await response.json();
-    } catch (parseError) {
-      console.error('[SISGED] JSON parse error:', parseError.message);
-      const text = await response.text();
-      data = { rawResponse: text.substring(0, 200) };
+    } catch (e) {
+      data = await response.text();
     }
 
     return res.status(response.status).json({
@@ -211,7 +201,11 @@ exports.getTrazabilidad = async (req, res) => {
       data,
     });
   } catch (error) {
-    console.error('[SISGED] getTrazabilidad error:', error.message);
-    return res.status(500).json({ error: error.message });
+    console.error('[TRAZABILIDAD] Error:', error.message);
+    return res.status(502).json({
+      success: false,
+      error: error.message || 'Error al conectar con SISGED',
+      statusCode: 502,
+    });
   }
 };

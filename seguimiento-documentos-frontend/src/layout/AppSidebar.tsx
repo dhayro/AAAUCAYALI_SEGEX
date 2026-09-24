@@ -131,6 +131,12 @@ const othersItems: NavItem[] = [
     key: "diagnostico",
     path: "/diagnostico",
   },
+  {
+    icon: <PieChartIcon fontSize={24} />,
+    name: "Sincronizar SISGED",
+    key: "sincronizar-sisged",
+    path: "/sincronizar-sisged",
+  },
 ];
 
 const AppSidebar: React.FC = () => {
