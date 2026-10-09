@@ -10,6 +10,7 @@ type Props = {
   placeholder?: string;
   isLoading?: boolean;
   disabled?: boolean;
+  selectedLabel?: string; // Nombre del valor seleccionado (para cuando no está en la lista)
 };
 
 export default function SearchableSelect({
@@ -21,6 +22,7 @@ export default function SearchableSelect({
   placeholder = "Buscar...",
   isLoading = false,
   disabled = false,
+  selectedLabel,
 }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -49,6 +51,7 @@ export default function SearchableSelect({
   };
 
   const selectedOption = options.find((opt) => opt.id === value);
+  const displayValue = isOpen ? searchTerm : (selectedOption?.nombre || selectedLabel || "");
 
   return (
     <div ref={containerRef} className="relative">
@@ -57,7 +60,7 @@ export default function SearchableSelect({
         <input
           ref={inputRef}
           type="text"
-          value={isOpen ? searchTerm : selectedOption?.nombre || ""}
+          value={displayValue}
           onChange={(e) => handleSearch(e.target.value)}
           onFocus={() => setIsOpen(true)}
           placeholder={placeholder}

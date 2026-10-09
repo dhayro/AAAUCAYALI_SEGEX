@@ -88,6 +88,8 @@ export default function Usuarios() {
   const [areas, setAreas] = useState<any[]>([]);
   const [loadingCargos, setLoadingCargos] = useState(false);
   const [loadingAreas, setLoadingAreas] = useState(false);
+  const [selectedCargoName, setSelectedCargoName] = useState("");
+  const [selectedAreaName, setSelectedAreaName] = useState("");
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetUserId, setResetUserId] = useState<number | null>(null);
   const [showEstadoModal, setShowEstadoModal] = useState(false);
@@ -166,6 +168,43 @@ export default function Usuarios() {
     }
   };
 
+  const loadCargoSelected = async (cargoId: number) => {
+    try {
+      const res = await api.get(`/cargos/${cargoId}`);
+      if (res.data) {
+        setSelectedCargoName(res.data.nombre);
+        setCargos((prev) => {
+          const exists = prev.some((c: any) => c.id === cargoId);
+          if (!exists) {
+            return [res.data, ...prev];
+          }
+          return prev;
+        });
+      }
+    } catch (error) {
+      console.error("Error loading selected cargo:", error);
+    }
+  };
+
+  const loadAreaSelected = async (areaId: number) => {
+    try {
+      const res = await api.get(`/areas/${areaId}`);
+      if (res.data) {
+        const formatted = formatAreaDisplay(res.data);
+        setSelectedAreaName(formatted.nombre);
+        setAreas((prev) => {
+          const exists = prev.some((a: any) => a.id === areaId);
+          if (!exists) {
+            return [formatted, ...prev];
+          }
+          return prev;
+        });
+      }
+    } catch (error) {
+      console.error("Error loading selected area:", error);
+    }
+  };
+
   const fetchUsuarios = useCallback(async () => {
     setLoading(true);
     try {
@@ -209,6 +248,8 @@ export default function Usuarios() {
 
   const handleCloseModal = () => {
     setShowModal(false);
+    setSelectedCargoName("");
+    setSelectedAreaName("");
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
@@ -273,6 +314,15 @@ export default function Usuarios() {
         id_area: usuarioCompleto.id_area?.toString() || "",
         estado: usuarioCompleto.estado || 1,
       });
+
+      // Cargar cargo y área específicos si existen
+      if (usuarioCompleto.id_cargo) {
+        loadCargoSelected(usuarioCompleto.id_cargo);
+      }
+      if (usuarioCompleto.id_area) {
+        loadAreaSelected(usuarioCompleto.id_area);
+      }
+
       setEditingId(usuario.id);
       setShowModal(true);
     } catch (error) {
@@ -496,6 +546,7 @@ export default function Usuarios() {
                     onSearch={searchCargos}
                     isLoading={loadingCargos}
                     placeholder="Buscar cargo..."
+                    selectedLabel={selectedCargoName}
                   />
                   <SearchableSelect
                     label="Área"
@@ -507,6 +558,7 @@ export default function Usuarios() {
                     onSearch={searchAreas}
                     isLoading={loadingAreas}
                     placeholder="Buscar área..."
+                    selectedLabel={selectedAreaName}
                   />
                 </div>
 
