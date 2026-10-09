@@ -3,8 +3,45 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
+import DatePickerLima from "@/components/form/DatePickerLima";
 import api from "@/utils/api";
 import { PencilIcon, TrashBinIcon, PlusIcon, CloseIcon } from "@/icons";
+
+const formatDateForInput = (date: string | undefined): string => {
+  if (!date) return "";
+  try {
+    // Parse YYYY-MM-DD format directly to avoid timezone issues
+    const parts = date.split("T")[0].split("-");
+    if (parts.length !== 3) return "";
+    return `${parts[0]}-${parts[1]}-${parts[2]}`;
+  } catch {
+    return "";
+  }
+};
+
+const formatDateForDisplay = (date: string | undefined): string => {
+  if (!date) return "";
+  try {
+    // Parse YYYY-MM-DD format directly to avoid timezone issues
+    const parts = date.split("T")[0].split("-");
+    if (parts.length !== 3) return "";
+    const [year, month, day] = parts;
+    return `${day}/${month}/${year}`;
+  } catch {
+    return "";
+  }
+};
+
+
+interface Cargo {
+  id: number;
+  nombre: string;
+}
+
+interface Area {
+  id: number;
+  nombre: string;
+}
 
 interface Usuario {
   id: number;
@@ -13,6 +50,15 @@ interface Usuario {
   nombre: string;
   apellido: string;
   perfil: string;
+  dni?: string;
+  telefono?: string;
+  direccion?: string;
+  fecha_nacimiento?: string;
+  id_cargo?: number;
+  id_area?: number;
+  estado?: number;
+  Cargo?: Cargo;
+  Area?: Area;
 }
 
 export default function Usuarios() {
@@ -28,7 +74,22 @@ export default function Usuarios() {
     apellido: "",
     password: "",
     perfil: "personal",
+    dni: "",
+    telefono: "",
+    direccion: "",
+    fecha_nacimiento: "",
+    id_cargo: "",
+    id_area: "",
+    estado: 1,
   });
+
+  const [cargos, setCargos] = useState<any[]>([]);
+  const [areas, setAreas] = useState<any[]>([]);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetUserId, setResetUserId] = useState<number | null>(null);
+  const [showEstadoModal, setShowEstadoModal] = useState(false);
+  const [estadoUserId, setEstadoUserId] = useState<number | null>(null);
+  const [estadoNuevo, setEstadoNuevo] = useState<boolean | null>(null);
 
   const [pagination, setPagination] = useState({
     pageIndex: 0,
@@ -43,7 +104,43 @@ export default function Usuarios() {
 
   useEffect(() => {
     fetchUsuarios();
+    fetchCargosYAreas();
   }, [pagination, filters]);
+
+  const fetchCargosYAreas = async () => {
+    try {
+      const [cargosRes, areasRes] = await Promise.all([
+        api.get("/cargos"),
+        api.get("/areas"),
+      ]);
+      setCargos(Array.isArray(cargosRes.data) ? cargosRes.data : cargosRes.data.cargos || []);
+
+      // Procesar áreas: NOMBRE (INICIAL) o PADRE > NOMBRE (INICIAL)
+      const areasData = Array.isArray(areasRes.data) ? areasRes.data : areasRes.data.areas || [];
+      const areasConFormato = areasData.map((area: any) => {
+        const nombreCompleto = area.nombre || '';
+        const inicial = area.descripcion || '';
+
+        let displayName = `${nombreCompleto}${inicial ? ` (${inicial})` : ''}`;
+
+        if (area.AreaPadre) {
+          const padreNombre = area.AreaPadre.nombre || '';
+          const padreInicial = area.AreaPadre.descripcion || '';
+          const padreDisplay = `${padreNombre}${padreInicial ? ` (${padreInicial})` : ''}`;
+          displayName = `${padreDisplay} > ${displayName}`;
+        }
+
+        return {
+          ...area,
+          displayName
+        };
+      });
+
+      setAreas(areasConFormato);
+    } catch (error) {
+      console.error("Error fetching cargos y areas:", error);
+    }
+  };
 
   const fetchUsuarios = useCallback(async () => {
     setLoading(true);
@@ -74,6 +171,13 @@ export default function Usuarios() {
       apellido: "",
       password: "",
       perfil: "personal",
+      dni: "",
+      telefono: "",
+      direccion: "",
+      fecha_nacimiento: "",
+      id_cargo: "",
+      id_area: "",
+      estado: 1,
     });
     setEditingId(null);
     setShowModal(true);
@@ -83,8 +187,10 @@ export default function Usuarios() {
     setShowModal(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
 
     if (
       !formData.usuario.trim() ||
@@ -96,12 +202,21 @@ export default function Usuarios() {
     }
 
     try {
+      const dataToSend = {
+        ...formData,
+        id_cargo: formData.id_cargo ? Number(formData.id_cargo) : null,
+        id_area: formData.id_area ? Number(formData.id_area) : null,
+      };
+
       if (editingId) {
-        await api.put(`/usuarios/${editingId}`, formData);
-        toast.success("Usuario actualizado correctamente");
+        // No enviar password ni estado al actualizar (se manejan por rutas separadas)
+        delete dataToSend.password;
+        delete dataToSend.estado;
+        await api.put(`/usuarios/${editingId}`, dataToSend);
+        toast.success("✅ Usuario actualizado correctamente");
       } else {
-        await api.post("/usuarios", formData);
-        toast.success("Usuario creado correctamente");
+        await api.post("/usuarios", dataToSend);
+        toast.success("✅ Usuario creado correctamente");
       }
 
       handleCloseModal();
@@ -113,17 +228,33 @@ export default function Usuarios() {
     }
   };
 
-  const handleEdit = (usuario: Usuario) => {
-    setFormData({
-      usuario: usuario.usuario,
-      email: usuario.email,
-      nombre: usuario.nombre,
-      apellido: usuario.apellido,
-      password: "",
-      perfil: usuario.perfil,
-    });
-    setEditingId(usuario.id);
-    setShowModal(true);
+  const handleEdit = async (usuario: Usuario) => {
+    try {
+      // Obtener datos completos del usuario por ID
+      const response = await api.get(`/usuarios/${usuario.id}`);
+      const usuarioCompleto = response.data;
+
+      setFormData({
+        usuario: usuarioCompleto.usuario,
+        email: usuarioCompleto.email,
+        nombre: usuarioCompleto.nombre,
+        apellido: usuarioCompleto.apellido,
+        password: "",
+        perfil: usuarioCompleto.perfil,
+        dni: usuarioCompleto.dni || "",
+        telefono: usuarioCompleto.telefono || "",
+        direccion: usuarioCompleto.direccion || "",
+        fecha_nacimiento: formatDateForInput(usuarioCompleto.fecha_nacimiento),
+        id_cargo: usuarioCompleto.id_cargo?.toString() || "",
+        id_area: usuarioCompleto.id_area?.toString() || "",
+        estado: usuarioCompleto.estado || 1,
+      });
+      setEditingId(usuario.id);
+      setShowModal(true);
+    } catch (error) {
+      console.error("Error cargando usuario:", error);
+      toast.error("Error al cargar los datos del usuario");
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -137,6 +268,45 @@ export default function Usuarios() {
       await fetchUsuarios();
     } catch (error: any) {
       toast.error("Error al eliminar el usuario");
+    }
+  };
+
+  const handleOpenResetModal = (id: number) => {
+    setResetUserId(id);
+    setShowResetModal(true);
+  };
+
+  const handleConfirmReset = async () => {
+    if (!resetUserId) return;
+
+    try {
+      await api.patch(`/usuarios/${resetUserId}/reset-password`);
+      toast.success("✅ Contraseña restablecida correctamente");
+      setShowResetModal(false);
+      setResetUserId(null);
+    } catch (error: any) {
+      toast.error("❌ Error al restablecer la contraseña");
+    }
+  };
+
+  const handleToggleEstado = (id: number, estadoActual: boolean) => {
+    setEstadoUserId(id);
+    setEstadoNuevo(!estadoActual);
+    setShowEstadoModal(true);
+  };
+
+  const handleConfirmEstado = async () => {
+    if (!estadoUserId || estadoNuevo === null) return;
+
+    try {
+      await api.patch(`/usuarios/${estadoUserId}/cambiar-estado`, { estado: estadoNuevo });
+      toast.success(estadoNuevo ? "✅ Usuario activado" : "✅ Usuario desactivado");
+      setShowEstadoModal(false);
+      setEstadoUserId(null);
+      setEstadoNuevo(null);
+      await fetchUsuarios();
+    } catch (error: any) {
+      toast.error("❌ Error al cambiar el estado del usuario");
     }
   };
 
@@ -186,8 +356,8 @@ export default function Usuarios() {
         {/* Modal */}
         {showModal && (
           <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-md rounded-lg bg-white shadow-2xl dark:bg-gray-800">
-              <div className="flex items-center justify-between border-b p-6 dark:border-gray-700">
+            <div className="w-full max-w-2xl rounded-lg bg-white shadow-2xl dark:bg-gray-800 max-h-[90vh] flex flex-col">
+              <div className="flex items-center justify-between border-b p-6 dark:border-gray-700 flex-shrink-0">
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                   {editingId ? "Editar Usuario" : "Nuevo Usuario"}
                 </h2>
@@ -199,18 +369,31 @@ export default function Usuarios() {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4 p-6">
-                <div>
-                  <Label>Usuario *</Label>
-                  <Input
-                    value={formData.usuario}
-                    onChange={(e) =>
-                      setFormData({ ...formData, usuario: e.target.value })
-                    }
-                    placeholder="Nombre de usuario"
-                    required
-                  />
+              <form id="usuarioForm" onSubmit={handleSubmit} className="space-y-4 p-6 overflow-y-auto flex-1">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Usuario *</Label>
+                    <Input
+                      value={formData.usuario}
+                      onChange={(e) =>
+                        setFormData({ ...formData, usuario: e.target.value })
+                      }
+                      placeholder="Nombre de usuario"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label>DNI</Label>
+                    <Input
+                      value={formData.dni}
+                      onChange={(e) =>
+                        setFormData({ ...formData, dni: e.target.value })
+                      }
+                      placeholder="12345678"
+                    />
+                  </div>
                 </div>
+
                 <div>
                   <Label>Email *</Label>
                   <Input
@@ -223,27 +406,98 @@ export default function Usuarios() {
                     required
                   />
                 </div>
-                <div>
-                  <Label>Nombre *</Label>
-                  <Input
-                    value={formData.nombre}
-                    onChange={(e) =>
-                      setFormData({ ...formData, nombre: e.target.value })
-                    }
-                    placeholder="Nombre"
-                    required
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Nombre *</Label>
+                    <Input
+                      value={formData.nombre}
+                      onChange={(e) =>
+                        setFormData({ ...formData, nombre: e.target.value })
+                      }
+                      placeholder="Nombre"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label>Apellido</Label>
+                    <Input
+                      value={formData.apellido}
+                      onChange={(e) =>
+                        setFormData({ ...formData, apellido: e.target.value })
+                      }
+                      placeholder="Apellido"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Teléfono</Label>
+                    <Input
+                      value={formData.telefono}
+                      onChange={(e) =>
+                        setFormData({ ...formData, telefono: e.target.value })
+                      }
+                      placeholder="987654321"
+                    />
+                  </div>
+                  <DatePickerLima
+                    label="Fecha de Nacimiento"
+                    value={formData.fecha_nacimiento}
+                    onChange={(date) => setFormData({ ...formData, fecha_nacimiento: date })}
+                    placeholder="DD/MM/YYYY"
                   />
                 </div>
+
                 <div>
-                  <Label>Apellido</Label>
+                  <Label>Dirección</Label>
                   <Input
-                    value={formData.apellido}
+                    value={formData.direccion}
                     onChange={(e) =>
-                      setFormData({ ...formData, apellido: e.target.value })
+                      setFormData({ ...formData, direccion: e.target.value })
                     }
-                    placeholder="Apellido"
+                    placeholder="Calle, número, ciudad"
                   />
                 </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Cargo</Label>
+                    <select
+                      value={formData.id_cargo}
+                      onChange={(e) =>
+                        setFormData({ ...formData, id_cargo: e.target.value })
+                      }
+                      className="w-full rounded border border-gray-300 bg-white px-3 py-2 dark:border-gray-600 dark:bg-gray-700 text-sm"
+                    >
+                      <option value="">-- Seleccionar --</option>
+                      {cargos.map((cargo: any) => (
+                        <option key={cargo.id} value={cargo.id}>
+                          {cargo.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label>Área</Label>
+                    <select
+                      value={formData.id_area}
+                      onChange={(e) =>
+                        setFormData({ ...formData, id_area: e.target.value })
+                      }
+                      className="w-full rounded border border-gray-300 bg-white px-3 py-2 dark:border-gray-600 dark:bg-gray-700 text-sm"
+                    >
+                      <option value="">-- Seleccionar --</option>
+                      {areas.map((area: any) => (
+                        <option key={area.id} value={area.id}>
+                          {area.displayName || area.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
                 {!editingId && (
                   <div>
                     <Label>Contraseña *</Label>
@@ -258,6 +512,7 @@ export default function Usuarios() {
                     />
                   </div>
                 )}
+
                 <div>
                   <Label>Perfil</Label>
                   <select
@@ -265,7 +520,7 @@ export default function Usuarios() {
                     onChange={(e) =>
                       setFormData({ ...formData, perfil: e.target.value })
                     }
-                    className="w-full rounded border border-gray-300 bg-white px-3 py-2 dark:border-gray-600 dark:bg-gray-700"
+                    className="w-full rounded border border-gray-300 bg-white px-3 py-2 dark:border-gray-600 dark:bg-gray-700 text-sm"
                   >
                     <option value="admin">Admin</option>
                     <option value="jefe">Jefe</option>
@@ -274,22 +529,138 @@ export default function Usuarios() {
                   </select>
                 </div>
 
-                <div className="flex gap-3 border-t pt-4 dark:border-gray-700">
-                  <button
-                    type="submit"
-                    className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-                  >
-                    {editingId ? "Actualizar" : "Guardar"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleCloseModal}
-                    className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300"
-                  >
-                    Cancelar
-                  </button>
-                </div>
               </form>
+
+              <div className="flex gap-3 border-t bg-gray-50 px-6 py-4 dark:border-gray-700 dark:bg-gray-700 flex-shrink-0">
+                <button
+                  type="submit"
+                  form="usuarioForm"
+                  className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+                >
+                  {editingId ? "Actualizar" : "Guardar"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCloseModal}
+                  className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Restablecer Contraseña */}
+        {showResetModal && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-md rounded-lg bg-white shadow-2xl dark:bg-gray-800">
+              <div className="flex items-center justify-between border-b p-6 dark:border-gray-700">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  🔑 Restablecer Contraseña
+                </h2>
+                <button
+                  onClick={() => setShowResetModal(false)}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 p-4 border border-blue-200 dark:border-blue-800">
+                  <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
+                    Se restablecerá la contraseña del usuario a:
+                  </p>
+                  <div className="inline-block bg-white dark:bg-gray-700 px-4 py-2 rounded-lg border-2 border-blue-500 font-mono font-bold text-lg text-blue-600 dark:text-blue-400">
+                    Autoridad1
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
+                    El usuario deberá cambiar esta contraseña en su próximo inicio de sesión.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                    ⚠️ Esta acción no se puede deshacer. ¿Deseas continuar?
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3 border-t bg-gray-50 px-6 py-4 dark:border-gray-700 dark:bg-gray-700">
+                <button
+                  onClick={handleConfirmReset}
+                  className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 font-medium"
+                >
+                  ✓ Restablecer
+                </button>
+                <button
+                  onClick={() => setShowResetModal(false)}
+                  className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Cambiar Estado */}
+        {showEstadoModal && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-md rounded-lg bg-white shadow-2xl dark:bg-gray-800">
+              <div className="flex items-center justify-between border-b p-6 dark:border-gray-700">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  {estadoNuevo ? "🟢 Activar Usuario" : "🔴 Desactivar Usuario"}
+                </h2>
+                <button
+                  onClick={() => setShowEstadoModal(false)}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className={`rounded-lg p-4 border-2 ${
+                  estadoNuevo
+                    ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                    : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+                }`}>
+                  <p className={`text-sm font-medium ${
+                    estadoNuevo
+                      ? "text-green-800 dark:text-green-200"
+                      : "text-red-800 dark:text-red-200"
+                  }`}>
+                    {estadoNuevo
+                      ? "✓ El usuario podrá acceder al sistema normalmente."
+                      : "✗ El usuario NO podrá acceder al sistema."}
+                  </p>
+                </div>
+
+                <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+                  ¿Deseas {estadoNuevo ? "activar" : "desactivar"} este usuario?
+                </p>
+              </div>
+
+              <div className="flex gap-3 border-t bg-gray-50 px-6 py-4 dark:border-gray-700 dark:bg-gray-700">
+                <button
+                  onClick={handleConfirmEstado}
+                  className={`flex-1 rounded-lg px-4 py-2 text-white hover:opacity-90 font-medium ${
+                    estadoNuevo
+                      ? "bg-green-600 hover:bg-green-700"
+                      : "bg-red-600 hover:bg-red-700"
+                  }`}
+                >
+                  {estadoNuevo ? "✓ Activar" : "✗ Desactivar"}
+                </button>
+                <button
+                  onClick={() => setShowEstadoModal(false)}
+                  className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300"
+                >
+                  Cancelar
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -319,7 +690,16 @@ export default function Usuarios() {
                       Email
                     </th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">
+                      Cargo
+                    </th>
+                    <th className="px-6 py-4 text-start text-sm font-semibold">
+                      Área
+                    </th>
+                    <th className="px-6 py-4 text-start text-sm font-semibold">
                       Perfil
+                    </th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold">
+                      Estado
                     </th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">
                       Acciones
@@ -341,6 +721,12 @@ export default function Usuarios() {
                       </td>
                       <td className="px-6 py-4 text-sm">{user.email}</td>
                       <td className="px-6 py-4 text-sm">
+                        {user.Cargo?.nombre || "—"}
+                      </td>
+                      <td className="px-6 py-4 text-sm">
+                        {user.Area?.nombre || "—"}
+                      </td>
+                      <td className="px-6 py-4 text-sm">
                         <span
                           className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
                             user.perfil === "admin"
@@ -353,17 +739,38 @@ export default function Usuarios() {
                           {user.perfil}
                         </span>
                       </td>
+                      <td className="px-6 py-4 text-center">
+                        <button
+                          onClick={() => handleToggleEstado(user.id, user.estado)}
+                          className={`inline-flex rounded-full px-4 py-1.5 text-xs font-bold transition-colors ${
+                            user.estado
+                              ? "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900 dark:text-green-100"
+                              : "bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900 dark:text-red-100"
+                          }`}
+                        >
+                          {user.estado ? "✓ Activo" : "✗ Inactivo"}
+                        </button>
+                      </td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center justify-center gap-3">
+                        <div className="flex items-center justify-center gap-2">
                           <button
                             onClick={() => handleEdit(user)}
-                            className="text-green-600 hover:text-green-800 dark:text-green-400"
+                            className="text-green-600 hover:text-green-800 dark:text-green-400 p-1"
+                            title="Editar"
                           >
                             <PencilIcon className="h-5 w-5" />
                           </button>
                           <button
+                            onClick={() => handleOpenResetModal(user.id)}
+                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 p-1"
+                            title="Restablecer contraseña"
+                          >
+                            🔑
+                          </button>
+                          <button
                             onClick={() => handleDelete(user.id)}
-                            className="text-red-600 hover:text-red-800 dark:text-red-400"
+                            className="text-red-600 hover:text-red-800 dark:text-red-400 p-1"
+                            title="Eliminar"
                           >
                             <TrashBinIcon className="h-5 w-5" />
                           </button>

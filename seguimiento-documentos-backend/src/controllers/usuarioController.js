@@ -5,6 +5,25 @@ const { Op } = require('sequelize'); // Import Op from Sequelize
 const Cargo = require('../models/Cargo');
 const Area = require('../models/Area');
 
+const formatDateForAPI = (date) => {
+  if (!date) return null;
+  if (typeof date === 'string') return date;
+  // Ensure we return YYYY-MM-DD format in Lima timezone
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const formatUsuarioResponse = (usuario) => {
+  const data = usuario.toJSON();
+  if (data.fecha_nacimiento) {
+    data.fecha_nacimiento = formatDateForAPI(data.fecha_nacimiento);
+  }
+  return data;
+};
+
 exports.obtenerTodosLosUsuarios = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -20,11 +39,11 @@ exports.obtenerTodosLosUsuarios = async (req, res) => {
     const include = [
       {
         model: Cargo,
-        attributes: [], // Exclude Cargo attributes from the result
+        attributes: ['id', 'nombre'], // Include Cargo name
       },
       {
         model: Area,
-        attributes: [], // Exclude Area attributes from the result
+        attributes: ['id', 'nombre'], // Include Area name
       }
     ];
 
@@ -62,7 +81,7 @@ exports.obtenerTodosLosUsuarios = async (req, res) => {
     });
 
     res.json({
-      usuarios: rows,
+      usuarios: rows.map(formatUsuarioResponse),
       totalUsuarios: count,
       totalPaginas: Math.ceil(count / limit),
       paginaActual: page
@@ -74,9 +93,21 @@ exports.obtenerTodosLosUsuarios = async (req, res) => {
 
 exports.obtenerUsuarioPorId = async (req, res) => {
   try {
-    const usuario = await Usuario.findByPk(req.params.id);
+    const usuarioId = parseInt(req.params.id);
+    const usuarioActual = req.user.id;
+
+    // Permitir que un usuario obtenga su propio perfil, o que admin/jefe obtenga cualquier usuario
+    const esAdmin = req.user.perfil === 'admin';
+    const esJefe = req.user.perfil === 'jefe';
+    const esSuPropioUsuario = usuarioId === usuarioActual;
+
+    if (!esAdmin && !esJefe && !esSuPropioUsuario) {
+      return res.status(403).json({ mensaje: 'No tienes permiso para ver este usuario' });
+    }
+
+    const usuario = await Usuario.findByPk(usuarioId);
     if (usuario) {
-      res.json(usuario);
+      res.json(formatUsuarioResponse(usuario));
     } else {
       res.status(404).json({ mensaje: 'Usuario no encontrado' });
     }
@@ -105,16 +136,53 @@ exports.crearUsuario = async (req, res) => {
 
 exports.actualizarUsuario = async (req, res) => {
   try {
-    const actualizado = await Usuario.update(req.body, {
-      where: { id: req.params.id }
+    const usuarioId = req.params.id;
+
+    console.log('[UPDATE] Intentando actualizar usuario:', usuarioId);
+    console.log('[UPDATE] Datos recibidos:', req.body);
+
+    // Verificar que el usuario existe
+    const usuarioExistente = await Usuario.findByPk(usuarioId);
+    if (!usuarioExistente) {
+      return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+    }
+
+    // Preparar datos a actualizar (excluir campos especiales)
+    const dataToUpdate = {};
+    for (const [key, value] of Object.entries(req.body)) {
+      // No actualizar campos especiales
+      if (['password', 'estado', 'id'].includes(key)) {
+        continue;
+      }
+      // Incluir otros campos
+      dataToUpdate[key] = value;
+    }
+
+    console.log('[UPDATE] Datos a actualizar:', dataToUpdate);
+
+    // Si no hay datos para actualizar, retornar error
+    if (Object.keys(dataToUpdate).length === 0) {
+      return res.status(400).json({ mensaje: 'No hay datos para actualizar' });
+    }
+
+    const actualizado = await Usuario.update(dataToUpdate, {
+      where: { id: usuarioId }
     });
+
+    console.log('[UPDATE] Resultado update:', actualizado);
+
     if (actualizado[0] === 1) {
       res.json({ mensaje: 'Usuario actualizado exitosamente' });
+    } else if (actualizado[0] === 0) {
+      // Si no se actualizó nada, probablemente los datos son idénticos
+      res.json({ mensaje: 'Usuario sin cambios' });
     } else {
       res.status(404).json({ mensaje: 'Usuario no encontrado' });
     }
   } catch (error) {
-    res.status(400).json({ mensaje: error.message });
+    console.error('[UPDATE] Error completo:', error);
+    console.error('[UPDATE] Mensaje:', error.message);
+    res.status(500).json({ mensaje: error.message || 'Error al actualizar el usuario' });
   }
 };
 
@@ -384,6 +452,24 @@ exports.cambiarPerfilUsuario = async (req, res) => {
     await user.save();
 
     res.json({ mensaje: 'Perfil del usuario actualizado exitosamente' });
+  } catch (error) {
+    res.status(500).json({ mensaje: error.message });
+  }
+};
+
+exports.cambiarEstadoUsuario = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { estado } = req.body;
+
+    const user = await Usuario.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+    }
+
+    await Usuario.update({ estado }, { where: { id } });
+
+    res.json({ mensaje: 'Estado del usuario actualizado exitosamente' });
   } catch (error) {
     res.status(500).json({ mensaje: error.message });
   }

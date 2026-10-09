@@ -531,7 +531,7 @@ router.get('/', isAdmin, usuarioController.obtenerTodosLosUsuarios);
  *       404:
  *         description: Usuario no encontrado
  */
-router.get('/:id', isJefeOrAdmin, usuarioController.obtenerUsuarioPorId);
+router.get('/:id', authenticateToken, usuarioController.obtenerUsuarioPorId);
 
 /**
  * @swagger
@@ -569,5 +569,42 @@ router.get('/:id', isJefeOrAdmin, usuarioController.obtenerUsuarioPorId);
  *         description: Usuario no encontrado
  */
 router.patch('/:id/cambiar-perfil', authenticateToken, isAdmin, usuarioController.cambiarPerfilUsuario);
+
+/**
+ * @swagger
+ * /api/usuarios/{id}/cambiar-estado:
+ *   patch:
+ *     summary: Cambiar el estado de un usuario (activo/inactivo)
+ *     tags: [Usuarios]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del usuario
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               estado:
+ *                 type: boolean
+ *                 description: Nuevo estado del usuario
+ *     responses:
+ *       200:
+ *         description: Estado del usuario actualizado exitosamente
+ *       400:
+ *         description: Error en los datos proporcionados
+ *       401:
+ *         description: No autorizado
+ *       404:
+ *         description: Usuario no encontrado
+ */
+router.patch('/:id/cambiar-estado', authenticateToken, isAdmin, usuarioController.cambiarEstadoUsuario);
 
 module.exports = router;

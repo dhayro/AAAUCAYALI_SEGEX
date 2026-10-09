@@ -24,6 +24,6 @@ const Area = sequelize.define('Area', {
 });
 
 Area.hasMany(Area, { as: 'subAreas', foreignKey: 'id_padre' });
-Area.belongsTo(Area, { as: 'areaPadre', foreignKey: 'id_padre' });
+Area.belongsTo(Area, { as: 'AreaPadre', foreignKey: 'id_padre' });
 
 module.exports = Area;
