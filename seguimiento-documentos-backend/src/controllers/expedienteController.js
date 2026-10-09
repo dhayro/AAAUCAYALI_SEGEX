@@ -5,6 +5,17 @@ const TipoDocumento = require('../models/TipoDocumento');
 const Documento = require('../models/Documento');
 const { formatDateForLima } = require('../utils/dateUtils');
 
+const normalizeExpedienteData = (data) => {
+  const normalized = { ...data };
+  const fieldsToUppercase = ['cut', 'estupa', 'tipo_procedimiento', 'numero_documento', 'asunto', 'remitente'];
+  fieldsToUppercase.forEach((field) => {
+    if (normalized[field]) {
+      normalized[field] = String(normalized[field]).trim().toUpperCase();
+    }
+  });
+  return normalized;
+};
+
 exports.getAllExpedientes = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -114,8 +125,13 @@ exports.createExpediente = async (req, res) => {
   try {
     const { cut, numero_documento, fecha_creacion, ...otherData } = req.body;
 
+    // Normalizar datos
+    const normalizedCut = String(cut).trim().toUpperCase();
+    const normalizedNumeroDocumento = String(numero_documento).trim().toUpperCase();
+    const normalizedData = normalizeExpedienteData(otherData);
+
     // Check if an expediente with the same cut already exists
-    const existingExpediente = await Expediente.findOne({ where: { cut } });
+    const existingExpediente = await Expediente.findOne({ where: { cut: normalizedCut } });
     if (existingExpediente) {
       return res.status(200).json({
         alert: 'El expediente con este CUT ya existe',
@@ -126,16 +142,16 @@ exports.createExpediente = async (req, res) => {
     // Check if the beginning of numero_documento matches any tipo_documento
     const tiposDocumentos = await TipoDocumento.findAll();
     let id_tipo_documento = null;
-    let updatedNumeroDocumento = numero_documento;
+    let updatedNumeroDocumento = normalizedNumeroDocumento;
 
     // Sort tiposDocumentos by the length of the name in descending order
     tiposDocumentos.sort((a, b) => b.nombre.length - a.nombre.length);
 
     for (const tipo of tiposDocumentos) {
       const tipoNombre = tipo.nombre.toUpperCase();
-      if (numero_documento.toUpperCase().startsWith(tipoNombre)) {
+      if (normalizedNumeroDocumento.startsWith(tipoNombre)) {
         id_tipo_documento = tipo.id;
-        updatedNumeroDocumento = numero_documento.substring(tipoNombre.length).trim();
+        updatedNumeroDocumento = normalizedNumeroDocumento.substring(tipoNombre.length).trim();
         break;
       }
     }
@@ -145,11 +161,11 @@ exports.createExpediente = async (req, res) => {
 
     // Create a new expediente if the cut does not exist
     const nuevoExpediente = await Expediente.create({
-      cut,
+      cut: normalizedCut,
       numero_documento: updatedNumeroDocumento,
       id_tipo_documento,
       fecha_creacion: formattedDate,
-      ...otherData
+      ...normalizedData
     });
 
     res.status(201).json(nuevoExpediente);
@@ -160,7 +176,8 @@ exports.createExpediente = async (req, res) => {
 
 exports.updateExpediente = async (req, res) => {
   try {
-    const [updated] = await Expediente.update(req.body, {
+    const normalizedData = normalizeExpedienteData(req.body);
+    const [updated] = await Expediente.update(normalizedData, {
       where: { id: req.params.id }
     });
     if (updated) {
