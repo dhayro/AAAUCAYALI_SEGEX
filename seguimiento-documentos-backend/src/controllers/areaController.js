@@ -53,7 +53,15 @@ exports.obtenerTodasLasAreas = async (req, res) => {
 
 exports.obtenerAreaPorId = async (req, res) => {
   try {
-    const area = await Area.findByPk(req.params.id);
+    const area = await Area.findByPk(req.params.id, {
+      include: [
+        {
+          association: 'AreaPadre',
+          attributes: ['id', 'nombre', 'descripcion'],
+          required: false
+        }
+      ]
+    });
     if (area) {
       res.json(area);
     } else {
