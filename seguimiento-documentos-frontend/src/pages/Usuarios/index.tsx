@@ -33,6 +33,17 @@ const formatDateForDisplay = (date: string | undefined): string => {
   }
 };
 
+const formatAreaForDisplay = (area: any): string => {
+  if (!area) return "—";
+  const nombreArea = area.nombre || '';
+  const inicialArea = area.descripcion || '';
+  if (area.AreaPadre) {
+    const inicialPadre = area.AreaPadre.descripcion || '';
+    return `${nombreArea} - ${inicialPadre}-${inicialArea}`;
+  }
+  return nombreArea;
+};
+
 
 interface Cargo {
   id: number;
@@ -788,7 +799,7 @@ export default function Usuarios() {
                         {user.Cargo?.nombre || "—"}
                       </td>
                       <td className="px-6 py-4 text-sm">
-                        {user.Area?.nombre || "—"}
+                        {formatAreaForDisplay(user.Area)}
                       </td>
                       <td className="px-6 py-4 text-sm">
                         <span

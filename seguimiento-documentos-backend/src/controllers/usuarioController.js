@@ -43,7 +43,14 @@ exports.obtenerTodosLosUsuarios = async (req, res) => {
       },
       {
         model: Area,
-        attributes: ['id', 'nombre'], // Include Area name
+        attributes: ['id', 'nombre', 'descripcion'], // Include Area name and abbreviation
+        include: [
+          {
+            association: 'AreaPadre',
+            attributes: ['id', 'nombre', 'descripcion'],
+            required: false
+          }
+        ]
       }
     ];
 
