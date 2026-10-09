@@ -16,6 +16,18 @@ const formatDateForAPI = (date) => {
   return `${year}-${month}-${day}`;
 };
 
+const normalizeUsuarioData = (data) => {
+  const normalized = { ...data };
+  // Convert to uppercase and trim all string fields except usuario and password
+  const fieldsToUppercase = ['email', 'nombre', 'apellido', 'dni', 'telefono', 'direccion', 'perfil'];
+  fieldsToUppercase.forEach((field) => {
+    if (normalized[field]) {
+      normalized[field] = String(normalized[field]).trim().toUpperCase();
+    }
+  });
+  return normalized;
+};
+
 const formatUsuarioResponse = (usuario) => {
   const data = usuario.toJSON();
   if (data.fecha_nacimiento) {
@@ -126,13 +138,14 @@ exports.obtenerUsuarioPorId = async (req, res) => {
 exports.crearUsuario = async (req, res) => {
   try {
     const { password, ...otrosDatos } = req.body;
+    const normalizedData = normalizeUsuarioData(otrosDatos);
     const hashedPassword = await bcrypt.hash(password, 10);
-    
+
     const nuevoUsuario = await Usuario.create({
-      ...otrosDatos,
+      ...normalizedData,
       password: hashedPassword
     });
-    
+
     // Omitimos la contraseña en la respuesta
     const { password: _, ...usuarioSinPassword } = nuevoUsuario.toJSON();
     res.status(201).json(usuarioSinPassword);
@@ -165,14 +178,17 @@ exports.actualizarUsuario = async (req, res) => {
       dataToUpdate[key] = value;
     }
 
-    console.log('[UPDATE] Datos a actualizar:', dataToUpdate);
+    // Normalizar datos (mayúscula y trim)
+    const normalizedData = normalizeUsuarioData(dataToUpdate);
+
+    console.log('[UPDATE] Datos a actualizar:', normalizedData);
 
     // Si no hay datos para actualizar, retornar error
-    if (Object.keys(dataToUpdate).length === 0) {
+    if (Object.keys(normalizedData).length === 0) {
       return res.status(400).json({ mensaje: 'No hay datos para actualizar' });
     }
 
-    const actualizado = await Usuario.update(dataToUpdate, {
+    const actualizado = await Usuario.update(normalizedData, {
       where: { id: usuarioId }
     });
 
@@ -210,36 +226,47 @@ exports.eliminarUsuario = async (req, res) => {
 
 exports.registrarUsuario = async (req, res) => {
   try {
-    const { 
-      usuario, 
-      email, 
-      nombre, 
-      apellido, 
-      dni, 
-      id_cargo, 
-      id_area, 
-      perfil, 
-      telefono, 
-      direccion, 
-      fecha_nacimiento 
-    } = req.body;
-
-    // Set the default password
-    const defaultPassword = 'Autoridad1';
-    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
-
-    const nuevoUsuario = await Usuario.create({
+    const {
       usuario,
-      password: hashedPassword,
       email,
       nombre,
       apellido,
       dni,
       id_cargo,
       id_area,
-      perfil: perfil || 'personal', // Valor por defecto si no se proporciona
+      perfil,
       telefono,
       direccion,
+      fecha_nacimiento
+    } = req.body;
+
+    // Set the default password
+    const defaultPassword = 'Autoridad1';
+    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+
+    // Normalizar datos
+    const datosNormalizados = normalizeUsuarioData({
+      email,
+      nombre,
+      apellido,
+      dni,
+      perfil: perfil || 'personal',
+      telefono,
+      direccion
+    });
+
+    const nuevoUsuario = await Usuario.create({
+      usuario,
+      password: hashedPassword,
+      email: datosNormalizados.email,
+      nombre: datosNormalizados.nombre,
+      apellido: datosNormalizados.apellido,
+      dni: datosNormalizados.dni,
+      id_cargo,
+      id_area,
+      perfil: datosNormalizados.perfil,
+      telefono: datosNormalizados.telefono,
+      direccion: datosNormalizados.direccion,
       fecha_nacimiento,
       estado: true // Por defecto, el usuario se crea activo
     });

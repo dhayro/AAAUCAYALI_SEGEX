@@ -1,6 +1,17 @@
 const { Op } = require('sequelize');
 const Cargo = require('../models/Cargo');
 
+const normalizeCargoData = (data) => {
+  const normalized = { ...data };
+  if (normalized.nombre) {
+    normalized.nombre = String(normalized.nombre).trim().toUpperCase();
+  }
+  if (normalized.descripcion) {
+    normalized.descripcion = String(normalized.descripcion).trim().toUpperCase();
+  }
+  return normalized;
+};
+
 exports.obtenerTodosLosCargos = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -58,7 +69,8 @@ exports.obtenerCargoPorId = async (req, res) => {
 
 exports.crearCargo = async (req, res) => {
   try {
-    const nuevoCargo = await Cargo.create(req.body);
+    const normalizedData = normalizeCargoData(req.body);
+    const nuevoCargo = await Cargo.create(normalizedData);
     res.status(201).json(nuevoCargo);
   } catch (error) {
     res.status(400).json({ mensaje: error.message });
@@ -67,7 +79,8 @@ exports.crearCargo = async (req, res) => {
 
 exports.actualizarCargo = async (req, res) => {
   try {
-    const actualizado = await Cargo.update(req.body, {
+    const normalizedData = normalizeCargoData(req.body);
+    const actualizado = await Cargo.update(normalizedData, {
       where: { id: req.params.id }
     });
     if (actualizado[0] === 1) {

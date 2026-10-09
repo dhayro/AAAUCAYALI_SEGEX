@@ -2,6 +2,17 @@ const { Op, QueryTypes } = require('sequelize');
 const Area = require('../models/Area');
 const sequelize = Area.sequelize; // Asegúrate de que tu modelo Area tenga acceso a la instancia de sequelize
 
+const normalizeAreaData = (data) => {
+  const normalized = { ...data };
+  if (normalized.nombre) {
+    normalized.nombre = String(normalized.nombre).trim().toUpperCase();
+  }
+  if (normalized.descripcion) {
+    normalized.descripcion = String(normalized.descripcion).trim().toUpperCase();
+  }
+  return normalized;
+};
+
 exports.obtenerTodasLasAreas = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -74,7 +85,8 @@ exports.obtenerAreaPorId = async (req, res) => {
 
 exports.crearArea = async (req, res) => {
   try {
-    const nuevaArea = await Area.create(req.body);
+    const normalizedData = normalizeAreaData(req.body);
+    const nuevaArea = await Area.create(normalizedData);
     res.status(201).json(nuevaArea);
   } catch (error) {
     res.status(400).json({ mensaje: error.message });
@@ -83,7 +95,8 @@ exports.crearArea = async (req, res) => {
 
 exports.actualizarArea = async (req, res) => {
   try {
-    const actualizado = await Area.update(req.body, {
+    const normalizedData = normalizeAreaData(req.body);
+    const actualizado = await Area.update(normalizedData, {
       where: { id: req.params.id }
     });
     if (actualizado[0] === 1) {
