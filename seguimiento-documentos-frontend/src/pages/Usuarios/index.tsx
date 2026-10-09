@@ -104,8 +104,13 @@ export default function Usuarios() {
 
   useEffect(() => {
     fetchUsuarios();
-    fetchCargosYAreas();
   }, [pagination, filters]);
+
+  useEffect(() => {
+    if (showModal) {
+      fetchCargosYAreas();
+    }
+  }, [showModal]);
 
   const fetchCargosYAreas = async () => {
     try {
