@@ -33,6 +33,7 @@ import ReporteDocumentosRespuestas from "./pages/ReporteDocumentosRespuestas";
 import SISGED from "./pages/SISGED";
 import ImportarSISGED from "./pages/ImportarSISGED";
 import SincronizarDatos from "./pages/SISGED/SincronizarDatos";
+import AdminTokens from "./pages/SISGED/AdminTokens";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem("token");
@@ -83,6 +84,7 @@ export default function App() {
             <Route path="/sisged" element={<SISGED />} />
             <Route path="/importar-sisged" element={<ImportarSISGED />} />
             <Route path="/sincronizar-sisged" element={<SincronizarDatos />} />
+            <Route path="/admin-sisged-tokens" element={<AdminTokens />} />
 
             {/* Forms */}
             <Route path="/form-elements" element={<FormElements />} />

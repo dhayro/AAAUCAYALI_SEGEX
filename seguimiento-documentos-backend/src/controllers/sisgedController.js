@@ -2,6 +2,37 @@ const SISGED_BASE_URL = 'https://sisgedpiloto.ana.gob.pe/apiRestSG/api/SISGED';
 const sisgedSyncService = require('../services/sisgedSyncService');
 const postmanUpdateService = require('../services/postmanUpdateService');
 
+// Obtener token: primero de BD, luego de Postman
+async function obtenerTokenOptimizado() {
+  try {
+    const SisgedToken = require('../models/SisgedToken');
+
+    if (SisgedToken) {
+      const ahora = new Date();
+      const tokenBD = await SisgedToken.findOne({
+        where: {
+          activo: true,
+          fecha_vencimiento: {
+            [require('sequelize').Op.gte]: ahora
+          }
+        },
+        order: [['fecha_creacion', 'DESC']]
+      });
+
+      if (tokenBD) {
+        console.log('[CONTROLLER] ✅ Usando token de BD (vencimiento:', tokenBD.fecha_vencimiento, ')');
+        return tokenBD.token;
+      }
+    }
+  } catch (error) {
+    console.log('[CONTROLLER] No se pudo obtener token de BD:', error.message);
+  }
+
+  // Si no hay token en BD, obtener de Postman
+  console.log('[CONTROLLER] Obteniendo token de Postman...');
+  return await sisgedSyncService.obtenerToken();
+}
+
 const fetchWithTimeout = (url, options = {}, timeout = 30000) => {
   return Promise.race([
     fetch(url, options),
@@ -246,30 +277,117 @@ exports.sincronizarConParametros = async (req, res) => {
   console.log('[SYNC-PARAMS] POST /sincronizar-con-parametros recibido');
 
   try {
-    const { params, token } = req.body;
+    const { params, token, endpoint } = req.body;
 
+    console.log('[SYNC-PARAMS] Endpoint:', endpoint || 'general');
     console.log('[SYNC-PARAMS] Parámetros recibidos');
-    console.log('[SYNC-PARAMS] Actualizando Postman...');
-
-    await postmanUpdateService.actualizarColeccionPostman({ params, token });
-
     console.log('[SYNC-PARAMS] Obteniendo datos de SISGED...');
-    const datos = await sisgedSyncService.obtenerDatosDeSISGED();
+    const datos = await sisgedSyncService.obtenerDatosDeSISGED(endpoint, params);
 
-    console.log('[SYNC-PARAMS] ✅ Completado:', datos?.length || 0, 'registros');
-
-    res.status(200).json({
-      success: true,
-      message: 'Parámetros actualizados en Postman y datos obtenidos',
-      total: datos.length,
-      data: datos
-    });
+    if (endpoint === 'archivo') {
+      console.log('[SYNC-PARAMS] ✅ Archivo obtenido');
+      res.status(200).json({
+        success: true,
+        message: 'URL del archivo obtenida',
+        pdfUrl: datos.pdfUrl
+      });
+    } else {
+      console.log('[SYNC-PARAMS] ✅ Completado:', datos?.length || 0, 'registros');
+      res.status(200).json({
+        success: true,
+        message: 'Parámetros actualizados en Postman y datos obtenidos',
+        total: datos.length,
+        data: datos
+      });
+    }
   } catch (error) {
     console.error('[SYNC-PARAMS] ERROR:', error.message);
 
     res.status(500).json({
       success: false,
       error: error.message
+    });
+  }
+};
+
+exports.limpiarCache = async (req, res) => {
+  try {
+    sisgedSyncService.limpiarCacheToken();
+    res.status(200).json({
+      success: true,
+      message: 'Cache de token limpiado. El próximo request obtendrá un nuevo token de Postman'
+    });
+  } catch (error) {
+    console.error('[CACHE] Error:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
+
+exports.sincronizarPostman = async (req, res) => {
+  console.log('[SYNC-POSTMAN] POST /sincronizar-postman recibido');
+
+  try {
+    const { params, token, endpoint } = req.body;
+
+    console.log('[SYNC-POSTMAN] Actualizando Postman con endpoint:', endpoint);
+    await postmanUpdateService.actualizarColeccionPostman({ params, token, endpoint });
+
+    res.status(200).json({
+      success: true,
+      message: 'Postman sincronizado con los parámetros actuales'
+    });
+  } catch (error) {
+    console.error('[SYNC-POSTMAN] Error:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
+
+exports.obtenerArchivo = async (req, res) => {
+  console.log('[ARCHIVO] GET /obtener-archivo recibido');
+
+  try {
+    const { ID_DOCUMENTO, ID_USUARIO, ID_OFICINA, ID_PERFIL, FLG_TIPO, FLG_FIRMA, CODIGO_ADJUNTO } = req.query;
+
+    if (!ID_DOCUMENTO) {
+      return res.status(400).json({ error: 'ID_DOCUMENTO requerido' });
+    }
+
+    const url = `https://sisged.ana.gob.pe/SISGED/Firma/Archivo/ArchivoVer?ID_DOCUMENTO=${ID_DOCUMENTO}&ID_USUARIO=${ID_USUARIO || 1}&ID_OFICINA=${ID_OFICINA || 1}&ID_PERFIL=${ID_PERFIL || 1}&FLG_TIPO=${FLG_TIPO || 1}&FLG_FIRMA=${FLG_FIRMA || 1}&CODIGO_ADJUNTO=${CODIGO_ADJUNTO || '-'}`;
+
+    console.log('[ARCHIVO] Obteniendo desde URL:', url.substring(0, 100) + '...');
+
+    const token = await sisgedSyncService.obtenerToken();
+
+    const response = await fetchWithTimeout(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/pdf, application/octet-stream'
+      }
+    }, 30000);
+
+    console.log('[ARCHIVO] Status:', response.status);
+
+    if (!response.ok) {
+      throw new Error(`SISGED respondió con error: ${response.status}`);
+    }
+
+    const buffer = await response.arrayBuffer();
+    res.setHeader('Content-Type', response.headers.get('content-type') || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="documento.pdf"`);
+    res.send(Buffer.from(buffer));
+
+  } catch (error) {
+    console.error('[ARCHIVO] Error:', error.message);
+    res.status(502).json({
+      success: false,
+      error: error.message || 'Error al obtener archivo'
     });
   }
 };

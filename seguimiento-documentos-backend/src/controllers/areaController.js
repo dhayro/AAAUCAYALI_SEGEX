@@ -28,6 +28,13 @@ exports.obtenerTodasLasAreas = async (req, res) => {
 
     const { count, rows } = await Area.findAndCountAll({
       where: whereClause,
+      include: [
+        {
+          association: 'AreaPadre',
+          attributes: ['id', 'nombre', 'descripcion'],
+          required: false
+        }
+      ],
       limit: limit,
       offset: offset,
       order: [['id', 'ASC']]
@@ -151,6 +158,13 @@ exports.obtenerAreasHijas = async (req, res) => {
 
     const { count, rows } = await Area.findAndCountAll({
       where: whereClause,
+      include: [
+        {
+          association: 'AreaPadre',
+          attributes: ['id', 'nombre', 'descripcion'],
+          required: false
+        }
+      ],
       limit: limit,
       offset: offset,
       order: [['id', 'ASC']]
@@ -192,6 +206,13 @@ exports.obtenerAreasPrincipales = async (req, res) => {
 
     const { count, rows } = await Area.findAndCountAll({
       where: whereClause,
+      include: [
+        {
+          association: 'AreaPadre',
+          attributes: ['id', 'nombre', 'descripcion'],
+          required: false
+        }
+      ],
       limit: limit,
       offset: offset,
       order: [['id', 'ASC']]

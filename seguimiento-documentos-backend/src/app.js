@@ -59,7 +59,7 @@ const swaggerSpec = swaggerJsdoc(swaggerOptions);
 const corsOptions = {
   origin: ['http://localhost:3003', 'http://localhost:3004', 'http://localhost:5173'],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   optionsSuccessStatus: 200
 };
@@ -85,6 +85,21 @@ app.use('/api/asignaciones', asignacionDocumentoRoutes);
 app.use('/api/respuestas', respuestaDocumentoRoutes);
 app.use('/api/antecedentes', antecedenteRoutes);
 app.use('/api/sisged', sisgedRoutes);
+
+// Cargar todos los modelos
+const Area = require('./models/Area');
+const Cargo = require('./models/Cargo');
+const Usuario = require('./models/Usuario');
+const TipoDocumento = require('./models/TipoDocumento');
+const Expediente = require('./models/Expediente');
+const Documento = require('./models/Documento');
+const AsignacionDocumento = require('./models/AsignacionDocumento');
+const RespuestaDocumento = require('./models/RespuestaDocumento');
+const Antecedente = require('./models/Antecedente');
+const SisgedToken = require('./models/SisgedToken');
+
+// Cargar asociaciones
+require('./models/associations');
 
 // Importar la función de inicialización de la base de datos
 const { initDatabaseFromSQL } = require('./config/database');

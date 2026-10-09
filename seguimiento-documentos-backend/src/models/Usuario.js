@@ -62,7 +62,7 @@ const Usuario = sequelize.define('Usuario', {
     type: DataTypes.TEXT,
   },
   fecha_nacimiento: {
-    type: DataTypes.DATE,
+    type: DataTypes.DATEONLY,
   },
   estado: {
     type: DataTypes.BOOLEAN,

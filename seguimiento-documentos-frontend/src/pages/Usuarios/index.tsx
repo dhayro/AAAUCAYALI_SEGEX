@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import DatePickerLima from "@/components/form/DatePickerLima";
+import SearchableSelect from "@/components/form/SearchableSelect";
 import api from "@/utils/api";
 import { PencilIcon, TrashBinIcon, PlusIcon, CloseIcon } from "@/icons";
 
@@ -85,6 +86,8 @@ export default function Usuarios() {
 
   const [cargos, setCargos] = useState<any[]>([]);
   const [areas, setAreas] = useState<any[]>([]);
+  const [loadingCargos, setLoadingCargos] = useState(false);
+  const [loadingAreas, setLoadingAreas] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetUserId, setResetUserId] = useState<number | null>(null);
   const [showEstadoModal, setShowEstadoModal] = useState(false);
@@ -112,36 +115,54 @@ export default function Usuarios() {
     }
   }, [showModal]);
 
+  const formatAreaDisplay = (area: any) => {
+    const nombreArea = area.nombre || '';
+    const inicialArea = area.descripcion || '';
+    let displayName = nombreArea;
+    if (area.AreaPadre) {
+      const inicialPadre = area.AreaPadre.descripcion || '';
+      displayName = `${nombreArea} - ${inicialPadre}-${inicialArea}`;
+    }
+    return { ...area, nombre: displayName };
+  };
+
   const fetchCargosYAreas = async () => {
     try {
       const [cargosRes, areasRes] = await Promise.all([
-        api.get("/cargos"),
-        api.get("/areas"),
+        api.get("/cargos?limit=10"),
+        api.get("/areas?limit=10"),
       ]);
       setCargos(Array.isArray(cargosRes.data) ? cargosRes.data : cargosRes.data.cargos || []);
-
-      // Procesar áreas: NOMBRE o NOMBRE - PADRE-HIJO (con abreviaturas)
       const areasData = Array.isArray(areasRes.data) ? areasRes.data : areasRes.data.areas || [];
-      const areasConFormato = areasData.map((area: any) => {
-        const nombreArea = area.nombre || '';
-        const inicialArea = area.descripcion || '';
-
-        let displayName = nombreArea;
-
-        if (area.AreaPadre) {
-          const inicialPadre = area.AreaPadre.descripcion || '';
-          displayName = `${nombreArea} - ${inicialPadre}-${inicialArea}`;
-        }
-
-        return {
-          ...area,
-          displayName
-        };
-      });
-
-      setAreas(areasConFormato);
+      setAreas(areasData.map(formatAreaDisplay));
     } catch (error) {
       console.error("Error fetching cargos y areas:", error);
+    }
+  };
+
+  const searchCargos = async (term: string) => {
+    setLoadingCargos(true);
+    try {
+      const res = await api.get(`/cargos?filtro=${encodeURIComponent(term)}&limit=10`);
+      const cargosList = Array.isArray(res.data) ? res.data : res.data.cargos || [];
+      setCargos(cargosList);
+    } catch (error) {
+      console.error("Error searching cargos:", error);
+    } finally {
+      setLoadingCargos(false);
+    }
+  };
+
+  const searchAreas = async (term: string) => {
+    setLoadingAreas(true);
+    try {
+      const res = await api.get(`/areas?filtro=${encodeURIComponent(term)}&limit=10`);
+      const areasList = Array.isArray(res.data) ? res.data : res.data.areas || [];
+      setAreas(areasList.map(formatAreaDisplay));
+    } catch (error) {
+      console.error("Error searching areas:", error);
+    } finally {
+      setLoadingAreas(false);
     }
   };
 
@@ -465,40 +486,28 @@ export default function Usuarios() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>Cargo</Label>
-                    <select
-                      value={formData.id_cargo}
-                      onChange={(e) =>
-                        setFormData({ ...formData, id_cargo: e.target.value })
-                      }
-                      className="w-full rounded border border-gray-300 bg-white px-3 py-2 dark:border-gray-600 dark:bg-gray-700 text-sm"
-                    >
-                      <option value="">-- Seleccionar --</option>
-                      {cargos.map((cargo: any) => (
-                        <option key={cargo.id} value={cargo.id}>
-                          {cargo.nombre}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label>Área</Label>
-                    <select
-                      value={formData.id_area}
-                      onChange={(e) =>
-                        setFormData({ ...formData, id_area: e.target.value })
-                      }
-                      className="w-full rounded border border-gray-300 bg-white px-3 py-2 dark:border-gray-600 dark:bg-gray-700 text-sm"
-                    >
-                      <option value="">-- Seleccionar --</option>
-                      {areas.map((area: any) => (
-                        <option key={area.id} value={area.id}>
-                          {area.displayName || area.nombre}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <SearchableSelect
+                    label="Cargo"
+                    value={formData.id_cargo}
+                    onChange={(value) =>
+                      setFormData({ ...formData, id_cargo: value })
+                    }
+                    options={cargos}
+                    onSearch={searchCargos}
+                    isLoading={loadingCargos}
+                    placeholder="Buscar cargo..."
+                  />
+                  <SearchableSelect
+                    label="Área"
+                    value={formData.id_area}
+                    onChange={(value) =>
+                      setFormData({ ...formData, id_area: value })
+                    }
+                    options={areas}
+                    onSearch={searchAreas}
+                    isLoading={loadingAreas}
+                    placeholder="Buscar área..."
+                  />
                 </div>
 
                 {!editingId && (

@@ -1,5 +1,6 @@
 const express = require('express');
 const sisgedController = require('../controllers/sisgedController');
+const sisgedTokenController = require('../controllers/sisgedTokenController');
 const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
@@ -117,5 +118,147 @@ router.post('/test-post', (req, res) => {
 router.post('/sincronizar', sisgedController.sincronizar);
 
 router.post('/sincronizar-con-parametros', sisgedController.sincronizarConParametros);
+
+/**
+ * @swagger
+ * /api/sisged/limpiar-cache:
+ *   post:
+ *     summary: Limpiar cache de token
+ *     tags: [SISGED]
+ *     description: Elimina el token cacheado para forzar obtener uno nuevo de Postman
+ *     responses:
+ *       200:
+ *         description: Cache limpiado
+ *       500:
+ *         description: Error
+ */
+router.post('/limpiar-cache', sisgedController.limpiarCache);
+
+/**
+ * @swagger
+ * /api/sisged/sincronizar-postman:
+ *   post:
+ *     summary: Sincronizar parámetros con Postman manualmente
+ *     tags: [SISGED]
+ *     description: Actualiza la colección SISGED en Postman con los parámetros actuales
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               params:
+ *                 type: object
+ *               endpoint:
+ *                 type: string
+ *               token:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Postman sincronizado
+ *       500:
+ *         description: Error
+ */
+router.post('/sincronizar-postman', sisgedController.sincronizarPostman);
+
+// ============== SISGED TOKEN MANAGEMENT ==============
+
+/**
+ * @swagger
+ * /api/sisged/tokens:
+ *   get:
+ *     summary: Obtener tokens activos
+ *     tags: [SISGED Tokens]
+ *     responses:
+ *       200:
+ *         description: Lista de tokens activos
+ */
+router.get('/tokens', sisgedTokenController.obtenerTokensActivos);
+
+/**
+ * @swagger
+ * /api/sisged/tokens/agregar:
+ *   post:
+ *     summary: Agregar nuevo token SISGED
+ *     tags: [SISGED Tokens]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               token:
+ *                 type: string
+ *               fecha_vencimiento:
+ *                 type: string
+ *                 example: "2026-12-31"
+ *               dias_validez:
+ *                 type: integer
+ *               notas:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Token agregado
+ *       400:
+ *         description: Datos inválidos
+ */
+router.post('/tokens/agregar', sisgedTokenController.agregarToken);
+
+/**
+ * @swagger
+ * /api/sisged/tokens/ultimo-activo:
+ *   get:
+ *     summary: Obtener último token activo y vigente
+ *     tags: [SISGED Tokens]
+ *     responses:
+ *       200:
+ *         description: Token activo
+ *       404:
+ *         description: No hay tokens vigentes
+ */
+router.get('/tokens/ultimo-activo', sisgedTokenController.obtenerUltimoTokenActivo);
+
+/**
+ * @swagger
+ * /api/sisged/tokens/:id/desactivar:
+ *   post:
+ *     summary: Desactivar un token
+ *     tags: [SISGED Tokens]
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *     responses:
+ *       200:
+ *         description: Token desactivado
+ */
+router.post('/tokens/:id/desactivar', sisgedTokenController.desactivarToken);
+
+/**
+ * @swagger
+ * /api/sisged/tokens/historial:
+ *   get:
+ *     summary: Obtener historial de últimos 20 tokens
+ *     tags: [SISGED Tokens]
+ *     responses:
+ *       200:
+ *         description: Historial de tokens
+ */
+router.get('/tokens/historial', sisgedTokenController.obtenerHistorialTokens);
+
+/**
+ * @swagger
+ * /api/sisged/tokens/verificar-actual:
+ *   get:
+ *     summary: Verificar qué token se está usando actualmente
+ *     tags: [SISGED Tokens]
+ *     description: Muestra si se está usando token de BD o de Postman
+ *     responses:
+ *       200:
+ *         description: Info del token actual en uso
+ */
+router.get('/tokens/verificar-actual', sisgedTokenController.verificarTokenActual);
 
 module.exports = router;

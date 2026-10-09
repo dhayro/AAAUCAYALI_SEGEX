@@ -17,9 +17,16 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
+    const shouldLogout =
+      (error.response && error.response.status === 401) ||
+      (error.response?.data?.mensaje?.includes('Token inválido') ||
+       error.response?.data?.mensaje?.includes('Token expirado') ||
+       error.response?.data?.error?.includes('Token inválido') ||
+       error.response?.data?.error?.includes('Token expirado'));
+
+    if (shouldLogout) {
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      window.location.href = '/signin';
     }
     return Promise.reject(error);
   }
