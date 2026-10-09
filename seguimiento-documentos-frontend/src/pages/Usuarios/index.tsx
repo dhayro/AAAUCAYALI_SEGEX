@@ -115,19 +115,17 @@ export default function Usuarios() {
       ]);
       setCargos(Array.isArray(cargosRes.data) ? cargosRes.data : cargosRes.data.cargos || []);
 
-      // Procesar áreas: NOMBRE (INICIAL) o PADRE > NOMBRE (INICIAL)
+      // Procesar áreas: NOMBRE o NOMBRE - PADRE-HIJO (con abreviaturas)
       const areasData = Array.isArray(areasRes.data) ? areasRes.data : areasRes.data.areas || [];
       const areasConFormato = areasData.map((area: any) => {
-        const nombreCompleto = area.nombre || '';
-        const inicial = area.descripcion || '';
+        const nombreArea = area.nombre || '';
+        const inicialArea = area.descripcion || '';
 
-        let displayName = `${nombreCompleto}${inicial ? ` (${inicial})` : ''}`;
+        let displayName = nombreArea;
 
         if (area.AreaPadre) {
-          const padreNombre = area.AreaPadre.nombre || '';
-          const padreInicial = area.AreaPadre.descripcion || '';
-          const padreDisplay = `${padreNombre}${padreInicial ? ` (${padreInicial})` : ''}`;
-          displayName = `${padreDisplay} > ${displayName}`;
+          const inicialPadre = area.AreaPadre.descripcion || '';
+          displayName = `${nombreArea} - ${inicialPadre}-${inicialArea}`;
         }
 
         return {
