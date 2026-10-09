@@ -6,7 +6,13 @@ const Expediente = require('../models/Expediente');
 const { Op } = require('sequelize'); // Asegúrate de importar Op desde sequelize
 const sequelize = require('../config/database'); // Import the sequelize instance
 
-
+const normalizeAsignacionData = (data) => {
+  const normalized = { ...data };
+  if (normalized.observaciones) {
+    normalized.observaciones = String(normalized.observaciones).trim().toUpperCase();
+  }
+  return normalized;
+};
 
 exports.getAllAsignaciones = async (req, res) => {
   try {
@@ -245,21 +251,21 @@ exports.getAsignacionById = async (req, res) => {
 exports.createAsignacion = async (req, res) => {
   try {
     // Obtener los datos del cuerpo de la solicitud
-    const datosAsignacion = { ...req.body };
-    
+    const datosAsignacion = normalizeAsignacionData({ ...req.body });
+
     // Establecer la fecha de asignación como la fecha actual
     datosAsignacion.fecha_asignacion = new Date();
-    
+
     // Calcular la fecha límite sumando días hábiles (excluyendo sábados y domingos)
     const plazoRespuesta = parseInt(datosAsignacion.plazo_respuesta);
     if (isNaN(plazoRespuesta) || plazoRespuesta <= 0) {
       return res.status(400).json({ message: 'El plazo de respuesta debe ser un número positivo' });
     }
-    
+
     // Función para calcular la fecha límite excluyendo fines de semana
     const fechaLimite = calcularFechaLimite(datosAsignacion.fecha_asignacion, plazoRespuesta);
     datosAsignacion.fecha_limite = fechaLimite;
-    
+
     // Crear la asignación con los datos calculados
     const nuevaAsignacion = await AsignacionDocumento.create(datosAsignacion);
     
@@ -310,7 +316,8 @@ exports.createAsignacionCalendario = async (req, res) => {
 
 exports.updateAsignacion = async (req, res) => {
   try {
-    const [updated] = await AsignacionDocumento.update(req.body, {
+    const normalizedData = normalizeAsignacionData(req.body);
+    const [updated] = await AsignacionDocumento.update(normalizedData, {
       where: { id: req.params.id }
     });
     if (updated) {

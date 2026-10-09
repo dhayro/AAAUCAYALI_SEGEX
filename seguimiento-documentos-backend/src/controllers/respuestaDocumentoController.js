@@ -6,6 +6,14 @@ const TipoDocumento = require('../models/TipoDocumento');
 const Expediente = require('../models/Expediente');
 const { Op } = require('sequelize');
 
+const normalizeRespuestaData = (data) => {
+  const normalized = { ...data };
+  if (normalized.observaciones) {
+    normalized.observaciones = String(normalized.observaciones).trim().toUpperCase();
+  }
+  return normalized;
+};
+
 exports.getAllRespuestas = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -130,7 +138,8 @@ exports.getRespuestaById = async (req, res) => {
 
 exports.createRespuesta = async (req, res) => {
   try {
-    const nuevaRespuesta = await RespuestaDocumento.create(req.body);
+    const normalizedData = normalizeRespuestaData(req.body);
+    const nuevaRespuesta = await RespuestaDocumento.create(normalizedData);
     res.status(201).json(nuevaRespuesta);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -139,7 +148,8 @@ exports.createRespuesta = async (req, res) => {
 
 exports.updateRespuesta = async (req, res) => {
   try {
-    const [updated] = await RespuestaDocumento.update(req.body, {
+    const normalizedData = normalizeRespuestaData(req.body);
+    const [updated] = await RespuestaDocumento.update(normalizedData, {
       where: { id: req.params.id }
     });
     if (updated) {

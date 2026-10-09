@@ -2,6 +2,17 @@ const Documento = require('../models/Documento');
 const TipoDocumento = require('../models/TipoDocumento'); // Asegúrate de importar el modelo de TipoDocumento
 const { formatDateForLima } = require('../utils/dateUtils');
 
+const normalizeDocumentoData = (data) => {
+  const normalized = { ...data };
+  const fieldsToUppercase = ['numero_documento', 'asunto', 'ultimo_escritorio', 'ultima_oficina_area', 'bandeja', 'estado'];
+  fieldsToUppercase.forEach((field) => {
+    if (normalized[field]) {
+      normalized[field] = String(normalized[field]).trim().toUpperCase();
+    }
+  });
+  return normalized;
+};
+
 exports.getAllDocumentos = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -46,36 +57,34 @@ exports.getDocumentoById = async (req, res) => {
 exports.createDocumento = async (req, res) => {
   try {
     const { numero_documento, fecha_documento, ...otherData } = req.body;
-    let id_tipo_documento = req.body.id_tipo_documento || null; // Mantener el id_tipo_documento si ya viene en el body
-    let updatedNumeroDocumento = numero_documento;
+    const normalizedData = normalizeDocumentoData(otherData);
+    const normalizedNumeroDocumento = String(numero_documento).trim().toUpperCase();
+
+    let id_tipo_documento = req.body.id_tipo_documento || null;
+    let updatedNumeroDocumento = normalizedNumeroDocumento;
 
     // Si no se proporcionó un id_tipo_documento, intentar detectarlo automáticamente
     if (!id_tipo_documento && numero_documento) {
-      // Obtener todos los tipos de documentos
       const tiposDocumentos = await TipoDocumento.findAll();
-
-      // Ordenar tiposDocumentos por la longitud del nombre en orden descendente
       tiposDocumentos.sort((a, b) => b.nombre.length - a.nombre.length);
 
       for (const tipo of tiposDocumentos) {
         const tipoNombre = tipo.nombre.toUpperCase();
-        if (numero_documento.toUpperCase().startsWith(tipoNombre)) {
+        if (normalizedNumeroDocumento.startsWith(tipoNombre)) {
           id_tipo_documento = tipo.id;
-          updatedNumeroDocumento = numero_documento.substring(tipoNombre.length).trim();
+          updatedNumeroDocumento = normalizedNumeroDocumento.substring(tipoNombre.length).trim();
           console.log(`Tipo de documento detectado: ${tipo.nombre} (ID: ${tipo.id})`);
           break;
         }
       }
     }
     let formattedDate = null;
-    if ( fecha_documento ) {
-        formattedDate = formatDateForLima(fecha_documento || new Date());
+    if (fecha_documento) {
+      formattedDate = formatDateForLima(fecha_documento || new Date());
     }
 
-
-    // Crear el nuevo documento con el id_tipo_documento, el número de documento actualizado y la fecha procesada
     const nuevoDocumento = await Documento.create({
-      ...otherData,
+      ...normalizedData,
       numero_documento: updatedNumeroDocumento,
       id_tipo_documento: id_tipo_documento,
       fecha_documento: formattedDate
@@ -91,10 +100,11 @@ exports.createDocumento = async (req, res) => {
 exports.updateDocumento = async (req, res) => {
   try {
     const { fecha_documento, ...otherData } = req.body;
+    const normalizedData = normalizeDocumentoData(otherData);
     const formattedDate = formatDateForLima(fecha_documento || new Date());
 
     const [updated] = await Documento.update(
-      { ...otherData, fecha_documento: formattedDate },
+      { ...normalizedData, fecha_documento: formattedDate },
       {
         where: { id: req.params.id }
       }

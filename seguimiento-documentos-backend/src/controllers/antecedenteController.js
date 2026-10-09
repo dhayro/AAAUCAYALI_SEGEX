@@ -1,8 +1,20 @@
 const Antecedente = require('../models/Antecedente');
 
+const normalizeAntecedenteData = (data) => {
+  const normalized = { ...data };
+  const fieldsToUppercase = ['persona_involucrada', 'telefono', 'resumen'];
+  fieldsToUppercase.forEach((field) => {
+    if (normalized[field]) {
+      normalized[field] = String(normalized[field]).trim().toUpperCase();
+    }
+  });
+  return normalized;
+};
+
 exports.createAntecedente = async (req, res) => {
   try {
-    const antecedente = await Antecedente.create(req.body);
+    const normalizedData = normalizeAntecedenteData(req.body);
+    const antecedente = await Antecedente.create(normalizedData);
     res.status(201).json(antecedente);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -41,7 +53,8 @@ exports.getAntecedenteById = async (req, res) => {
 
 exports.updateAntecedente = async (req, res) => {
   try {
-    const [updated] = await Antecedente.update(req.body, {
+    const normalizedData = normalizeAntecedenteData(req.body);
+    const [updated] = await Antecedente.update(normalizedData, {
       where: { id: req.params.id }
     });
     if (updated) {

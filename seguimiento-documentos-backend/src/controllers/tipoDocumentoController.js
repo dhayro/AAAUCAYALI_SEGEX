@@ -2,6 +2,17 @@ const TipoDocumento = require('../models/TipoDocumento');
 const sequelize = require('../config/database'); // Import the Sequelize instance
 const { Op } = require('sequelize'); // Asegúrate de importar sequelize
 
+const normalizeTipoDocumentoData = (data) => {
+  const normalized = { ...data };
+  if (normalized.nombre) {
+    normalized.nombre = String(normalized.nombre).trim().toUpperCase();
+  }
+  if (normalized.descripcion) {
+    normalized.descripcion = String(normalized.descripcion).trim().toUpperCase();
+  }
+  return normalized;
+};
+
 // Obtener todos los tipos de documento con paginación y filtros
 exports.obtenerTodos = async (req, res) => {
   try {
@@ -63,7 +74,8 @@ exports.obtenerPorId = async (req, res) => {
 // Crear un nuevo tipo de documento
 exports.crear = async (req, res) => {
   try {
-    const nuevoTipo = await TipoDocumento.create(req.body);
+    const normalizedData = normalizeTipoDocumentoData(req.body);
+    const nuevoTipo = await TipoDocumento.create(normalizedData);
     res.status(201).json(nuevoTipo);
   } catch (error) {
     res.status(400).json({ mensaje: error.message });
@@ -73,7 +85,8 @@ exports.crear = async (req, res) => {
 // Actualizar un tipo de documento
 exports.actualizar = async (req, res) => {
   try {
-    const [actualizado] = await TipoDocumento.update(req.body, {
+    const normalizedData = normalizeTipoDocumentoData(req.body);
+    const [actualizado] = await TipoDocumento.update(normalizedData, {
       where: { id: req.params.id }
     });
     if (actualizado) {
