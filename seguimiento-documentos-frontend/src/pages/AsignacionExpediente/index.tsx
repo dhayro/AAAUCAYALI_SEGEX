@@ -71,32 +71,60 @@ const formatFechaHora = (valor?: string | null) => {
   return hora ? `${d}/${m}/${y} ${hora}` : `${d}/${m}/${y}`;
 };
 
-const CAMPOS_EXPEDIENTE: { clave: string; etiqueta: string; tipo?: "fecha" | "fechahora" }[] = [
-  { clave: "idoc", etiqueta: "idoc" },
-  { clave: "cut", etiqueta: "CUT" },
-  { clave: "origen", etiqueta: "Origen" },
-  { clave: "destip", etiqueta: "Destino (tipo)" },
-  { clave: "estupa", etiqueta: "TUPA" },
-  { clave: "proced", etiqueta: "Procedimiento" },
-  { clave: "asunto", etiqueta: "Asunto" },
-  { clave: "refe", etiqueta: "Referencia" },
-  { clave: "fol", etiqueta: "Folios" },
-  { clave: "flgcut", etiqueta: "Flag CUT" },
-  { clave: "destinos", etiqueta: "Destinos" },
-  { clave: "ndoc", etiqueta: "Documento" },
-  { clave: "feccrea", etiqueta: "Fecha de creación", tipo: "fechahora" },
-  { clave: "solfec", etiqueta: "Fecha de solicitud", tipo: "fecha" },
-  { clave: "solhor", etiqueta: "Hora de solicitud" },
-  { clave: "usurem", etiqueta: "Remitente" },
-  { clave: "ofirem", etiqueta: "Oficina remitente" },
-  { clave: "flgarc", etiqueta: "Flag archivo" },
-  { clave: "tema", etiqueta: "Tema" },
+type FormatoCampo = "texto" | "largo" | "fecha" | "fechahora" | "siNo";
+
+const SECCIONES_EXPEDIENTE: {
+  titulo: string;
+  campos: { clave: string; etiqueta: string; formato?: FormatoCampo }[];
+}[] = [
+  {
+    titulo: "Identificación",
+    campos: [
+      { clave: "idoc", etiqueta: "ID SISGED" },
+      { clave: "ndoc", etiqueta: "Documento" },
+      { clave: "origen", etiqueta: "Origen" },
+      { clave: "destip", etiqueta: "Destino (tipo)" },
+    ],
+  },
+  {
+    titulo: "Trámite",
+    campos: [
+      { clave: "proced", etiqueta: "Procedimiento", formato: "largo" },
+      { clave: "fol", etiqueta: "Folios" },
+      { clave: "flgcut", etiqueta: "CUT activo", formato: "siNo" },
+      { clave: "flgarc", etiqueta: "Archivado", formato: "siNo" },
+    ],
+  },
+  {
+    titulo: "Contenido",
+    campos: [
+      { clave: "asunto", etiqueta: "Asunto", formato: "largo" },
+      { clave: "refe", etiqueta: "Referencia", formato: "largo" },
+      { clave: "destinos", etiqueta: "Destinos", formato: "largo" },
+      { clave: "tema", etiqueta: "Tema", formato: "largo" },
+    ],
+  },
+  {
+    titulo: "Remitente y fechas",
+    campos: [
+      { clave: "usurem", etiqueta: "Remitente", formato: "largo" },
+      { clave: "ofirem", etiqueta: "Oficina remitente" },
+      { clave: "feccrea", etiqueta: "Fecha de creación", formato: "fechahora" },
+      { clave: "solfec", etiqueta: "Fecha de solicitud", formato: "fecha" },
+      { clave: "solhor", etiqueta: "Hora de solicitud" },
+    ],
+  },
 ];
 
-const valorCampo = (valor: any, tipo?: "fecha" | "fechahora") => {
-  if (valor === null || valor === undefined || valor === "") return "—";
-  if (tipo === "fecha") return formatFecha(String(valor));
-  if (tipo === "fechahora") return formatFechaHora(String(valor));
+const valorCampo = (valor: any, formato: FormatoCampo = "texto") => {
+  const vacio = valor === null || valor === undefined || valor === "" || String(valor).trim() === "-";
+  if (formato === "siNo") {
+    if (vacio) return "—";
+    return ["1", "true"].includes(String(valor)) ? "Sí" : "No";
+  }
+  if (vacio) return "—";
+  if (formato === "fecha") return formatFecha(String(valor));
+  if (formato === "fechahora") return formatFechaHora(String(valor));
   return String(valor);
 };
 
@@ -505,29 +533,45 @@ export default function AsignacionExpediente() {
         {/* Modal expediente por CUT */}
         {cutAbierto && (
           <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
-            <div className="flex max-h-[90vh] w-full max-w-3xl flex-col rounded-lg bg-white shadow-2xl dark:bg-gray-800">
-              <div className="flex items-center justify-between border-b p-6 dark:border-gray-700">
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                    Expediente {cutAbierto}
-                  </h2>
-                  {cutOrigen && (
-                    <p className="text-xs text-gray-500">
-                      {cutOrigen === "SISGED"
-                        ? "Obtenido de SISGED y guardado en la tabla"
-                        : "Obtenido de la tabla local"}
-                    </p>
-                  )}
-                </div>
+            <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-gray-800">
+              <div className="relative border-b bg-gradient-to-r from-blue-600 to-blue-500 p-6 text-white dark:border-gray-700">
                 <button
                   onClick={cerrarExpediente}
-                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400"
+                  className="absolute right-4 top-4 rounded-full p-1 text-white/80 hover:bg-white/20 hover:text-white"
                 >
                   <CloseIcon className="h-6 w-6" />
                 </button>
+                <p className="text-xs font-semibold uppercase tracking-wider text-blue-100">Expediente</p>
+                <h2 className="mt-1 text-2xl font-bold">{cutAbierto}</h2>
+                {expedienteCut && (
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                    <span
+                      className={`rounded-full px-3 py-1 font-bold ${
+                        expedienteCut.estupa === "TUPA"
+                          ? "bg-white text-blue-700"
+                          : "bg-blue-900/40 text-white"
+                      }`}
+                    >
+                      {expedienteCut.estupa === "TUPA" ? "TUPA" : "NO TUPA"}
+                    </span>
+                    {expedienteCut.origen && (
+                      <span className="rounded-full bg-white/20 px-3 py-1">
+                        Origen {expedienteCut.origen}
+                      </span>
+                    )}
+                    {expedienteCut.fecha_creacion && (
+                      <span className="rounded-full bg-white/20 px-3 py-1">
+                        Registrado {formatFecha(expedienteCut.fecha_creacion)}
+                      </span>
+                    )}
+                    <span className="ml-auto text-blue-100">
+                      {cutOrigen === "SISGED" ? "Traído de SISGED y guardado" : "Desde tu tabla"}
+                    </span>
+                  </div>
+                )}
               </div>
 
-              <div className="overflow-y-auto p-6">
+              <div className="overflow-y-auto bg-gray-50 p-6 dark:bg-gray-900/40">
                 {cutCargando && (
                   <div className="p-12 text-center text-gray-500">
                     <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
@@ -540,21 +584,33 @@ export default function AsignacionExpediente() {
                   </div>
                 )}
                 {!cutCargando && expedienteCut && (
-                  <dl className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-2">
-                    {CAMPOS_EXPEDIENTE.map((campo) => (
-                      <div
-                        key={campo.clave}
-                        className={campo.clave === "asunto" || campo.clave === "proced" || campo.clave === "destinos" || campo.clave === "tema" ? "md:col-span-2" : ""}
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    {SECCIONES_EXPEDIENTE.map((seccion) => (
+                      <section
+                        key={seccion.titulo}
+                        className={`rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800 ${
+                          seccion.campos.some((c) => c.formato === "largo") ? "md:col-span-2" : ""
+                        }`}
                       >
-                        <dt className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">
-                          {campo.etiqueta}
-                        </dt>
-                        <dd className="mt-1 whitespace-pre-wrap break-words text-sm text-gray-900 dark:text-white">
-                          {valorCampo(expedienteCut[campo.clave], campo.tipo)}
-                        </dd>
-                      </div>
+                        <h3 className="mb-4 text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                          {seccion.titulo}
+                        </h3>
+                        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                          {seccion.campos.map((campo) => (
+                            <div
+                              key={campo.clave}
+                              className={campo.formato === "largo" ? "sm:col-span-2" : ""}
+                            >
+                              <dt className="text-xs text-gray-500 dark:text-gray-400">{campo.etiqueta}</dt>
+                              <dd className="mt-1 whitespace-pre-wrap break-words text-sm font-medium text-gray-900 dark:text-white">
+                                {valorCampo(expedienteCut[campo.clave], campo.formato)}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                      </section>
                     ))}
-                  </dl>
+                  </div>
                 )}
               </div>
             </div>
