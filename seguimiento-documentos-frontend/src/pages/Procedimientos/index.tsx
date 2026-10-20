@@ -31,15 +31,6 @@ const emptyForm = {
   es_tupa: "false",
 };
 
-const formatFecha = (fecha?: string) => {
-  if (!fecha) return "—";
-  const [y, m, d] = fecha.slice(0, 10).split("-");
-  return `${d}/${m}/${y}`;
-};
-
-const formatUsuario = (u?: UsuarioResumen | null) =>
-  u ? `${u.nombre} ${u.apellido}` : "—";
-
 export default function Procedimientos() {
   const [procedimientos, setProcedimientos] = useState<Procedimiento[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,7 +45,6 @@ export default function Procedimientos() {
 
   const [filters, setFilters] = useState({
     filtro: "",
-    estado: "",
   });
 
   const [totalCount, setTotalCount] = useState(0);
@@ -65,9 +55,9 @@ export default function Procedimientos() {
       const params: any = {
         page: pagination.pageIndex + 1,
         limit: pagination.pageSize,
+        estado: "true",
       };
       if (filters.filtro) params.filtro = filters.filtro;
-      if (filters.estado) params.estado = filters.estado;
 
       const response = await api.get("/procedimientos", { params });
       setProcedimientos(response.data.procedimientos || []);
@@ -190,29 +180,14 @@ export default function Procedimientos() {
         </div>
 
         {/* Filtros */}
-        <div className="grid grid-cols-1 gap-4 rounded-lg bg-gray-50 p-4 dark:bg-gray-800 md:grid-cols-2">
-          <div>
-            <Label>Buscar procedimientos</Label>
-            <Input
-              name="filtro"
-              value={filters.filtro}
-              onChange={handleFilterChange}
-              placeholder="Buscar por nombre..."
-            />
-          </div>
-          <div>
-            <Label>Estado</Label>
-            <select
-              name="estado"
-              value={filters.estado}
-              onChange={handleFilterChange}
-              className={selectClass}
-            >
-              <option value="">Todos</option>
-              <option value="true">Activos</option>
-              <option value="false">Inactivos</option>
-            </select>
-          </div>
+        <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
+          <Label>Buscar procedimientos</Label>
+          <Input
+            name="filtro"
+            value={filters.filtro}
+            onChange={handleFilterChange}
+            placeholder="Buscar por nombre..."
+          />
         </div>
 
         {/* Modal */}
@@ -306,9 +281,6 @@ export default function Procedimientos() {
                     <th className="px-6 py-4 text-start text-sm font-semibold">Nombre</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Plazo (días)</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Tipo</th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold">Estado</th>
-                    <th className="px-6 py-4 text-start text-sm font-semibold">Creado por</th>
-                    <th className="px-6 py-4 text-start text-sm font-semibold">Modificado por</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Acciones</th>
                   </tr>
                 </thead>
@@ -333,25 +305,6 @@ export default function Procedimientos() {
                         >
                           {proc.es_tupa ? "TUPA" : "NO TUPA"}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span
-                          className={`rounded-full px-3 py-1 text-xs font-bold ${
-                            proc.estado
-                              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                              : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-                          }`}
-                        >
-                          {proc.estado ? "Activo" : "Inactivo"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <div>{formatUsuario(proc.creador)}</div>
-                        <div className="text-xs text-gray-500">{formatFecha(proc.fecha_creacion)}</div>
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <div>{formatUsuario(proc.modificador)}</div>
-                        <div className="text-xs text-gray-500">{formatFecha(proc.fecha_modificacion)}</div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-3">
