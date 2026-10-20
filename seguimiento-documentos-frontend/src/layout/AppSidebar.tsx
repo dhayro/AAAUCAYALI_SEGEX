@@ -86,6 +86,12 @@ const navItems: NavItem[] = [
     path: "/documentos-sin-asignar",
   },
   {
+    icon: <TableIcon fontSize={24} />,
+    name: "Asignación de Expediente",
+    key: "asignacion-expediente",
+    path: "/asignacion-expediente",
+  },
+  {
     icon: <ListIcon fontSize={24} />,
     name: "Maestros",
     key: "maestros",
