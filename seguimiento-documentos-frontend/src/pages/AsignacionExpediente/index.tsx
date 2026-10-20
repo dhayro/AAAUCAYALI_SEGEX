@@ -125,6 +125,44 @@ const valorCampo = (valor: any, formato: FormatoCampo = "texto") => {
   return String(valor);
 };
 
+type AdjuntoSisged = {
+  id: string;
+  nombre: string;
+  extension: string;
+  isUrl: boolean;
+  icono: string;
+};
+
+const iconoAdjunto = (nombre: string) => {
+  if (nombre.startsWith("http://") || nombre.startsWith("https://")) return "🔗";
+  const extension = nombre.split(".").pop()?.toLowerCase() || "";
+  if (extension === "pdf") return "📕";
+  if (["doc", "docx"].includes(extension)) return "📝";
+  if (["xls", "xlsx"].includes(extension)) return "📊";
+  if (["ppt", "pptx"].includes(extension)) return "🎯";
+  if (["jpg", "jpeg", "png", "gif"].includes(extension)) return "🖼️";
+  if (["zip", "rar", "7z"].includes(extension)) return "🗜️";
+  return "📎";
+};
+
+// Formato SISGED: ID"NOMBRE"...  separado por saltos de línea
+const parseAdjuntos = (texto?: string | null): AdjuntoSisged[] => {
+  if (!texto) return [];
+  return texto
+    .split("\r")
+    .map((linea) => linea.trim())
+    .filter(Boolean)
+    .map((linea) => {
+      const coincidencia = linea.match(/^(\d+)"([^"]+)"/);
+      if (!coincidencia) return null;
+      const nombre = coincidencia[2];
+      const isUrl = nombre.startsWith("http://") || nombre.startsWith("https://");
+      const extension = isUrl ? "url" : nombre.split(".").pop()?.toLowerCase() || "";
+      return { id: coincidencia[1], nombre, extension, isUrl, icono: iconoAdjunto(nombre) };
+    })
+    .filter((a): a is AdjuntoSisged => a !== null);
+};
+
 const badgeEstado = (estado?: string | null) => {
   const valor = (estado || "").toUpperCase();
   const clases =
@@ -411,29 +449,56 @@ export default function AsignacionExpediente() {
     }
   };
 
-  const verDocumento = async (documento: any) => {
-    setVerDoc({ titulo: documento.ndoc || "Documento", url: null, cargando: true, error: "" });
+  const pedirArchivo = async (titulo: string, params: Record<string, any>) => {
+    setVerDoc({ titulo, url: null, cargando: true, error: "" });
     try {
-      const res = await api.post("/sisged/sincronizar-con-parametros", {
-        params: {
-          ID_DOCUMENTO: documento.iddochij,
-          ID_USUARIO: 1,
-          ID_OFICINA: documento.idofi,
-          ID_PERFIL: 1,
-          FLG_TIPO: 1,
-          FLG_FIRMA: 1,
-          CODIGO_ADJUNTO: "-",
-        },
-        endpoint: "archivo",
-      });
+      const res = await api.post("/sisged/sincronizar-con-parametros", { params, endpoint: "archivo" });
+      if (!res.data.success || !res.data.pdfUrl) {
+        throw new Error("SISGED no devolvió el archivo");
+      }
       setVerDoc((prev) => (prev ? { ...prev, url: res.data.pdfUrl, cargando: false } : prev));
     } catch (error: any) {
       setVerDoc((prev) =>
         prev
-          ? { ...prev, cargando: false, error: error.response?.data?.error || "No se pudo obtener el archivo" }
+          ? { ...prev, cargando: false, error: error.response?.data?.error || error.message || "No se pudo obtener el archivo" }
           : prev
       );
     }
+  };
+
+  const verDocumento = (documento: any) => {
+    pedirArchivo(documento.ndoc || "Documento", {
+      ID_DOCUMENTO: documento.iddocpad || documento.iddocanex || 0,
+      ID_USUARIO: 1,
+      ID_OFICINA: documento.idofi || 1,
+      ID_PERFIL: 1,
+      FLG_TIPO: 1,
+      FLG_FIRMA: 1,
+      CODIGO_ADJUNTO: "-",
+    });
+  };
+
+  const verAdjunto = (adjunto: AdjuntoSisged, documento: any) => {
+    if (adjunto.isUrl) {
+      window.open(adjunto.nombre, "_blank");
+      return;
+    }
+    if (adjunto.extension === "pdf") {
+      pedirArchivo(adjunto.nombre, {
+        ID_DOCUMENTO: adjunto.id,
+        ID_USUARIO: 1,
+        ID_OFICINA: documento.idofi || 1,
+        ID_PERFIL: 1,
+        FLG_TIPO: 2,
+        FLG_FIRMA: 1,
+        CODIGO_ADJUNTO: "-",
+      });
+      return;
+    }
+    window.open(
+      `https://sisged.ana.gob.pe/SISGED/Recursos/Descarga/FrmDescargaAdjunto.aspx?ID_DOCUMENTO_ADJUNTO=${adjunto.id}&CODIGO_ADJUNTO=--`,
+      "_blank"
+    );
   };
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -781,19 +846,34 @@ export default function AsignacionExpediente() {
                         <th className="px-3 py-2 text-center">Folios</th>
                         <th className="px-3 py-2 text-start">Remitente</th>
                         <th className="px-3 py-2 text-start">Destino</th>
-                        <th className="px-3 py-2 text-center">Ver</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                       {trazRows.map((d, index) => (
                         <tr key={d.id} className="align-top hover:bg-gray-50 dark:hover:bg-gray-700/50">
                           <td className="px-3 py-2 text-gray-500">{index + 1}</td>
-                          <td className="px-3 py-2 font-semibold text-gray-900 dark:text-white">{d.ndoc || "—"}</td>
+                          <td className="px-3 py-2">
+                            <button
+                              onClick={() => verDocumento(d)}
+                              className="text-left font-semibold text-brand-600 underline-offset-2 hover:underline dark:text-brand-400"
+                            >
+                              {d.ndoc || "—"}
+                            </button>
+                          </td>
                           <td className="px-3 py-2 text-center">
-                            {d.adjunto ? (
-                              <span className="rounded bg-red-50 px-1.5 py-0.5 font-bold text-red-600 dark:bg-red-900/30 dark:text-red-300">
-                                {(d.ext || "PDF").replace(".", "").toUpperCase()}
-                              </span>
+                            {parseAdjuntos(d.adjunto).length > 0 ? (
+                              <div className="flex flex-wrap justify-center gap-1">
+                                {parseAdjuntos(d.adjunto).map((adj) => (
+                                  <button
+                                    key={adj.id}
+                                    onClick={() => verAdjunto(adj, d)}
+                                    title={adj.isUrl ? `Enlace: ${adj.nombre}` : `${adj.nombre} (${adj.extension.toUpperCase()})`}
+                                    className="text-base transition hover:scale-125"
+                                  >
+                                    {adj.icono}
+                                  </button>
+                                ))}
+                              </div>
                             ) : (
                               "—"
                             )}
@@ -804,14 +884,6 @@ export default function AsignacionExpediente() {
                           <td className="px-3 py-2 text-center">{d.fol ?? "—"}</td>
                           <td className="max-w-[12rem] px-3 py-2 text-gray-700 dark:text-gray-200">{d.remi || "—"}</td>
                           <td className="max-w-[12rem] px-3 py-2 text-gray-700 dark:text-gray-200">{d.destino || "—"}</td>
-                          <td className="px-3 py-2 text-center">
-                            <button
-                              onClick={() => verDocumento(d)}
-                              className="rounded-md border border-brand-600 px-2 py-0.5 text-[11px] font-semibold text-brand-600 hover:bg-brand-50 dark:border-brand-400 dark:text-brand-400 dark:hover:bg-gray-700"
-                            >
-                              Ver
-                            </button>
-                          </td>
                         </tr>
                       ))}
                     </tbody>
