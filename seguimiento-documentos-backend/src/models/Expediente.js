@@ -93,19 +93,21 @@ Expediente.belongsTo(Usuario, {
   foreignKey: "id_usuario_modificador",
 });
 
-Expediente.vincularAsignaciones = async (expediente) => {
+Expediente.vincularAsignaciones = async (expediente, transaction) => {
   const AsignacionExpediente = sequelize.models.AsignacionExpediente;
   if (!AsignacionExpediente || !expediente) return;
   await AsignacionExpediente.update(
     { id_expediente: null },
-    { where: { id_expediente: expediente.id, cut: { [Op.ne]: expediente.cut } } }
+    { where: { id_expediente: expediente.id, cut: { [Op.ne]: expediente.cut } }, transaction }
   );
   await AsignacionExpediente.update(
     { id_expediente: expediente.id },
-    { where: { cut: expediente.cut } }
+    { where: { cut: expediente.cut }, transaction }
   );
 };
 
-Expediente.addHook("afterSave", (expediente) => Expediente.vincularAsignaciones(expediente));
+Expediente.addHook("afterSave", (expediente, options) =>
+  Expediente.vincularAsignaciones(expediente, options.transaction)
+);
 
 module.exports = Expediente;

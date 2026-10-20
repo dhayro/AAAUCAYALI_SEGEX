@@ -281,6 +281,7 @@ async function importarExpedientesABD(datosEntrada, models, idUsuario = 1) {
         }
       });
 
+      await models.Expediente.vincularAsignaciones(expediente);
       exitosos++;
       console.log(`[IMPORT] ${i + 1}/${datos.length}: ${cut} - ${created ? 'CREADO' : 'EXISTENTE'}`);
     } catch (err) {
