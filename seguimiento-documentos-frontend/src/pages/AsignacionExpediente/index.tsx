@@ -80,7 +80,6 @@ const SECCIONES_EXPEDIENTE: {
   {
     titulo: "Identificación",
     campos: [
-      { clave: "idoc", etiqueta: "ID SISGED" },
       { clave: "ndoc", etiqueta: "Documento" },
       { clave: "origen", etiqueta: "Origen" },
       { clave: "destip", etiqueta: "Destino (tipo)" },
@@ -91,8 +90,6 @@ const SECCIONES_EXPEDIENTE: {
     campos: [
       { clave: "proced", etiqueta: "Procedimiento", formato: "largo" },
       { clave: "fol", etiqueta: "Folios" },
-      { clave: "flgcut", etiqueta: "CUT activo", formato: "siNo" },
-      { clave: "flgarc", etiqueta: "Archivado", formato: "siNo" },
     ],
   },
   {
