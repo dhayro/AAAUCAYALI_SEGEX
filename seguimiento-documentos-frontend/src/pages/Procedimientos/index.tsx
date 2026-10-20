@@ -29,7 +29,6 @@ const emptyForm = {
   nombre: "",
   plazo: "",
   es_tupa: "false",
-  estado: "true",
 };
 
 const formatFecha = (fecha?: string) => {
@@ -111,7 +110,6 @@ export default function Procedimientos() {
       nombre: formData.nombre,
       plazo: Number(formData.plazo),
       es_tupa: formData.es_tupa === "true",
-      estado: formData.estado === "true",
     };
 
     try {
@@ -137,20 +135,19 @@ export default function Procedimientos() {
       nombre: procedimiento.nombre,
       plazo: String(procedimiento.plazo),
       es_tupa: String(procedimiento.es_tupa),
-      estado: String(procedimiento.estado),
     });
     setEditingId(procedimiento.id);
     setShowModal(true);
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm("¿Está seguro de que desea eliminar este procedimiento?")) {
+    if (!window.confirm("¿Está seguro de que desea desactivar este procedimiento?")) {
       return;
     }
 
     try {
       await api.delete(`/procedimientos/${id}`);
-      toast.success("Procedimiento eliminado correctamente");
+      toast.success("Procedimiento desactivado correctamente");
       await fetchProcedimientos();
     } catch (error: any) {
       toast.error("Error al eliminar el procedimiento");
@@ -259,33 +256,18 @@ export default function Procedimientos() {
                     required
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>Tipo</Label>
-                    <select
-                      value={formData.es_tupa}
-                      onChange={(e) =>
-                        setFormData({ ...formData, es_tupa: e.target.value })
-                      }
-                      className={selectClass}
-                    >
-                      <option value="true">TUPA</option>
-                      <option value="false">NO TUPA</option>
-                    </select>
-                  </div>
-                  <div>
-                    <Label>Estado</Label>
-                    <select
-                      value={formData.estado}
-                      onChange={(e) =>
-                        setFormData({ ...formData, estado: e.target.value })
-                      }
-                      className={selectClass}
-                    >
-                      <option value="true">Activo</option>
-                      <option value="false">Inactivo</option>
-                    </select>
-                  </div>
+                <div>
+                  <Label>Tipo</Label>
+                  <select
+                    value={formData.es_tupa}
+                    onChange={(e) =>
+                      setFormData({ ...formData, es_tupa: e.target.value })
+                    }
+                    className={selectClass}
+                  >
+                    <option value="true">TUPA</option>
+                    <option value="false">NO TUPA</option>
+                  </select>
                 </div>
 
                 <div className="flex gap-3 border-t pt-4 dark:border-gray-700">

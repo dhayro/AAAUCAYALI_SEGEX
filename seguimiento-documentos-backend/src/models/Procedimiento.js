@@ -34,6 +34,9 @@ const Procedimiento = sequelize.define('Procedimiento', {
   },
 }, {
   tableName: 'procedimientos',
+  indexes: [
+    { unique: true, fields: ['nombre', 'es_tupa'] },
+  ],
   timestamps: true,
   createdAt: 'fecha_creacion',
   updatedAt: 'fecha_modificacion',

@@ -9,6 +9,8 @@ const usuarioInclude = [
   { model: Usuario, as: 'modificador', attributes: ['id', 'nombre', 'apellido', 'usuario'], required: false },
 ];
 
+const MENSAJE_DUPLICADO = 'Ya existe un procedimiento con ese nombre y tipo';
+
 const validarYNormalizar = (data) => {
   const normalized = {};
   if (data.nombre !== undefined) {
@@ -24,11 +26,10 @@ const validarYNormalizar = (data) => {
   if (data.es_tupa !== undefined) {
     normalized.es_tupa = parseBoolean(data.es_tupa);
   }
-  if (data.estado !== undefined) {
-    normalized.estado = parseBoolean(data.estado);
-  }
   return normalized;
 };
+
+const obtenerConUsuarios = (id) => Procedimiento.findByPk(id, { include: usuarioInclude });
 
 exports.obtenerTodos = async (req, res) => {
   try {
@@ -41,7 +42,7 @@ exports.obtenerTodos = async (req, res) => {
     if (filtro) {
       whereClause.nombre = { [Op.like]: `%${String(filtro).trim()}%` };
     }
-    if (estado !== undefined) {
+    if (estado !== undefined && estado !== '') {
       whereClause.estado = parseBoolean(estado);
     }
 
@@ -66,7 +67,7 @@ exports.obtenerTodos = async (req, res) => {
 
 exports.obtenerPorId = async (req, res) => {
   try {
-    const procedimiento = await Procedimiento.findByPk(req.params.id, { include: usuarioInclude });
+    const procedimiento = await obtenerConUsuarios(req.params.id);
     if (!procedimiento) {
       return res.status(404).json({ mensaje: 'Procedimiento no encontrado' });
     }
@@ -78,12 +79,37 @@ exports.obtenerPorId = async (req, res) => {
 
 exports.crear = async (req, res) => {
   try {
+    const datos = validarYNormalizar(req.body);
+    if (!datos.nombre || datos.plazo === undefined) {
+      return res.status(400).json({ mensaje: 'El nombre y el plazo son obligatorios' });
+    }
+    datos.es_tupa = datos.es_tupa ?? false;
+
+    const existente = await Procedimiento.findOne({
+      where: { nombre: datos.nombre, es_tupa: datos.es_tupa }
+    });
+
+    if (existente && existente.estado) {
+      return res.status(409).json({ mensaje: MENSAJE_DUPLICADO });
+    }
+
+    if (existente) {
+      await existente.update({
+        plazo: datos.plazo,
+        estado: true,
+        id_usuario_modificador: req.user.id,
+      });
+      const reactivado = await obtenerConUsuarios(existente.id);
+      return res.json({ ...reactivado.toJSON(), mensaje: 'Procedimiento reactivado' });
+    }
+
     const nuevo = await Procedimiento.create({
-      ...validarYNormalizar(req.body),
+      ...datos,
+      estado: true,
       id_usuario_creador: req.user.id,
       id_usuario_modificador: req.user.id,
     });
-    res.status(201).json(nuevo);
+    res.status(201).json(await obtenerConUsuarios(nuevo.id));
   } catch (error) {
     res.status(400).json({ mensaje: error.message });
   }
@@ -91,15 +117,24 @@ exports.crear = async (req, res) => {
 
 exports.actualizar = async (req, res) => {
   try {
-    const [actualizado] = await Procedimiento.update(
-      { ...validarYNormalizar(req.body), id_usuario_modificador: req.user.id },
-      { where: { id: req.params.id } }
-    );
-    if (!actualizado) {
+    const actual = await Procedimiento.findByPk(req.params.id);
+    if (!actual) {
       return res.status(404).json({ mensaje: 'Procedimiento no encontrado' });
     }
-    const procedimiento = await Procedimiento.findByPk(req.params.id, { include: usuarioInclude });
-    res.json(procedimiento);
+
+    const datos = validarYNormalizar(req.body);
+    const nombre = datos.nombre ?? actual.nombre;
+    const esTupa = datos.es_tupa ?? actual.es_tupa;
+
+    const duplicado = await Procedimiento.findOne({
+      where: { nombre, es_tupa: esTupa, id: { [Op.ne]: actual.id } }
+    });
+    if (duplicado) {
+      return res.status(409).json({ mensaje: MENSAJE_DUPLICADO });
+    }
+
+    await actual.update({ ...datos, id_usuario_modificador: req.user.id });
+    res.json(await obtenerConUsuarios(actual.id));
   } catch (error) {
     res.status(400).json({ mensaje: error.message });
   }
@@ -107,11 +142,12 @@ exports.actualizar = async (req, res) => {
 
 exports.eliminar = async (req, res) => {
   try {
-    const eliminado = await Procedimiento.destroy({ where: { id: req.params.id } });
-    if (!eliminado) {
+    const procedimiento = await Procedimiento.findByPk(req.params.id);
+    if (!procedimiento) {
       return res.status(404).json({ mensaje: 'Procedimiento no encontrado' });
     }
-    res.json({ mensaje: 'Procedimiento eliminado exitosamente' });
+    await procedimiento.update({ estado: false, id_usuario_modificador: req.user.id });
+    res.json({ mensaje: 'Procedimiento desactivado exitosamente' });
   } catch (error) {
     res.status(500).json({ mensaje: error.message });
   }
