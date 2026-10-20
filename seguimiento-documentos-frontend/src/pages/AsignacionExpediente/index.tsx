@@ -63,6 +63,43 @@ const formatFecha = (fecha?: string | null) => {
   return `${d}/${m}/${y}`;
 };
 
+const formatFechaHora = (valor?: string | null) => {
+  if (!valor) return "—";
+  const coincidencia = String(valor).match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}:\d{2}:\d{2}))?/);
+  if (!coincidencia) return String(valor);
+  const [, y, m, d, hora] = coincidencia;
+  return hora ? `${d}/${m}/${y} ${hora}` : `${d}/${m}/${y}`;
+};
+
+const CAMPOS_EXPEDIENTE: { clave: string; etiqueta: string; tipo?: "fecha" | "fechahora" }[] = [
+  { clave: "idoc", etiqueta: "idoc" },
+  { clave: "cut", etiqueta: "CUT" },
+  { clave: "origen", etiqueta: "Origen" },
+  { clave: "destip", etiqueta: "Destino (tipo)" },
+  { clave: "estupa", etiqueta: "TUPA" },
+  { clave: "proced", etiqueta: "Procedimiento" },
+  { clave: "asunto", etiqueta: "Asunto" },
+  { clave: "refe", etiqueta: "Referencia" },
+  { clave: "fol", etiqueta: "Folios" },
+  { clave: "flgcut", etiqueta: "Flag CUT" },
+  { clave: "destinos", etiqueta: "Destinos" },
+  { clave: "ndoc", etiqueta: "Documento" },
+  { clave: "feccrea", etiqueta: "Fecha de creación", tipo: "fechahora" },
+  { clave: "solfec", etiqueta: "Fecha de solicitud", tipo: "fecha" },
+  { clave: "solhor", etiqueta: "Hora de solicitud" },
+  { clave: "usurem", etiqueta: "Remitente" },
+  { clave: "ofirem", etiqueta: "Oficina remitente" },
+  { clave: "flgarc", etiqueta: "Flag archivo" },
+  { clave: "tema", etiqueta: "Tema" },
+];
+
+const valorCampo = (valor: any, tipo?: "fecha" | "fechahora") => {
+  if (valor === null || valor === undefined || valor === "") return "—";
+  if (tipo === "fecha") return formatFecha(String(valor));
+  if (tipo === "fechahora") return formatFechaHora(String(valor));
+  return String(valor);
+};
+
 const nombreUsuario = (u?: UsuarioResumen | null) =>
   u ? `${u.nombre} ${u.apellido}` : "—";
 
@@ -78,6 +115,12 @@ export default function AsignacionExpediente() {
 
   const [prorrogaTarget, setProrrogaTarget] = useState<Asignacion | null>(null);
   const [prorrogaData, setProrrogaData] = useState({ plazo: "", fecha: "" });
+
+  const [cutAbierto, setCutAbierto] = useState<string | null>(null);
+  const [expedienteCut, setExpedienteCut] = useState<any>(null);
+  const [cutCargando, setCutCargando] = useState(false);
+  const [cutError, setCutError] = useState("");
+  const [cutOrigen, setCutOrigen] = useState("");
 
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [filters, setFilters] = useState({ cut: "" });
@@ -244,6 +287,27 @@ export default function AsignacionExpediente() {
     } catch (error: any) {
       toast.error("Error al desactivar la asignación");
     }
+  };
+
+  const abrirExpediente = async (cut: string) => {
+    setCutAbierto(cut);
+    setExpedienteCut(null);
+    setCutError("");
+    setCutOrigen("");
+    setCutCargando(true);
+    try {
+      const res = await api.get(`/expedientes/por-cut/${encodeURIComponent(cut)}`);
+      setExpedienteCut(res.data.expediente);
+      setCutOrigen(res.data.origen);
+    } catch (error: any) {
+      setCutError(error.response?.data?.mensaje || "Error al consultar el expediente");
+    } finally {
+      setCutCargando(false);
+    }
+  };
+
+  const cerrarExpediente = () => {
+    setCutAbierto(null);
   };
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -438,6 +502,65 @@ export default function AsignacionExpediente() {
           </div>
         )}
 
+        {/* Modal expediente por CUT */}
+        {cutAbierto && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+            <div className="flex max-h-[90vh] w-full max-w-3xl flex-col rounded-lg bg-white shadow-2xl dark:bg-gray-800">
+              <div className="flex items-center justify-between border-b p-6 dark:border-gray-700">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    Expediente {cutAbierto}
+                  </h2>
+                  {cutOrigen && (
+                    <p className="text-xs text-gray-500">
+                      {cutOrigen === "SISGED"
+                        ? "Obtenido de SISGED y guardado en la tabla"
+                        : "Obtenido de la tabla local"}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={cerrarExpediente}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400"
+                >
+                  <CloseIcon className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="overflow-y-auto p-6">
+                {cutCargando && (
+                  <div className="p-12 text-center text-gray-500">
+                    <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+                    <p className="mt-4">Consultando expediente...</p>
+                  </div>
+                )}
+                {!cutCargando && cutError && (
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200">
+                    {cutError}
+                  </div>
+                )}
+                {!cutCargando && expedienteCut && (
+                  <dl className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-2">
+                    {CAMPOS_EXPEDIENTE.map((campo) => (
+                      <div
+                        key={campo.clave}
+                        className={campo.clave === "asunto" || campo.clave === "proced" || campo.clave === "destinos" || campo.clave === "tema" ? "md:col-span-2" : ""}
+                      >
+                        <dt className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">
+                          {campo.etiqueta}
+                        </dt>
+                        <dd className="mt-1 whitespace-pre-wrap break-words text-sm text-gray-900 dark:text-white">
+                          {valorCampo(expedienteCut[campo.clave], campo.tipo)}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Tabla */}
         <div className="overflow-hidden rounded-lg bg-white shadow dark:bg-gray-800">
           <div className="overflow-x-auto">
@@ -468,7 +591,14 @@ export default function AsignacionExpediente() {
                       <td className="px-6 py-4 text-sm">
                         {pagination.pageIndex * pagination.pageSize + index + 1}
                       </td>
-                      <td className="px-6 py-4 font-medium">{a.cut}</td>
+                      <td className="px-6 py-4 font-medium">
+                        <button
+                          onClick={() => abrirExpediente(a.cut)}
+                          className="text-blue-600 hover:underline dark:text-blue-400"
+                        >
+                          {a.cut}
+                        </button>
+                      </td>
                       <td className="px-6 py-4 text-sm">
                         <div>{nombreUsuario(a.asignado)}</div>
                         {a.numero_orden && (
