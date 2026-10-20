@@ -234,8 +234,9 @@ async function obtenerDatosDeSISGED(endpoint = 'general', params = {}, tokenPref
   }
 }
 
-async function importarExpedientesABD(datos, models) {
-  if (!Array.isArray(datos) || datos.length === 0) {
+async function importarExpedientesABD(datosEntrada, models, idUsuario = 1) {
+  const datos = Array.isArray(datosEntrada) ? datosEntrada.flat() : [];
+  if (datos.length === 0) {
     return { exitosos: 0, errores: 0, total: 0 };
   }
 
@@ -275,8 +276,8 @@ async function importarExpedientesABD(datos, models) {
           flgarc: item.flgarc,
           tema: textoMayuscula(item.tema),
           estado: true,
-          id_usuario_creador: 1,
-          id_usuario_modificador: 1,
+          id_usuario_creador: idUsuario,
+          id_usuario_modificador: idUsuario,
         }
       });
 

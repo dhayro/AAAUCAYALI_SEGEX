@@ -138,6 +138,7 @@ router.get('/',isSecretariaOrAbove, expedienteController.getAllExpedientes);
  *       404:
  *         description: Expediente no encontrado
  */
+router.get('/por-cut/:cut', authenticateToken, expedienteController.buscarPorCut);
 router.get('/:id', expedienteController.getExpedienteById);
 
 /**

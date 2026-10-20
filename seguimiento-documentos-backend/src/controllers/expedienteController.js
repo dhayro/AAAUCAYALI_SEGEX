@@ -4,6 +4,7 @@ const Expediente = require('../models/Expediente');
 const Documento = require('../models/Documento');
 const Usuario = require('../models/Usuario');
 const { convertirFechaSisged } = require('../utils/fechas');
+const sisgedSyncService = require('../services/sisgedSyncService');
 
 const CAMPOS_TEXTO = ['cut', 'origen', 'destip', 'estupa', 'proced', 'asunto', 'refe', 'destinos', 'ndoc', 'usurem', 'ofirem', 'tema'];
 const CAMPOS_ENTERO = ['idoc', 'fol', 'flgcut', 'flgarc'];
@@ -72,6 +73,34 @@ exports.getAllExpedientes = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+exports.buscarPorCut = async (req, res) => {
+  try {
+    const cut = String(req.params.cut).trim().toUpperCase();
+
+    const local = await Expediente.findOne({ where: { cut }, include: incluirUsuarios });
+    if (local) {
+      return res.json({ origen: 'LOCAL', expediente: local });
+    }
+
+    const datos = await sisgedSyncService.obtenerDatosDeSISGED('general', { NRO_CUT: cut });
+    const coincidencias = (Array.isArray(datos) ? datos.flat() : [])
+      .filter((item) => String(item.ncut || '').trim().toUpperCase() === cut);
+    if (coincidencias.length === 0) {
+      return res.status(404).json({ mensaje: 'No se encontró el CUT en SISGED' });
+    }
+
+    await sisgedSyncService.importarExpedientesABD(coincidencias, sequelize.models, req.user.id);
+
+    const guardado = await Expediente.findOne({ where: { cut }, include: incluirUsuarios });
+    if (!guardado) {
+      return res.status(500).json({ mensaje: 'No se pudo guardar el expediente obtenido de SISGED' });
+    }
+    res.json({ origen: 'SISGED', expediente: guardado });
+  } catch (error) {
+    res.status(500).json({ mensaje: error.message });
   }
 };
 
