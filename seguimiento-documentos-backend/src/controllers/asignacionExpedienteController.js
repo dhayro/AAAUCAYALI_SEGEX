@@ -1,8 +1,7 @@
 const { Op } = require('sequelize');
 const AsignacionExpediente = require('../models/AsignacionExpediente');
-const Expediente = require('../models/Expediente');
 const Usuario = require('../models/Usuario');
-const { hoyLima, esFechaValida, sumarDiasHabiles } = require('../utils/diasHabiles');
+const { hoyLima, esFechaValida, sumarDiasCalendario } = require('../utils/fechas');
 
 const parseBoolean = (value) => value === true || value === 'true' || value === 1 || value === '1';
 
@@ -24,7 +23,6 @@ const parseFecha = (valor) => {
 };
 
 const includes = [
-  { model: Expediente, attributes: ['id', 'cut', 'asunto'], required: false },
   { model: Usuario, as: 'asignado', attributes: ['id', 'nombre', 'apellido', 'usuario'], required: false },
   { model: Usuario, as: 'creador', attributes: ['id', 'nombre', 'apellido', 'usuario'], required: false },
   { model: Usuario, as: 'modificador', attributes: ['id', 'nombre', 'apellido', 'usuario'], required: false },
@@ -32,8 +30,8 @@ const includes = [
 
 const obtenerConRelaciones = (id) => AsignacionExpediente.findByPk(id, { include: includes });
 
-const usuarioExiste = async (idUsuario) => {
-  const id = parseInt(idUsuario, 10);
+const validarUsuario = async (valor) => {
+  const id = parseInt(valor, 10);
   if (isNaN(id)) throw new Error('El usuario asignado es obligatorio');
   const usuario = await Usuario.findByPk(id);
   if (!usuario) throw new Error('El usuario asignado no existe');
@@ -48,21 +46,15 @@ exports.obtenerTodas = async (req, res) => {
     const { cut, id_usuario, estado } = req.query;
 
     const whereClause = {};
+    if (cut) whereClause.cut = { [Op.like]: `%${normalizarTexto(cut)}%` };
     if (id_usuario) whereClause.id_usuario = parseInt(id_usuario, 10);
     if (estado !== undefined && estado !== '') whereClause.estado = parseBoolean(estado);
 
-    const include = includes.map((inc) => ({ ...inc }));
-    if (cut) {
-      include[0].where = { cut: { [Op.like]: `%${normalizarTexto(cut)}%` } };
-      include[0].required = true;
-    }
-
     const { count, rows } = await AsignacionExpediente.findAndCountAll({
       where: whereClause,
-      include,
+      include: includes,
       limit,
       offset,
-      distinct: true,
       order: [['id', 'ASC']],
     });
 
@@ -93,23 +85,20 @@ exports.crear = async (req, res) => {
   try {
     const cut = normalizarTexto(req.body.cut);
     if (!cut) {
-      return res.status(400).json({ mensaje: 'El CUT del expediente es obligatorio' });
-    }
-    const expediente = await Expediente.findOne({ where: { cut } });
-    if (!expediente) {
-      return res.status(404).json({ mensaje: 'No existe un expediente con ese CUT' });
+      return res.status(400).json({ mensaje: 'El CUT es obligatorio' });
     }
 
-    const idUsuario = await usuarioExiste(req.body.id_usuario);
+    const idUsuario = await validarUsuario(req.body.id_usuario);
     const plazo = parsePlazo(req.body.plazo_atencion);
     const fechaAsignacion = req.body.fecha_asignacion ? parseFecha(req.body.fecha_asignacion) : hoyLima();
 
     const nueva = await AsignacionExpediente.create({
-      id_expediente: expediente.id,
+      cut,
+      id_expediente: null,
       id_usuario: idUsuario,
       fecha_asignacion: fechaAsignacion,
       plazo_atencion: plazo,
-      fecha_vencimiento: sumarDiasHabiles(fechaAsignacion, plazo),
+      fecha_vencimiento: sumarDiasCalendario(fechaAsignacion, plazo),
       observacion: normalizarTexto(req.body.observacion),
       numero_orden: normalizarTexto(req.body.numero_orden),
       estado: true,
@@ -131,7 +120,7 @@ exports.actualizar = async (req, res) => {
     }
 
     const cambios = { id_usuario_modificador: req.user.id };
-    if (req.body.id_usuario !== undefined) cambios.id_usuario = await usuarioExiste(req.body.id_usuario);
+    if (req.body.id_usuario !== undefined) cambios.id_usuario = await validarUsuario(req.body.id_usuario);
     if (req.body.observacion !== undefined) cambios.observacion = normalizarTexto(req.body.observacion);
     if (req.body.numero_orden !== undefined) cambios.numero_orden = normalizarTexto(req.body.numero_orden);
 
@@ -144,9 +133,9 @@ exports.actualizar = async (req, res) => {
 
     cambios.fecha_asignacion = fechaAsignacion;
     cambios.plazo_atencion = plazo;
-    cambios.fecha_vencimiento = sumarDiasHabiles(fechaAsignacion, plazo);
+    cambios.fecha_vencimiento = sumarDiasCalendario(fechaAsignacion, plazo);
     if (actual.plazo_prorroga) {
-      cambios.fecha_vencimiento_prorroga = sumarDiasHabiles(cambios.fecha_vencimiento, actual.plazo_prorroga);
+      cambios.fecha_vencimiento_prorroga = sumarDiasCalendario(cambios.fecha_vencimiento, actual.plazo_prorroga);
     }
 
     await actual.update(cambios);
@@ -169,7 +158,7 @@ exports.prorrogar = async (req, res) => {
     await actual.update({
       fecha_prorroga: fechaProrroga,
       plazo_prorroga: plazoProrroga,
-      fecha_vencimiento_prorroga: sumarDiasHabiles(actual.fecha_vencimiento, plazoProrroga),
+      fecha_vencimiento_prorroga: sumarDiasCalendario(actual.fecha_vencimiento, plazoProrroga),
       id_usuario_modificador: req.user.id,
     });
 

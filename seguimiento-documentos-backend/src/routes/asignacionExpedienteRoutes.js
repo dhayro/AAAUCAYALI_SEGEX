@@ -64,7 +64,7 @@ router.get('/:id', authenticateToken, controller.obtenerPorId);
  * /api/asignaciones-expediente:
  *   post:
  *     summary: Crear una asignación (admin, jefe o secretaria)
- *     description: Recibe el CUT del expediente. El vencimiento se calcula con días hábiles.
+ *     description: Recibe el CUT tal cual. El vencimiento se calcula con días calendario.
  *     tags: [AsignacionesExpediente]
  *     security:
  *       - bearerAuth: []

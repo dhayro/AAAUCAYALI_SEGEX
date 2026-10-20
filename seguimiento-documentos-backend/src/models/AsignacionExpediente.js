@@ -9,9 +9,14 @@ const AsignacionExpediente = sequelize.define('AsignacionExpediente', {
     primaryKey: true,
     autoIncrement: true,
   },
+  cut: {
+    type: DataTypes.STRING(50),
+    allowNull: false,
+  },
   id_expediente: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
+    comment: 'Se enlaza al expediente cuando los datos de expedientes estén cargados',
   },
   id_usuario: {
     type: DataTypes.INTEGER,
@@ -24,7 +29,7 @@ const AsignacionExpediente = sequelize.define('AsignacionExpediente', {
   plazo_atencion: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    comment: 'Plazo de atención en días hábiles',
+    comment: 'Plazo de atención en días calendario',
   },
   fecha_vencimiento: {
     type: DataTypes.DATEONLY,
@@ -35,7 +40,7 @@ const AsignacionExpediente = sequelize.define('AsignacionExpediente', {
   },
   plazo_prorroga: {
     type: DataTypes.INTEGER,
-    comment: 'Plazo de prórroga en días hábiles',
+    comment: 'Plazo de prórroga en días calendario',
   },
   fecha_vencimiento_prorroga: {
     type: DataTypes.DATEONLY,
