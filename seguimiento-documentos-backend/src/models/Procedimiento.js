@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
+const Usuario = require('./Usuario');
 
 const Procedimiento = sequelize.define('Procedimiento', {
   id: {
@@ -21,9 +22,24 @@ const Procedimiento = sequelize.define('Procedimiento', {
     allowNull: false,
     defaultValue: false,
   },
+  estado: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+  },
+  id_usuario_creador: {
+    type: DataTypes.INTEGER,
+  },
+  id_usuario_modificador: {
+    type: DataTypes.INTEGER,
+  },
 }, {
   tableName: 'procedimientos',
-  timestamps: false,
+  timestamps: true,
+  createdAt: 'fecha_creacion',
+  updatedAt: 'fecha_modificacion',
 });
+
+Procedimiento.belongsTo(Usuario, { as: 'creador', foreignKey: 'id_usuario_creador' });
+Procedimiento.belongsTo(Usuario, { as: 'modificador', foreignKey: 'id_usuario_modificador' });
 
 module.exports = Procedimiento;
