@@ -145,7 +145,6 @@ export default function AsignacionExpediente() {
   const [expedienteCut, setExpedienteCut] = useState<any>(null);
   const [cutCargando, setCutCargando] = useState(false);
   const [cutError, setCutError] = useState("");
-  const [cutOrigen, setCutOrigen] = useState("");
   const [copiado, setCopiado] = useState(false);
 
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
@@ -319,12 +318,10 @@ export default function AsignacionExpediente() {
     setCutAbierto(cut);
     setExpedienteCut(null);
     setCutError("");
-    setCutOrigen("");
     setCutCargando(true);
     try {
       const res = await api.get(`/expedientes/por-cut/${encodeURIComponent(cut)}`);
       setExpedienteCut(res.data.expediente);
-      setCutOrigen(res.data.origen);
     } catch (error: any) {
       setCutError(error.response?.data?.mensaje || "Error al consultar el expediente");
     } finally {
