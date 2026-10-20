@@ -14,6 +14,7 @@ const respuestaDocumentoRoutes = require('./routes/respuestaDocumentoRoutes');
 const antecedenteRoutes = require('./routes/antecedenteRoutes');
 const sisgedRoutes = require('./routes/sisgedRoutes');
 const procedimientoRoutes = require('./routes/procedimientoRoutes');
+const asignacionExpedienteRoutes = require('./routes/asignacionExpedienteRoutes');
 const initAdmin = require('./utils/initAdmin');
 const initTipoDocumentos = require('./utils/initTipoDocumentos');
 
@@ -87,6 +88,7 @@ app.use('/api/respuestas', respuestaDocumentoRoutes);
 app.use('/api/antecedentes', antecedenteRoutes);
 app.use('/api/sisged', sisgedRoutes);
 app.use('/api/procedimientos', procedimientoRoutes);
+app.use('/api/asignaciones-expediente', asignacionExpedienteRoutes);
 
 // Cargar todos los modelos
 const Area = require('./models/Area');
@@ -100,6 +102,7 @@ const RespuestaDocumento = require('./models/RespuestaDocumento');
 const Antecedente = require('./models/Antecedente');
 const SisgedToken = require('./models/SisgedToken');
 const Procedimiento = require('./models/Procedimiento');
+const AsignacionExpediente = require('./models/AsignacionExpediente');
 
 // Cargar asociaciones
 require('./models/associations');
