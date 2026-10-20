@@ -1,6 +1,9 @@
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
+const { convertirFechaSisged } = require('../utils/fechas');
+
+const textoMayuscula = (valor) => (valor === undefined || valor === null || valor === '' ? null : String(valor).trim().toUpperCase());
 
 const POSTMAN_API_KEY = process.env.POSTMAN_API_KEY;
 const SISGED_BASE_URL = 'https://sisgedpiloto.ana.gob.pe/apiRestSG/api/SISGED';
@@ -252,14 +255,28 @@ async function importarExpedientesABD(datos, models) {
       const [expediente, created] = await models.Expediente.findOrCreate({
         where: { cut },
         defaults: {
+          idoc: item.idoc,
           cut,
-          asunto: item.asunto || item.ASUNTO || "Sin asunto",
-          remitente: (item.usurem || item.USUARIO || "").split('\n')?.[0] || "Desconocido",
-          numero_documento: item.ndoc || item.DOCUMENTO || "",
-          tipo_procedimiento: item.proced || item.PROCEDIMIENTO || "SISGED",
-          estupa: item.estupa || item.ESTUPA || "NO TUPA",
-          periodo: new Date().getFullYear().toString(),
+          origen: textoMayuscula(item.origen),
+          destip: textoMayuscula(item.destip),
+          estupa: textoMayuscula(item.estupa),
+          proced: textoMayuscula(item.proced),
+          asunto: textoMayuscula(item.asunto),
+          refe: textoMayuscula(item.refe),
+          fol: item.fol,
+          flgcut: item.flgcut,
+          destinos: textoMayuscula(item.destinos),
+          ndoc: textoMayuscula(item.ndoc),
+          feccrea: convertirFechaSisged(item.feccrea),
+          solfec: convertirFechaSisged(item.solfec),
+          solhor: item.solhor || null,
+          usurem: textoMayuscula(item.usurem),
+          ofirem: textoMayuscula(item.ofirem),
+          flgarc: item.flgarc,
+          tema: textoMayuscula(item.tema),
+          estado: true,
           id_usuario_creador: 1,
+          id_usuario_modificador: 1,
         }
       });
 

@@ -42,7 +42,7 @@ exports.getAllRespuestas = async (req, res) => {
                 {
                   model: Expediente,
                   as: 'Expediente',
-                  attributes: ['id', 'cut', 'asunto', 'remitente', 'fecha_creacion', 'estado']
+                  attributes: ['id', 'cut', 'asunto', 'usurem', 'fecha_creacion', 'estado']
                 }
               ],
             },
@@ -74,7 +74,7 @@ exports.getAllRespuestas = async (req, res) => {
         { '$AsignacionDocumento.Documento.TipoDocumento.nombre$': { [Op.like]: `%${filtro}%` } },
         { '$AsignacionDocumento.Documento.Expediente.cut$': { [Op.like]: `%${filtro}%` } },
         { '$AsignacionDocumento.Documento.Expediente.asunto$': { [Op.like]: `%${filtro}%` } },
-        { '$AsignacionDocumento.Documento.Expediente.remitente$': { [Op.like]: `%${filtro}%` } },
+        { '$AsignacionDocumento.Documento.Expediente.usurem$': { [Op.like]: `%${filtro}%` } },
         { '$AsignacionDocumento.asignado.nombre$': { [Op.like]: `%${filtro}%` } },
         { '$AsignacionDocumento.asignado.apellido$': { [Op.like]: `%${filtro}%` } },
         { '$AsignacionDocumento.asignado.usuario$': { [Op.like]: `%${filtro}%` } }

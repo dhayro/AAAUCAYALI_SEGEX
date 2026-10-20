@@ -16,4 +16,13 @@ const sumarDiasCalendario = (fechaYMD, dias) => {
   return fecha.toISOString().slice(0, 10);
 };
 
-module.exports = { hoyLima, esFechaValida, sumarDiasCalendario };
+// SISGED entrega fechas como "dd/mm/yyyy" y horas como "hh:mm:ss"
+const convertirFechaSisged = (valor) => {
+  if (!valor) return null;
+  const coincidencia = String(valor).match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}:\d{2}:\d{2}))?$/);
+  if (!coincidencia) return valor;
+  const [, dia, mes, anio, hora] = coincidencia;
+  return hora ? `${anio}-${mes}-${dia} ${hora}` : `${anio}-${mes}-${dia}`;
+};
+
+module.exports = { hoyLima, esFechaValida, sumarDiasCalendario, convertirFechaSisged };

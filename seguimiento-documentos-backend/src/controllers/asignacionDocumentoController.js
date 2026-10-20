@@ -48,7 +48,7 @@ exports.getAllAsignaciones = async (req, res) => {
             {
               model: Expediente,
               as: 'Expediente',
-              attributes: ['id', 'cut', 'asunto', 'remitente', 'fecha_creacion', 'estado']
+              attributes: ['id', 'cut', 'asunto', 'usurem', 'fecha_creacion', 'estado']
             }
           ],
         },
@@ -79,7 +79,7 @@ exports.getAllAsignaciones = async (req, res) => {
         { '$Documento.TipoDocumento.nombre$': { [Op.like]: `%${filtro}%` } },
         { '$Documento.Expediente.cut$': { [Op.like]: `%${filtro}%` } },
         { '$Documento.Expediente.asunto$': { [Op.like]: `%${filtro}%` } },
-        { '$Documento.Expediente.remitente$': { [Op.like]: `%${filtro}%` } },
+        { '$Documento.Expediente.usurem$': { [Op.like]: `%${filtro}%` } },
         { '$asignado.nombre$': { [Op.like]: `%${filtro}%` } },
         { '$asignado.apellido$': { [Op.like]: `%${filtro}%` } },
         { '$asignado.usuario$': { [Op.like]: `%${filtro}%` } }
@@ -89,7 +89,7 @@ exports.getAllAsignaciones = async (req, res) => {
         whereClause['$Documento.Expediente.cut$'] = { [Op.like]: `%${cut}%` };
       }
       if (remitente) {
-        whereClause['$Documento.Expediente.remitente$'] = { [Op.like]: `%${remitente}%` };
+        whereClause['$Documento.Expediente.usurem$'] = { [Op.like]: `%${remitente}%` };
       }
       if (documento) {
         whereClause[Op.or] = [
@@ -165,7 +165,7 @@ exports.getAsignacionesConProrrogaPendiente = async (req, res) => {
             {
               model: Expediente,
               as: 'Expediente',
-              attributes: ['id', 'cut', 'asunto', 'remitente', 'fecha_creacion', 'estado']
+              attributes: ['id', 'cut', 'asunto', 'usurem', 'fecha_creacion', 'estado']
             }
           ],
         },
@@ -189,7 +189,7 @@ exports.getAsignacionesConProrrogaPendiente = async (req, res) => {
         { '$Documento.TipoDocumento.nombre$': { [Op.like]: `%${filtro}%` } },
         { '$Documento.Expediente.cut$': { [Op.like]: `%${filtro}%` } },
         { '$Documento.Expediente.asunto$': { [Op.like]: `%${filtro}%` } },
-        { '$Documento.Expediente.remitente$': { [Op.like]: `%${filtro}%` } },
+        { '$Documento.Expediente.usurem$': { [Op.like]: `%${filtro}%` } },
         { '$asignado.nombre$': { [Op.like]: `%${filtro}%` } },
         { '$asignado.apellido$': { [Op.like]: `%${filtro}%` } },
         { '$asignado.usuario$': { [Op.like]: `%${filtro}%` } }
@@ -199,7 +199,7 @@ exports.getAsignacionesConProrrogaPendiente = async (req, res) => {
         whereClause['$Documento.Expediente.cut$'] = { [Op.like]: `%${cut}%` };
       }
       if (remitente) {
-        whereClause['$Documento.Expediente.remitente$'] = { [Op.like]: `%${remitente}%` };
+        whereClause['$Documento.Expediente.usurem$'] = { [Op.like]: `%${remitente}%` };
       }
       if (documento) {
         whereClause[Op.or] = [

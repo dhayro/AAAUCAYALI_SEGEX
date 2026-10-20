@@ -1,80 +1,74 @@
 const { Op } = require('sequelize');
-const sequelize = require('../config/database'); // Asegúrate de que esta ruta sea correcta
+const sequelize = require('../config/database');
 const Expediente = require('../models/Expediente');
-const TipoDocumento = require('../models/TipoDocumento');
 const Documento = require('../models/Documento');
-const { formatDateForLima } = require('../utils/dateUtils');
+const Usuario = require('../models/Usuario');
+const { convertirFechaSisged } = require('../utils/fechas');
+
+const CAMPOS_TEXTO = ['cut', 'origen', 'destip', 'estupa', 'proced', 'asunto', 'refe', 'destinos', 'ndoc', 'usurem', 'ofirem', 'tema'];
+const CAMPOS_ENTERO = ['idoc', 'fol', 'flgcut', 'flgarc'];
 
 const normalizeExpedienteData = (data) => {
-  const normalized = { ...data };
-  const fieldsToUppercase = ['cut', 'estupa', 'tipo_procedimiento', 'numero_documento', 'asunto', 'remitente'];
-  fieldsToUppercase.forEach((field) => {
-    if (normalized[field]) {
-      normalized[field] = String(normalized[field]).trim().toUpperCase();
+  const normalized = {};
+  CAMPOS_TEXTO.forEach((campo) => {
+    if (data[campo] !== undefined) {
+      normalized[campo] = data[campo] === null ? null : String(data[campo]).trim().toUpperCase();
+    }
+  });
+  CAMPOS_ENTERO.forEach((campo) => {
+    if (data[campo] !== undefined) {
+      normalized[campo] = data[campo] === null || data[campo] === '' ? null : parseInt(data[campo], 10);
     }
   });
   return normalized;
 };
+
+const incluirUsuarios = [
+  { model: Usuario, as: 'creador', attributes: ['id', 'nombre', 'apellido', 'usuario'], required: false },
+  { model: Usuario, as: 'modificador', attributes: ['id', 'nombre', 'apellido', 'usuario'], required: false },
+];
 
 exports.getAllExpedientes = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    const { cut, filtro, estado } = req.query;
 
-    const cut = req.query.cut ? req.query.cut.trim() : null;
-    const asunto = req.query.asunto ? req.query.asunto.trim() : null;
-    const remitente = req.query.remitente ? req.query.remitente.trim() : null;
-    const documento = req.query.documento ? req.query.documento.trim() : null;
-    const filtro = req.query.filtro ? req.query.filtro.trim() : null;
-
-    let whereClause = {
-      estado: 1
-    };
+    const whereClause = {};
+    if (estado !== undefined && estado !== '') {
+      whereClause.estado = estado === 'true' || estado === '1';
+    } else {
+      whereClause.estado = true;
+    }
 
     if (filtro) {
+      const termino = `%${String(filtro).trim()}%`;
       whereClause[Op.or] = [
-        { cut: { [Op.like]: `%${filtro}%` } },
-        { asunto: { [Op.like]: `%${filtro}%` } },
-        { remitente: { [Op.like]: `%${remitente}%` } },
-        { '$TipoDocumento.nombre$': { [Op.like]: `%${filtro}%` } },
-        { numero_documento: { [Op.like]: `%${filtro}%` } }
+        { cut: { [Op.like]: termino } },
+        { asunto: { [Op.like]: termino } },
+        { ndoc: { [Op.like]: termino } },
+        { usurem: { [Op.like]: termino } },
+        { proced: { [Op.like]: termino } },
+        { destinos: { [Op.like]: termino } },
       ];
-    } else {
-      if (cut) {
-        whereClause.cut = { [Op.like]: `%${cut}%` };
-      }
-      if (asunto) {
-        whereClause.asunto = { [Op.like]: `%${asunto}%` };
-      }
-      if (remitente) {
-        whereClause.remitente = { [Op.like]: `%${remitente}%` };
-      }
-      if (documento) {
-        whereClause[Op.or] = [
-          { '$TipoDocumento.nombre$': { [Op.like]: `%${documento}%` } },
-          { numero_documento: { [Op.like]: `%${documento}%` } }
-        ];
-      }
+    } else if (cut) {
+      whereClause.cut = { [Op.like]: `%${String(cut).trim()}%` };
     }
 
     const { count, rows } = await Expediente.findAndCountAll({
       where: whereClause,
-      include: [{
-        model: TipoDocumento,
-        as: 'TipoDocumento', // Ensure this matches the alias used in your associations
-        attributes: ['id', 'nombre', 'descripcion'] // Include the TipoDocumento attributes you want to return
-      }],
-      limit: limit,
-      offset: offset,
-      order: [['id', 'ASC']]
+      include: incluirUsuarios,
+      limit,
+      offset,
+      order: [['id', 'ASC']],
     });
 
     res.json({
       expedientes: rows,
       totalExpedientes: count,
       totalPaginas: Math.ceil(count / limit),
-      paginaActual: page
+      paginaActual: page,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -83,12 +77,7 @@ exports.getAllExpedientes = async (req, res) => {
 
 exports.getExpedienteById = async (req, res) => {
   try {
-    const expediente = await Expediente.findByPk(req.params.id, {
-            include: [{
-              model: TipoDocumento,
-              as: 'TipoDocumento', // This matches the alias used in the association
-            }]
-          });
+    const expediente = await Expediente.findByPk(req.params.id, { include: incluirUsuarios });
     if (expediente) {
       res.json(expediente);
     } else {
@@ -99,76 +88,34 @@ exports.getExpedienteById = async (req, res) => {
   }
 };
 
-// exports.getExpedienteById = async (req, res) => {
-//   try {
-//     const expediente = await Expediente.findByPk(req.params.id, {
-//       include: [{
-//         model: TipoDocumento,
-//         as: 'TipoDocumento', // This matches the alias used in the association
-//       }]
-//     });
-
-//     if (expediente) {
-//       res.json({
-//         expediente: expediente,
-//         tipoDocumento: expediente.TipoDocumento // Include the associated TipoDocumento
-//       });
-//     } else {
-//       res.status(404).json({ message: 'Expediente no encontrado' });
-//     }
-//   } catch (error) {
-//     res.status(500).json({ message: error.message });
-//   }
-// };
-
 exports.createExpediente = async (req, res) => {
   try {
-    const { cut, numero_documento, fecha_creacion, ...otherData } = req.body;
+    const datos = normalizeExpedienteData(req.body);
+    if (!datos.idoc || !datos.cut) {
+      return res.status(400).json({ message: 'El idoc y el CUT son obligatorios' });
+    }
 
-    // Normalizar datos
-    const normalizedCut = String(cut).trim().toUpperCase();
-    const normalizedNumeroDocumento = String(numero_documento).trim().toUpperCase();
-    const normalizedData = normalizeExpedienteData(otherData);
-
-    // Check if an expediente with the same cut already exists
-    const existingExpediente = await Expediente.findOne({ where: { cut: normalizedCut } });
-    if (existingExpediente) {
+    const existente = await Expediente.findOne({
+      where: { [Op.or]: [{ cut: datos.cut }, { idoc: datos.idoc }] },
+    });
+    if (existente) {
       return res.status(200).json({
-        alert: 'El expediente con este CUT ya existe',
-        id: existingExpediente.id
+        alert: 'El expediente con este CUT o idoc ya existe',
+        id: existente.id,
       });
     }
 
-    // Check if the beginning of numero_documento matches any tipo_documento
-    const tiposDocumentos = await TipoDocumento.findAll();
-    let id_tipo_documento = null;
-    let updatedNumeroDocumento = normalizedNumeroDocumento;
-
-    // Sort tiposDocumentos by the length of the name in descending order
-    tiposDocumentos.sort((a, b) => b.nombre.length - a.nombre.length);
-
-    for (const tipo of tiposDocumentos) {
-      const tipoNombre = tipo.nombre.toUpperCase();
-      if (normalizedNumeroDocumento.startsWith(tipoNombre)) {
-        id_tipo_documento = tipo.id;
-        updatedNumeroDocumento = normalizedNumeroDocumento.substring(tipoNombre.length).trim();
-        break;
-      }
-    }
-
-    // Formatear la fecha de creación para Lima o usar la fecha actual
-    const formattedDate = formatDateForLima(fecha_creacion || new Date());
-
-    // Create a new expediente if the cut does not exist
-    const nuevoExpediente = await Expediente.create({
-      cut: normalizedCut,
-      numero_documento: updatedNumeroDocumento,
-      id_tipo_documento,
-      fecha_creacion: formattedDate,
-      ...normalizedData
+    const nuevo = await Expediente.create({
+      ...datos,
+      feccrea: convertirFechaSisged(req.body.feccrea),
+      solfec: convertirFechaSisged(req.body.solfec),
+      solhor: req.body.solhor || null,
+      estado: true,
+      id_usuario_creador: req.user.id,
+      id_usuario_modificador: req.user.id,
     });
 
-    res.status(201).json(nuevoExpediente);
+    res.status(201).json(nuevo);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -176,13 +123,15 @@ exports.createExpediente = async (req, res) => {
 
 exports.updateExpediente = async (req, res) => {
   try {
-    const normalizedData = normalizeExpedienteData(req.body);
-    const [updated] = await Expediente.update(normalizedData, {
-      where: { id: req.params.id }
-    });
+    const datos = normalizeExpedienteData(req.body);
+    if (req.body.feccrea !== undefined) datos.feccrea = convertirFechaSisged(req.body.feccrea);
+    if (req.body.solfec !== undefined) datos.solfec = convertirFechaSisged(req.body.solfec);
+    if (req.body.solhor !== undefined) datos.solhor = req.body.solhor || null;
+    datos.id_usuario_modificador = req.user.id;
+
+    const [updated] = await Expediente.update(datos, { where: { id: req.params.id } });
     if (updated) {
-      const updatedExpediente = await Expediente.findByPk(req.params.id);
-      res.json(updatedExpediente);
+      res.json(await Expediente.findByPk(req.params.id, { include: incluirUsuarios }));
     } else {
       res.status(404).json({ message: 'Expediente no encontrado' });
     }
@@ -193,9 +142,7 @@ exports.updateExpediente = async (req, res) => {
 
 exports.deleteExpediente = async (req, res) => {
   try {
-    const deleted = await Expediente.destroy({
-      where: { id: req.params.id }
-    });
+    const deleted = await Expediente.destroy({ where: { id: req.params.id } });
     if (deleted) {
       res.json({ message: 'Expediente eliminado' });
     } else {
@@ -208,16 +155,12 @@ exports.deleteExpediente = async (req, res) => {
 
 exports.getUniqueProcedimientos = async (req, res) => {
   try {
-    // Obtener todos los tipos de procedimientos únicos
     const procedimientos = await Expediente.findAll({
-      attributes: [[sequelize.fn('DISTINCT', sequelize.col('tipo_procedimiento')), 'tipo_procedimiento']],
-      order: [['tipo_procedimiento', 'ASC']]
+      attributes: [[sequelize.fn('DISTINCT', sequelize.col('proced')), 'proced']],
+      where: { proced: { [Op.ne]: null } },
+      order: [['proced', 'ASC']],
     });
-
-    // Extraer solo los nombres de los procedimientos
-    const uniqueProcedimientos = procedimientos.map(proc => proc.tipo_procedimiento);
-
-    res.json(uniqueProcedimientos);
+    res.json(procedimientos.map((p) => p.proced));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -226,44 +169,22 @@ exports.getUniqueProcedimientos = async (req, res) => {
 exports.getDocumentosRelacionados = async (req, res) => {
   try {
     const expedienteId = req.params.id;
-    const numero_documento = req.query.numero_documento;
-    const id_tipo_documento = req.query.id_tipo_documento;
-    
-    // Primero obtenemos el expediente para tener sus datos
-    const expediente = await Expediente.findByPk(expedienteId, {
-      include: [{
-        model: TipoDocumento,
-        as: 'TipoDocumento'
-      }]
-    });
+    const { numero_documento, id_tipo_documento } = req.query;
 
+    const expediente = await Expediente.findByPk(expedienteId);
     if (!expediente) {
       return res.status(404).json({ message: 'Expediente no encontrado' });
     }
 
-    // Buscamos documentos que coincidan con los criterios
-    const documentosRelacionados = await Documento.findOne({
+    const documentoRelacionado = await Documento.findOne({
       where: {
-        [Op.and]: [
-          // Documentos que pertenecen directamente al expediente
-          { id_expediente: expedienteId },
-          
-          // Documentos con el mismo número y tipo de documento
-          {
-            [Op.and]: [
-              { numero_documento: numero_documento  },
-              { id_tipo_documento: id_tipo_documento  }
-            ]
-          }
-        ]
+        id_expediente: expedienteId,
+        numero_documento,
+        id_tipo_documento,
       },
-      include: [{
-        model: TipoDocumento,
-        as: 'TipoDocumento'
-      }]
     });
 
-    res.json(documentosRelacionados);
+    res.json(documentoRelacionado);
   } catch (error) {
     console.error('Error al buscar documentos relacionados:', error);
     res.status(500).json({ message: error.message });
@@ -273,59 +194,32 @@ exports.getDocumentosRelacionados = async (req, res) => {
 exports.cambiarEstadoExpediente = async (req, res) => {
   try {
     const { id } = req.params;
-    const { estado } = req.body; // Suponiendo que el nuevo estado se envía en el cuerpo de la solicitud
+    const estado = req.body.estado === true || req.body.estado === 'true' || req.body.estado === 1;
 
-    if (estado === false) {
-      // Validar si existen documentos que no están en el estado "TERMINADO"
-      const documentosNoTerminados = await Documento.findAll({
-        where: {
-          id_expediente: id,
-          estado: { [Op.ne]: 'TERMINADO' }
-        }
+    if (!estado) {
+      const documentosNoTerminados = await Documento.count({
+        where: { id_expediente: id, estado: { [Op.ne]: 'TERMINADO' } },
       });
-
-      // Si hay documentos que no están terminados, no permitir el cambio de estado
-      if (documentosNoTerminados.length > 0) {
-        res.json({
+      if (documentosNoTerminados > 0) {
+        return res.json({
           message: 'expediente no puede ser cambiado a estado "false" porque hay documentos no terminados',
-          expediente: id
+          expediente: id,
         });
-      }else{
-        // Actualizar el estado del expediente
-    const [updated] = await Expediente.update({ estado }, {
-      where: { id }
-    });
-
-    if (updated) {
-      const updatedExpediente = await Expediente.findByPk(id);
-      res.json({
-        message: 'Estado del expediente actualizado exitosamente',
-        expediente: updatedExpediente
-      });
-    } else {
-      res.status(404).json({ message: 'Expediente no encontrado' });
-    }
-
       }
+    }
 
-    }else{
-      // Actualizar el estado del expediente
-    const [updated] = await Expediente.update({ estado }, {
-      where: { id }
+    const [updated] = await Expediente.update(
+      { estado, id_usuario_modificador: req.user.id },
+      { where: { id } }
+    );
+    if (!updated) {
+      return res.status(404).json({ message: 'Expediente no encontrado' });
+    }
+
+    res.json({
+      message: 'Estado del expediente actualizado exitosamente',
+      expediente: await Expediente.findByPk(id, { include: incluirUsuarios }),
     });
-
-    if (updated) {
-      const updatedExpediente = await Expediente.findByPk(id);
-      res.json({
-        message: 'Estado del expediente actualizado exitosamente',
-        expediente: updatedExpediente
-      });
-    } else {
-      res.status(404).json({ message: 'Expediente no encontrado' });
-    }
-    }
-
-    
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

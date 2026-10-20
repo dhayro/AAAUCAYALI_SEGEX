@@ -1,7 +1,6 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 const Usuario = require("./Usuario");
-const TipoDocumento = require("./TipoDocumento");
 
 const Expediente = sequelize.define(
   "Expediente",
@@ -11,39 +10,71 @@ const Expediente = sequelize.define(
       primaryKey: true,
       autoIncrement: true,
     },
+    idoc: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      unique: true,
+    },
     cut: {
       type: DataTypes.STRING(50),
       allowNull: false,
       unique: true,
     },
+    origen: {
+      type: DataTypes.STRING(20),
+    },
+    destip: {
+      type: DataTypes.STRING(100),
+    },
     estupa: {
-      type: DataTypes.STRING(50),
+      type: DataTypes.STRING(20),
     },
-    tipo_procedimiento: {
-      type: DataTypes.STRING(100),
-    },
-    periodo: {
-      type: DataTypes.INTEGER,
-    },
-    numero_documento: {
-      type: DataTypes.STRING(100),
+    proced: {
+      type: DataTypes.TEXT,
     },
     asunto: {
       type: DataTypes.TEXT,
     },
-    remitente: {
-      type: DataTypes.STRING(100),
+    refe: {
+      type: DataTypes.TEXT,
     },
-    fecha_cierre: {
+    fol: {
+      type: DataTypes.INTEGER,
+    },
+    flgcut: {
+      type: DataTypes.INTEGER,
+    },
+    destinos: {
+      type: DataTypes.TEXT,
+    },
+    ndoc: {
+      type: DataTypes.STRING(255),
+    },
+    feccrea: {
       type: DataTypes.DATE,
     },
-    fecha_ultima_respuesta: {
-      type: DataTypes.DATE,
+    solfec: {
+      type: DataTypes.DATEONLY,
+    },
+    solhor: {
+      type: DataTypes.TIME,
+    },
+    usurem: {
+      type: DataTypes.TEXT,
+    },
+    ofirem: {
+      type: DataTypes.TEXT,
+    },
+    flgarc: {
+      type: DataTypes.INTEGER,
+    },
+    tema: {
+      type: DataTypes.TEXT,
     },
     estado: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
-    }
+    },
   },
   {
     tableName: "expedientes",
@@ -53,7 +84,6 @@ const Expediente = sequelize.define(
   }
 );
 
-Expediente.belongsTo(TipoDocumento, { foreignKey: "id_tipo_documento" });
 Expediente.belongsTo(Usuario, {
   as: "creador",
   foreignKey: "id_usuario_creador",
