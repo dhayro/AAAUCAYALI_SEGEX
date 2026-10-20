@@ -146,6 +146,7 @@ export default function AsignacionExpediente() {
   const [cutCargando, setCutCargando] = useState(false);
   const [cutError, setCutError] = useState("");
   const [cutOrigen, setCutOrigen] = useState("");
+  const [copiado, setCopiado] = useState(false);
 
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [filters, setFilters] = useState({ cut: "" });
@@ -333,6 +334,18 @@ export default function AsignacionExpediente() {
 
   const cerrarExpediente = () => {
     setCutAbierto(null);
+    setCopiado(false);
+  };
+
+  const copiarCut = async () => {
+    if (!cutAbierto) return;
+    try {
+      await navigator.clipboard.writeText(cutAbierto);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 1500);
+    } catch {
+      toast.error("No se pudo copiar el CUT");
+    }
   };
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -529,54 +542,67 @@ export default function AsignacionExpediente() {
 
         {/* Modal expediente por CUT */}
         {cutAbierto && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
-            <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-gray-800">
-              <div className="relative border-b bg-gradient-to-r from-blue-600 to-blue-500 p-6 text-white dark:border-gray-700">
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900/60 p-4 backdrop-blur-sm">
+            <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-gray-800">
+              <div className="relative bg-gradient-to-br from-brand-500 via-brand-600 to-brand-700 px-7 pb-7 pt-6 text-white">
                 <button
                   onClick={cerrarExpediente}
-                  className="absolute right-4 top-4 rounded-full p-1 text-white/80 hover:bg-white/20 hover:text-white"
+                  className="absolute right-5 top-5 rounded-full bg-white/10 p-1.5 text-white/90 transition hover:bg-white/25"
                 >
-                  <CloseIcon className="h-6 w-6" />
+                  <CloseIcon className="h-5 w-5" />
                 </button>
-                <p className="text-xs font-semibold uppercase tracking-wider text-blue-100">Expediente</p>
-                <h2 className="mt-1 text-2xl font-bold">{cutAbierto}</h2>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70">
+                  Expediente
+                </p>
+                <div className="mt-1 flex flex-wrap items-center gap-3">
+                  <h2 className="text-3xl font-bold tracking-tight">{cutAbierto}</h2>
+                  <button
+                    onClick={copiarCut}
+                    className="rounded-lg bg-white/15 px-3 py-1 text-xs font-medium transition hover:bg-white/25"
+                  >
+                    {copiado ? "Copiado" : "Copiar CUT"}
+                  </button>
+                </div>
                 {expedienteCut && (
-                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                  <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
                     <span
                       className={`rounded-full px-3 py-1 font-bold ${
                         expedienteCut.estupa === "TUPA"
-                          ? "bg-white text-blue-700"
-                          : "bg-blue-900/40 text-white"
+                          ? "bg-white text-brand-700"
+                          : "bg-white/15 text-white"
                       }`}
                     >
                       {expedienteCut.estupa === "TUPA" ? "TUPA" : "NO TUPA"}
                     </span>
                     {expedienteCut.origen && (
-                      <span className="rounded-full bg-white/20 px-3 py-1">
+                      <span className="rounded-full bg-white/15 px-3 py-1">
                         Origen {expedienteCut.origen}
                       </span>
                     )}
-                    {expedienteCut.fecha_creacion && (
-                      <span className="rounded-full bg-white/20 px-3 py-1">
-                        Registrado {formatFecha(expedienteCut.fecha_creacion)}
+                    {expedienteCut.feccrea && (
+                      <span className="rounded-full bg-white/15 px-3 py-1">
+                        Creado {formatFechaHora(expedienteCut.feccrea)}
                       </span>
                     )}
-                    <span className="ml-auto text-blue-100">
-                      {cutOrigen === "SISGED" ? "Traído de SISGED y guardado" : "Desde tu tabla"}
-                    </span>
                   </div>
                 )}
+                <p className="mt-4 text-[11px] text-white/70">
+                  {cutOrigen === "SISGED"
+                    ? "Traído de SISGED y guardado en tu tabla"
+                    : "Consultado desde tu tabla"}
+                </p>
               </div>
 
               <div className="overflow-y-auto bg-gray-50 p-6 dark:bg-gray-900/40">
                 {cutCargando && (
-                  <div className="p-12 text-center text-gray-500">
-                    <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
-                    <p className="mt-4">Consultando expediente...</p>
+                  <div className="grid animate-pulse grid-cols-1 gap-4 md:grid-cols-2">
+                    {[0, 1, 2, 3].map((i) => (
+                      <div key={i} className="h-40 rounded-2xl bg-white shadow-sm dark:bg-gray-800"></div>
+                    ))}
                   </div>
                 )}
                 {!cutCargando && cutError && (
-                  <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200">
+                  <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200">
                     {cutError}
                   </div>
                 )}
@@ -585,25 +611,38 @@ export default function AsignacionExpediente() {
                     {SECCIONES_EXPEDIENTE.map((seccion) => (
                       <section
                         key={seccion.titulo}
-                        className={`rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800 ${
+                        className={`rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 ${
                           seccion.campos.some((c) => c.formato === "largo") ? "md:col-span-2" : ""
                         }`}
                       >
-                        <h3 className="mb-4 text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                        <h3 className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                          <span className="h-2 w-2 rounded-full bg-brand-500"></span>
                           {seccion.titulo}
                         </h3>
-                        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                          {seccion.campos.map((campo) => (
-                            <div
-                              key={campo.clave}
-                              className={campo.formato === "largo" ? "sm:col-span-2" : ""}
-                            >
-                              <dt className="text-xs text-gray-500 dark:text-gray-400">{campo.etiqueta}</dt>
-                              <dd className="mt-1 whitespace-pre-wrap break-words text-sm font-medium text-gray-900 dark:text-white">
-                                {valorCampo(expedienteCut[campo.clave], campo.formato)}
-                              </dd>
-                            </div>
-                          ))}
+                        <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          {seccion.campos.map((campo) => {
+                            const valor = valorCampo(expedienteCut[campo.clave], campo.formato);
+                            const esLargo = campo.formato === "largo";
+                            return (
+                              <div
+                                key={campo.clave}
+                                className={`rounded-xl bg-gray-50 px-4 py-3 dark:bg-gray-700/50 ${
+                                  esLargo ? "sm:col-span-2 border-l-4 border-brand-500" : ""
+                                }`}
+                              >
+                                <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                  {campo.etiqueta}
+                                </dt>
+                                <dd
+                                  className={`mt-1 whitespace-pre-wrap break-words text-gray-900 dark:text-white ${
+                                    esLargo ? "text-sm leading-relaxed" : "text-sm font-semibold"
+                                  }`}
+                                >
+                                  {valor}
+                                </dd>
+                              </div>
+                            );
+                          })}
                         </dl>
                       </section>
                     ))}
