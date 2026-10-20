@@ -401,6 +401,17 @@ exports.verificarUsuarioExistente = async (req, res) => {
 exports.obtenerUsuariosParaSelect = async (req, res) => {
   try {
     // Obtener solo los campos necesarios para un select
+    const { filtro, limit } = req.query;
+    const where = { estado: true }; // Solo usuarios activos
+    if (filtro) {
+      const termino = `%${String(filtro).trim()}%`;
+      where[Op.or] = [
+        { nombre: { [Op.like]: termino } },
+        { apellido: { [Op.like]: termino } },
+        { usuario: { [Op.like]: termino } },
+      ];
+    }
+
     const usuarios = await Usuario.findAll({
       attributes: ['id', 'nombre', 'apellido', 'usuario', 'perfil'],
       include: [
@@ -409,8 +420,9 @@ exports.obtenerUsuariosParaSelect = async (req, res) => {
           attributes: ['id', 'nombre']
         }
       ],
-      where: { estado: true }, // Solo usuarios activos
-      order: [['nombre', 'ASC']]
+      where,
+      order: [['nombre', 'ASC']],
+      limit: parseInt(limit, 10) || undefined,
     });
 
     // Formatear los datos para un select (id y nombre completo)

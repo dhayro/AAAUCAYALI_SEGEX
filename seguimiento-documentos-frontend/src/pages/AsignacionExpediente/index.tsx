@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import DatePickerLima from "@/components/form/DatePickerLima";
+import SearchableSelect from "@/components/form/SearchableSelect";
 import api from "@/utils/api";
 import { PencilIcon, TrashBinIcon, PlusIcon, CloseIcon } from "@/icons";
 
@@ -46,7 +47,7 @@ const hoyLima = () =>
 
 const getEmptyForm = () => ({
   cut: "",
-  id_usuario: "",
+  id_usuario: "" as number | "",
   fecha_asignacion: hoyLima(),
   plazo_atencion: "",
   observacion: "",
@@ -62,9 +63,6 @@ const formatFecha = (fecha?: string | null) => {
 const nombreUsuario = (u?: UsuarioResumen | null) =>
   u ? `${u.nombre} ${u.apellido}` : "—";
 
-const selectClass =
-  "w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700";
-
 export default function AsignacionExpediente() {
   const [asignaciones, setAsignaciones] = useState<Asignacion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,6 +70,8 @@ export default function AsignacionExpediente() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState(getEmptyForm);
   const [usuarios, setUsuarios] = useState<UsuarioSelect[]>([]);
+  const [loadingUsuarios, setLoadingUsuarios] = useState(false);
+  const [selectedUsuarioName, setSelectedUsuarioName] = useState("");
 
   const [prorrogaTarget, setProrrogaTarget] = useState<Asignacion | null>(null);
   const [prorrogaData, setProrrogaData] = useState({ plazo: "", fecha: "" });
@@ -105,16 +105,32 @@ export default function AsignacionExpediente() {
     fetchAsignaciones();
   }, [fetchAsignaciones]);
 
+  const fetchUsuarios = useCallback(async (filtro = "") => {
+    setLoadingUsuarios(true);
+    try {
+      const params: any = { limit: 10 };
+      if (filtro) params.filtro = filtro;
+      const res = await api.get("/usuarios/select", { params });
+      setUsuarios(Array.isArray(res.data) ? res.data : []);
+    } catch (error) {
+      console.error("Error cargando usuarios:", error);
+    } finally {
+      setLoadingUsuarios(false);
+    }
+  }, []);
+
   useEffect(() => {
-    if (!showModal) return;
-    api
-      .get("/usuarios/select")
-      .then((res) => setUsuarios(Array.isArray(res.data) ? res.data : []))
-      .catch((error) => console.error("Error cargando usuarios:", error));
-  }, [showModal]);
+    if (showModal) fetchUsuarios();
+  }, [showModal, fetchUsuarios]);
+
+  const opcionesUsuarios = usuarios.map((u) => ({
+    id: u.id,
+    nombre: `${u.nombre} (${u.usuario})`,
+  }));
 
   const handleOpenModal = () => {
     setFormData(getEmptyForm());
+    setSelectedUsuarioName("");
     setEditingId(null);
     setShowModal(true);
   };
@@ -126,12 +142,17 @@ export default function AsignacionExpediente() {
   const handleEdit = (asignacion: Asignacion) => {
     setFormData({
       cut: asignacion.cut,
-      id_usuario: String(asignacion.id_usuario),
+      id_usuario: asignacion.id_usuario,
       fecha_asignacion: asignacion.fecha_asignacion.slice(0, 10),
       plazo_atencion: String(asignacion.plazo_atencion),
       observacion: asignacion.observacion || "",
       numero_orden: asignacion.numero_orden || "",
     });
+    setSelectedUsuarioName(
+      asignacion.asignado
+        ? `${asignacion.asignado.nombre} ${asignacion.asignado.apellido} (${asignacion.asignado.usuario})`
+        : ""
+    );
     setEditingId(asignacion.id);
     setShowModal(true);
   };
@@ -288,19 +309,15 @@ export default function AsignacionExpediente() {
                 </div>
                 <div>
                   <Label>Usuario asignado *</Label>
-                  <select
+                  <SearchableSelect
                     value={formData.id_usuario}
-                    onChange={(e) => setFormData({ ...formData, id_usuario: e.target.value })}
-                    className={selectClass}
-                  >
-                    <option value="">-- Seleccionar --</option>
-                    {usuarios.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.nombre}
-                        {u.cargo ? ` (${u.cargo})` : ""}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(value) => setFormData({ ...formData, id_usuario: value as number })}
+                    options={opcionesUsuarios}
+                    onSearch={(term) => fetchUsuarios(term)}
+                    isLoading={loadingUsuarios}
+                    placeholder="Buscar por nombre o usuario..."
+                    selectedLabel={selectedUsuarioName}
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <DatePickerLima
