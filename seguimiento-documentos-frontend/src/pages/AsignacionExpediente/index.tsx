@@ -125,24 +125,31 @@ const valorCampo = (valor: any, formato: FormatoCampo = "texto") => {
   return String(valor);
 };
 
+type TipoAdjunto = "pdf" | "word" | "excel" | "url" | "otro";
+
 type AdjuntoSisged = {
   id: string;
   nombre: string;
   extension: string;
   isUrl: boolean;
-  icono: string;
+  tipo: TipoAdjunto;
 };
 
-const iconoAdjunto = (nombre: string) => {
-  if (nombre.startsWith("http://") || nombre.startsWith("https://")) return "🔗";
+const ESTILO_ADJUNTO: Record<TipoAdjunto, { etiqueta: string; clases: string }> = {
+  pdf: { etiqueta: "PDF", clases: "bg-red-500" },
+  word: { etiqueta: "DOC", clases: "bg-blue-600" },
+  excel: { etiqueta: "XLS", clases: "bg-emerald-600" },
+  url: { etiqueta: "LINK", clases: "bg-violet-600" },
+  otro: { etiqueta: "ARCH", clases: "bg-gray-400" },
+};
+
+const tipoAdjunto = (nombre: string): TipoAdjunto => {
+  if (nombre.startsWith("http://") || nombre.startsWith("https://")) return "url";
   const extension = nombre.split(".").pop()?.toLowerCase() || "";
-  if (extension === "pdf") return "📕";
-  if (["doc", "docx"].includes(extension)) return "📝";
-  if (["xls", "xlsx"].includes(extension)) return "📊";
-  if (["ppt", "pptx"].includes(extension)) return "🎯";
-  if (["jpg", "jpeg", "png", "gif"].includes(extension)) return "🖼️";
-  if (["zip", "rar", "7z"].includes(extension)) return "🗜️";
-  return "📎";
+  if (extension === "pdf") return "pdf";
+  if (["doc", "docx"].includes(extension)) return "word";
+  if (["xls", "xlsx", "csv"].includes(extension)) return "excel";
+  return "otro";
 };
 
 // Formato SISGED: ID"NOMBRE"...  separado por saltos de línea
@@ -158,7 +165,7 @@ const parseAdjuntos = (texto?: string | null): AdjuntoSisged[] => {
       const nombre = coincidencia[2];
       const isUrl = nombre.startsWith("http://") || nombre.startsWith("https://");
       const extension = isUrl ? "url" : nombre.split(".").pop()?.toLowerCase() || "";
-      return { id: coincidencia[1], nombre, extension, isUrl, icono: iconoAdjunto(nombre) };
+      return { id: coincidencia[1], nombre, extension, isUrl, tipo: tipoAdjunto(nombre) };
     })
     .filter((a): a is AdjuntoSisged => a !== null);
 };
@@ -867,10 +874,10 @@ export default function AsignacionExpediente() {
                                   <button
                                     key={adj.id}
                                     onClick={() => verAdjunto(adj, d)}
-                                    title={adj.isUrl ? `Enlace: ${adj.nombre}` : `${adj.nombre} (${adj.extension.toUpperCase()})`}
-                                    className="text-base transition hover:scale-125"
+                                    title={adj.isUrl ? `Enlace: ${adj.nombre}` : adj.nombre}
+                                    className={`inline-flex h-6 min-w-[2.5rem] items-center justify-center rounded-md px-1.5 text-[10px] font-bold tracking-wide text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow ${ESTILO_ADJUNTO[adj.tipo].clases}`}
                                   >
-                                    {adj.icono}
+                                    {ESTILO_ADJUNTO[adj.tipo].etiqueta}
                                   </button>
                                 ))}
                               </div>
