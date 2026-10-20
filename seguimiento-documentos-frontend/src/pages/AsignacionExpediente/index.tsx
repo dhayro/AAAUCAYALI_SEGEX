@@ -166,6 +166,12 @@ export default function AsignacionExpediente() {
   const [trazCargando, setTrazCargando] = useState(false);
   const [trazSincronizando, setTrazSincronizando] = useState(false);
   const [trazError, setTrazError] = useState("");
+  const [verDoc, setVerDoc] = useState<{
+    titulo: string;
+    url: string | null;
+    cargando: boolean;
+    error: string;
+  } | null>(null);
 
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [filters, setFilters] = useState({ cut: "" });
@@ -402,6 +408,31 @@ export default function AsignacionExpediente() {
       setTrazError(error.response?.data?.mensaje || "Error al cargar la trazabilidad");
     } finally {
       setTrazCargando(false);
+    }
+  };
+
+  const verDocumento = async (documento: any) => {
+    setVerDoc({ titulo: documento.ndoc || "Documento", url: null, cargando: true, error: "" });
+    try {
+      const res = await api.post("/sisged/sincronizar-con-parametros", {
+        params: {
+          ID_DOCUMENTO: documento.iddochij,
+          ID_USUARIO: 1,
+          ID_OFICINA: documento.idofi,
+          ID_PERFIL: 1,
+          FLG_TIPO: 1,
+          FLG_FIRMA: 1,
+          CODIGO_ADJUNTO: "-",
+        },
+        endpoint: "archivo",
+      });
+      setVerDoc((prev) => (prev ? { ...prev, url: res.data.pdfUrl, cargando: false } : prev));
+    } catch (error: any) {
+      setVerDoc((prev) =>
+        prev
+          ? { ...prev, cargando: false, error: error.response?.data?.error || "No se pudo obtener el archivo" }
+          : prev
+      );
     }
   };
 
@@ -750,6 +781,7 @@ export default function AsignacionExpediente() {
                         <th className="px-3 py-2 text-center">Folios</th>
                         <th className="px-3 py-2 text-start">Remitente</th>
                         <th className="px-3 py-2 text-start">Destino</th>
+                        <th className="px-3 py-2 text-center">Ver</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -772,10 +804,61 @@ export default function AsignacionExpediente() {
                           <td className="px-3 py-2 text-center">{d.fol ?? "—"}</td>
                           <td className="max-w-[12rem] px-3 py-2 text-gray-700 dark:text-gray-200">{d.remi || "—"}</td>
                           <td className="max-w-[12rem] px-3 py-2 text-gray-700 dark:text-gray-200">{d.destino || "—"}</td>
+                          <td className="px-3 py-2 text-center">
+                            <button
+                              onClick={() => verDocumento(d)}
+                              className="rounded-md border border-brand-600 px-2 py-0.5 text-[11px] font-semibold text-brand-600 hover:bg-brand-50 dark:border-brand-400 dark:text-brand-400 dark:hover:bg-gray-700"
+                            >
+                              Ver
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal visor de documento */}
+        {verDoc && (
+          <div className="fixed inset-0 z-[11000] flex items-center justify-center bg-gray-900/60 p-4">
+            <div className="flex h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-gray-800">
+              <div className="flex items-center gap-3 bg-brand-600 px-5 py-3 text-white">
+                <h2 className="min-w-0 flex-1 truncate text-sm font-bold">{verDoc.titulo}</h2>
+                {verDoc.url && (
+                  <a
+                    href={verDoc.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-md bg-white/15 px-2.5 py-1 text-[11px] font-medium hover:bg-white/25"
+                  >
+                    Abrir en nueva pestaña
+                  </a>
+                )}
+                <button
+                  onClick={() => setVerDoc(null)}
+                  className="rounded-full p-1 text-white/80 hover:bg-white/20 hover:text-white"
+                >
+                  <CloseIcon className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="flex flex-1 items-center justify-center bg-gray-100 dark:bg-gray-900">
+                {verDoc.cargando && (
+                  <div className="text-center text-sm text-gray-500">
+                    <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-brand-600 border-t-transparent"></div>
+                    <p className="mt-3">Obteniendo documento de SISGED...</p>
+                  </div>
+                )}
+                {!verDoc.cargando && verDoc.error && (
+                  <div className="m-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200">
+                    {verDoc.error}
+                  </div>
+                )}
+                {!verDoc.cargando && verDoc.url && (
+                  <iframe src={verDoc.url} title={verDoc.titulo} className="h-full w-full border-0 bg-white" />
                 )}
               </div>
             </div>
