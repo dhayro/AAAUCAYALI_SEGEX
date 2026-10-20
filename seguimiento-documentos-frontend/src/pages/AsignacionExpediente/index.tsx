@@ -211,6 +211,10 @@ export default function AsignacionExpediente() {
   const [trazCargando, setTrazCargando] = useState(false);
   const [trazSincronizando, setTrazSincronizando] = useState(false);
   const [trazError, setTrazError] = useState("");
+  const [movDoc, setMovDoc] = useState<{ titulo: string } | null>(null);
+  const [movRows, setMovRows] = useState<any[]>([]);
+  const [movCargando, setMovCargando] = useState(false);
+  const [movError, setMovError] = useState("");
   const [verDoc, setVerDoc] = useState<{
     titulo: string;
     url: string | null;
@@ -483,6 +487,25 @@ export default function AsignacionExpediente() {
       FLG_FIRMA: 1,
       CODIGO_ADJUNTO: "-",
     });
+  };
+
+  const verMovimientos = async (documento: any) => {
+    setMovDoc({ titulo: documento.ndoc || "Documento" });
+    setMovRows([]);
+    setMovError("");
+    setMovCargando(true);
+    try {
+      const res = await api.post("/sisged/sincronizar-con-parametros", {
+        params: { ID_DOCUMENTO: documento.iddocpad || documento.iddocanex || 0 },
+        endpoint: "movimientos",
+      });
+      if (!res.data.success) throw new Error("SISGED no devolvió movimientos");
+      setMovRows(Array.isArray(res.data.data) ? res.data.data.flat() : []);
+    } catch (error: any) {
+      setMovError(error.response?.data?.error || error.message || "No se pudieron obtener los movimientos");
+    } finally {
+      setMovCargando(false);
+    }
   };
 
   const verAdjunto = (adjunto: AdjuntoSisged, documento: any) => {
@@ -853,6 +876,7 @@ export default function AsignacionExpediente() {
                         <th className="px-3 py-2 text-center">Folios</th>
                         <th className="px-3 py-2 text-start">Remitente</th>
                         <th className="px-3 py-2 text-start">Destino</th>
+                        <th className="px-3 py-2 text-center">Movimientos</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -891,6 +915,14 @@ export default function AsignacionExpediente() {
                           <td className="px-3 py-2 text-center">{d.fol ?? "—"}</td>
                           <td className="max-w-[12rem] px-3 py-2 text-gray-700 dark:text-gray-200">{d.remi || "—"}</td>
                           <td className="max-w-[12rem] px-3 py-2 text-gray-700 dark:text-gray-200">{d.destino || "—"}</td>
+                          <td className="px-3 py-2 text-center">
+                            <button
+                              onClick={() => verMovimientos(d)}
+                              className="whitespace-nowrap rounded-md border border-brand-600 px-2 py-0.5 text-[11px] font-semibold text-brand-600 hover:bg-brand-50 dark:border-brand-400 dark:text-brand-400 dark:hover:bg-gray-700"
+                            >
+                              Movimientos
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -940,6 +972,83 @@ export default function AsignacionExpediente() {
                   <iframe src={verDoc.url} title={verDoc.titulo} className="h-full w-full border-0 bg-white" />
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal movimientos */}
+        {movDoc && (
+          <div className="fixed inset-0 z-[10500] flex items-center justify-center bg-gray-900/50 p-4">
+            <div className="flex max-h-[85vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-gray-800">
+              <div className="flex items-center gap-3 bg-brand-600 px-5 py-3 text-white">
+                <div className="flex min-w-0 items-baseline gap-3">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-white/70">Movimientos</span>
+                  <h2 className="truncate text-lg font-bold">{movDoc.titulo}</h2>
+                </div>
+                <button
+                  onClick={() => setMovDoc(null)}
+                  className="ml-auto rounded-full p-1 text-white/80 hover:bg-white/20 hover:text-white"
+                >
+                  <CloseIcon className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="overflow-auto">
+                {movCargando && (
+                  <div className="p-10 text-center text-sm text-gray-500">
+                    <div className="inline-block h-6 w-6 animate-spin rounded-full border-4 border-brand-600 border-t-transparent"></div>
+                    <p className="mt-3">Consultando movimientos en SISGED...</p>
+                  </div>
+                )}
+                {!movCargando && movError && (
+                  <div className="m-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200">
+                    {movError}
+                  </div>
+                )}
+                {!movCargando && !movError && movRows.length === 0 && (
+                  <div className="p-10 text-center text-sm text-gray-500">No hay movimientos disponibles para este documento.</div>
+                )}
+                {!movCargando && movRows.length > 0 && (
+                  <table className="w-full text-xs">
+                    <thead className="sticky top-0 bg-gray-50 text-[10px] uppercase tracking-wide text-gray-500 dark:bg-gray-700 dark:text-gray-300">
+                      <tr>
+                        <th className="px-3 py-2 text-center">N°</th>
+                        <th className="px-3 py-2 text-start">Oficina envía</th>
+                        <th className="px-3 py-2 text-center">Fecha envío</th>
+                        <th className="px-3 py-2 text-start">Oficina recibe</th>
+                        <th className="px-3 py-2 text-center">Fecha recepción</th>
+                        <th className="px-3 py-2 text-start">Acción</th>
+                        <th className="px-3 py-2 text-start">Documento</th>
+                        <th className="px-3 py-2 text-center">Estado</th>
+                        <th className="px-3 py-2 text-start">Comentario envía</th>
+                        <th className="px-3 py-2 text-start">Comentario recibe</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                      {movRows.map((m, index) => (
+                        <tr key={index} className="align-top hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                          <td className="px-3 py-2 text-center font-bold text-brand-600">{index + 1}</td>
+                          <td className="max-w-[10rem] px-3 py-2 text-gray-700 dark:text-gray-200">{m.DESC_OFICINA_ENVIA || "—"}</td>
+                          <td className="whitespace-nowrap px-3 py-2 text-center">{m.STR_FEC_INICIO || "—"}</td>
+                          <td className="max-w-[10rem] px-3 py-2 text-gray-700 dark:text-gray-200">{m.DESC_OFICINA_RECIBE || "—"}</td>
+                          <td className="whitespace-nowrap px-3 py-2 text-center">{m.STR_FEC_FIN || "—"}</td>
+                          <td className="px-3 py-2 font-semibold text-gray-900 dark:text-white">{m.MOVIMIENTO || "—"}</td>
+                          <td className="max-w-[12rem] px-3 py-2 text-gray-700 dark:text-gray-200">{m.NRO_DOCUMENTO || "—"}</td>
+                          <td className="px-3 py-2 text-center">{badgeEstado(m.ESTADO)}</td>
+                          <td className="max-w-[12rem] whitespace-pre-wrap px-3 py-2 text-gray-700 dark:text-gray-200">{m.COMENTARIO_ENVIA || "—"}</td>
+                          <td className="max-w-[12rem] whitespace-pre-wrap px-3 py-2 text-gray-700 dark:text-gray-200">{m.COMENTARIO_RECIBE || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+
+              {movRows.length > 0 && (
+                <div className="border-t bg-gray-50 px-5 py-2 text-xs text-gray-500 dark:border-gray-700 dark:bg-gray-900/40">
+                  {movRows.length} movimientos
+                </div>
+              )}
             </div>
           </div>
         )}
