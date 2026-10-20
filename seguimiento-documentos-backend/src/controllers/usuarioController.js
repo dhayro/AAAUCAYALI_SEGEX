@@ -402,7 +402,7 @@ exports.obtenerUsuariosParaSelect = async (req, res) => {
   try {
     // Obtener solo los campos necesarios para un select
     const { filtro, limit } = req.query;
-    const where = { estado: true }; // Solo usuarios activos
+    const where = { estado: true, usuario: { [Op.ne]: 'admin' } }; // Solo usuarios activos, sin el admin
     if (filtro) {
       const termino = `%${String(filtro).trim()}%`;
       where[Op.or] = [
