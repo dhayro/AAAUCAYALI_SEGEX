@@ -1,6 +1,7 @@
 const { Op } = require('sequelize');
 const AsignacionExpediente = require('../models/AsignacionExpediente');
 const Usuario = require('../models/Usuario');
+const Cargo = require('../models/Cargo');
 const { hoyLima, esFechaValida, sumarDiasCalendario } = require('../utils/fechas');
 
 const parseBoolean = (value) => value === true || value === 'true' || value === 1 || value === '1';
@@ -23,7 +24,13 @@ const parseFecha = (valor) => {
 };
 
 const includes = [
-  { model: Usuario, as: 'asignado', attributes: ['id', 'nombre', 'apellido', 'usuario'], required: false },
+  {
+    model: Usuario,
+    as: 'asignado',
+    attributes: ['id', 'nombre', 'apellido', 'usuario'],
+    include: [{ model: Cargo, attributes: ['id', 'nombre'] }],
+    required: false,
+  },
   { model: Usuario, as: 'creador', attributes: ['id', 'nombre', 'apellido', 'usuario'], required: false },
   { model: Usuario, as: 'modificador', attributes: ['id', 'nombre', 'apellido', 'usuario'], required: false },
 ];

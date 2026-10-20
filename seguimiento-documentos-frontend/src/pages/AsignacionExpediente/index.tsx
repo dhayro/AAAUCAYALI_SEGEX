@@ -34,8 +34,11 @@ interface Asignacion {
   fecha_vencimiento_prorroga?: string | null;
   observacion?: string | null;
   numero_orden?: string | null;
-  asignado?: UsuarioResumen | null;
+  asignado?: (UsuarioResumen & { Cargo?: { nombre: string } | null }) | null;
 }
+
+const etiquetaUsuario = (nombre: string, cargo?: string | null) =>
+  cargo ? `${nombre} (${cargo})` : nombre;
 
 const hoyLima = () =>
   new Intl.DateTimeFormat("en-CA", {
@@ -125,7 +128,7 @@ export default function AsignacionExpediente() {
 
   const opcionesUsuarios = usuarios.map((u) => ({
     id: u.id,
-    nombre: `${u.nombre} (${u.usuario})`,
+    nombre: etiquetaUsuario(u.nombre, u.cargo),
   }));
 
   const handleOpenModal = () => {
@@ -150,7 +153,10 @@ export default function AsignacionExpediente() {
     });
     setSelectedUsuarioName(
       asignacion.asignado
-        ? `${asignacion.asignado.nombre} ${asignacion.asignado.apellido} (${asignacion.asignado.usuario})`
+        ? etiquetaUsuario(
+            `${asignacion.asignado.nombre} ${asignacion.asignado.apellido}`,
+            asignacion.asignado.Cargo?.nombre
+          )
         : ""
     );
     setEditingId(asignacion.id);
