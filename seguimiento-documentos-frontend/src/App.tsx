@@ -25,6 +25,7 @@ import Usuarios from "./pages/Usuarios";
 import Areas from "./pages/Areas";
 import Cargos from "./pages/Cargos";
 import TiposDocumentos from "./pages/TiposDocumentos";
+import Procedimientos from "./pages/Procedimientos";
 import DocumentosNoAsignados from "./pages/DocumentosNoAsignados";
 import DocumentosProrroga from "./pages/DocumentosProrroga";
 import DocumentosRespuestas from "./pages/DocumentosRespuestas";
@@ -76,6 +77,7 @@ export default function App() {
             <Route path="/areas" element={<Areas />} />
             <Route path="/cargos" element={<Cargos />} />
             <Route path="/tipos-documentos" element={<TiposDocumentos />} />
+            <Route path="/procedimientos" element={<Procedimientos />} />
 
             {/* Others Page */}
             <Route path="/profile" element={<UserProfiles />} />

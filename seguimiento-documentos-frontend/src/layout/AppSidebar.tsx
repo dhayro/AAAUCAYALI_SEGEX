@@ -2,7 +2,6 @@ import { useSidebar } from "@/context/SidebarContext";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
 import {
-  BoxCubeIcon,
   ChevronDownIcon,
   GridIcon,
   HorizontaLDots,
@@ -87,28 +86,36 @@ const navItems: NavItem[] = [
     path: "/documentos-sin-asignar",
   },
   {
-    icon: <UserCircleIcon fontSize={24} />,
-    name: "Cargos",
-    key: "cargos",
-    path: "/cargos",
-  },
-  {
-    icon: <BoxCubeIcon fontSize={24} />,
-    name: "Áreas",
-    key: "areas",
-    path: "/areas",
-  },
-  {
     icon: <ListIcon fontSize={24} />,
-    name: "Tipos Documentos",
-    key: "tipos",
-    path: "/tipos-documentos",
-  },
-  {
-    icon: <UserCircleIcon fontSize={24} />,
-    name: "Usuarios",
-    key: "usuarios",
-    path: "/usuarios",
+    name: "Maestros",
+    key: "maestros",
+    subItems: [
+      {
+        name: "Cargos",
+        key: "cargos",
+        path: "/cargos",
+      },
+      {
+        name: "Áreas",
+        key: "areas",
+        path: "/areas",
+      },
+      {
+        name: "Tipos Documentos",
+        key: "tipos",
+        path: "/tipos-documentos",
+      },
+      {
+        name: "Procedimientos",
+        key: "procedimientos",
+        path: "/procedimientos",
+      },
+      {
+        name: "Usuarios",
+        key: "usuarios",
+        path: "/usuarios",
+      },
+    ],
   },
 ];
 
