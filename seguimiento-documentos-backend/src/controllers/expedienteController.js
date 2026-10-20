@@ -5,6 +5,7 @@ const Documento = require('../models/Documento');
 const Usuario = require('../models/Usuario');
 const { convertirFechaSisged } = require('../utils/fechas');
 const sisgedSyncService = require('../services/sisgedSyncService');
+const { listarTrazabilidad } = require('../services/trazabilidadService');
 
 const CAMPOS_TEXTO = ['cut', 'origen', 'destip', 'estupa', 'proced', 'asunto', 'refe', 'destinos', 'ndoc', 'usurem', 'ofirem', 'tema'];
 const CAMPOS_ENTERO = ['idoc', 'fol', 'flgcut', 'flgarc'];
@@ -99,6 +100,15 @@ exports.buscarPorCut = async (req, res) => {
       return res.status(500).json({ mensaje: 'No se pudo guardar el expediente obtenido de SISGED' });
     }
     res.json({ origen: 'SISGED', expediente: guardado });
+  } catch (error) {
+    res.status(500).json({ mensaje: error.message });
+  }
+};
+
+exports.getTrazabilidadPorCut = async (req, res) => {
+  try {
+    const documentos = await listarTrazabilidad(req.params.cut);
+    res.json({ total: documentos.length, documentos });
   } catch (error) {
     res.status(500).json({ mensaje: error.message });
   }

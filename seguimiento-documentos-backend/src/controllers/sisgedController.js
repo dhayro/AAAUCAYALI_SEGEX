@@ -1,6 +1,7 @@
 const SISGED_BASE_URL = 'https://sisgedpiloto.ana.gob.pe/apiRestSG/api/SISGED';
 const sisgedSyncService = require('../services/sisgedSyncService');
 const postmanUpdateService = require('../services/postmanUpdateService');
+const { guardarTrazabilidad } = require('../services/trazabilidadService');
 
 // Obtener token: primero de BD, luego de Postman
 async function obtenerTokenOptimizado() {
@@ -292,6 +293,10 @@ exports.sincronizarConParametros = async (req, res) => {
         pdfUrl: datos.pdfUrl
       });
     } else {
+      if (endpoint === 'trazabilidad') {
+        const guardados = await guardarTrazabilidad(params?.NRO_CUT, datos);
+        console.log('[SYNC-PARAMS] Trazabilidad guardada:', guardados, 'documentos');
+      }
       console.log('[SYNC-PARAMS] ✅ Completado:', datos?.length || 0, 'registros');
       res.status(200).json({
         success: true,

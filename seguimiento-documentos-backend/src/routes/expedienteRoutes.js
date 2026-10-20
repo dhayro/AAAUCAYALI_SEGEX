@@ -139,6 +139,7 @@ router.get('/',isSecretariaOrAbove, expedienteController.getAllExpedientes);
  *         description: Expediente no encontrado
  */
 router.get('/por-cut/:cut', authenticateToken, expedienteController.buscarPorCut);
+router.get('/por-cut/:cut/trazabilidad', authenticateToken, expedienteController.getTrazabilidadPorCut);
 router.get('/:id', expedienteController.getExpedienteById);
 
 /**

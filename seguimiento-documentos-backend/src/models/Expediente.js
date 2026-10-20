@@ -104,6 +104,10 @@ Expediente.vincularAsignaciones = async (expediente, transaction) => {
     { id_expediente: expediente.id },
     { where: { cut: expediente.cut }, transaction }
   );
+  await sequelize.models.DocumentoSisged.update(
+    { id_expediente: expediente.id },
+    { where: { cut: expediente.cut }, transaction }
+  );
 };
 
 Expediente.addHook("afterSave", (expediente, options) =>
