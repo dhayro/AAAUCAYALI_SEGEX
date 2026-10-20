@@ -592,9 +592,7 @@ export default function AsignacionExpediente() {
                     {SECCIONES_EXPEDIENTE.map((seccion) => (
                       <section
                         key={seccion.titulo}
-                        className={`rounded-xl bg-white p-3 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 ${
-                          seccion.campos.some((c) => c.formato === "largo") ? "md:col-span-2" : ""
-                        }`}
+                        className="h-full rounded-xl bg-white p-3 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700"
                       >
                         <h3 className="mb-2 text-[10px] font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
                           {seccion.titulo}
