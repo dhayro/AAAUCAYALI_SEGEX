@@ -125,6 +125,21 @@ const valorCampo = (valor: any, formato: FormatoCampo = "texto") => {
   return String(valor);
 };
 
+const badgeEstado = (estado?: string | null) => {
+  const valor = (estado || "").toUpperCase();
+  const clases =
+    valor === "ATENDIDO"
+      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+      : valor === "PENDIENTE"
+      ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100"
+      : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200";
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${clases}`}>
+      {valor || "—"}
+    </span>
+  );
+};
+
 const nombreUsuario = (u?: UsuarioResumen | null) =>
   u ? `${u.nombre} ${u.apellido}` : "—";
 
@@ -146,6 +161,11 @@ export default function AsignacionExpediente() {
   const [cutCargando, setCutCargando] = useState(false);
   const [cutError, setCutError] = useState("");
   const [copiado, setCopiado] = useState(false);
+  const [trazCut, setTrazCut] = useState<string | null>(null);
+  const [trazRows, setTrazRows] = useState<any[]>([]);
+  const [trazCargando, setTrazCargando] = useState(false);
+  const [trazSincronizando, setTrazSincronizando] = useState(false);
+  const [trazError, setTrazError] = useState("");
 
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [filters, setFilters] = useState({ cut: "" });
@@ -342,6 +362,46 @@ export default function AsignacionExpediente() {
       setTimeout(() => setCopiado(false), 1500);
     } catch {
       toast.error("No se pudo copiar el CUT");
+    }
+  };
+
+  const cargarTrazabilidad = async (cut: string) => {
+    const res = await api.get(`/expedientes/por-cut/${encodeURIComponent(cut)}/trazabilidad`);
+    return res.data.documentos || [];
+  };
+
+  const sincronizarTrazabilidad = async (cut: string) => {
+    setTrazSincronizando(true);
+    setTrazError("");
+    try {
+      await api.post("/sisged/sincronizar-con-parametros", {
+        params: { NRO_CUT: cut },
+        endpoint: "trazabilidad",
+      });
+      setTrazRows(await cargarTrazabilidad(cut));
+    } catch (error: any) {
+      setTrazError(error.response?.data?.error || error.response?.data?.mensaje || "No se pudo consultar SISGED");
+    } finally {
+      setTrazSincronizando(false);
+    }
+  };
+
+  const abrirTrazabilidad = async (cut: string) => {
+    setTrazCut(cut);
+    setTrazRows([]);
+    setTrazError("");
+    setTrazCargando(true);
+    try {
+      const guardados = await cargarTrazabilidad(cut);
+      setTrazRows(guardados);
+      setTrazCargando(false);
+      if (guardados.length === 0) {
+        await sincronizarTrazabilidad(cut);
+      }
+    } catch (error: any) {
+      setTrazError(error.response?.data?.mensaje || "Error al cargar la trazabilidad");
+    } finally {
+      setTrazCargando(false);
     }
   };
 
@@ -552,6 +612,12 @@ export default function AsignacionExpediente() {
                 >
                   {copiado ? "Copiado" : "Copiar"}
                 </button>
+                <button
+                  onClick={() => cutAbierto && abrirTrazabilidad(cutAbierto)}
+                  className="rounded-md bg-white px-2 py-0.5 text-[11px] font-semibold text-brand-700 hover:bg-white/90"
+                >
+                  Trazabilidad
+                </button>
                 {expedienteCut && (
                   <div className="flex items-center gap-2 text-[11px]">
                     <span
@@ -625,6 +691,91 @@ export default function AsignacionExpediente() {
                       </section>
                     ))}
                   </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal trazabilidad */}
+        {trazCut && (
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-gray-900/50 p-4">
+            <div className="flex max-h-[85vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-gray-800">
+              <div className="flex items-center gap-3 bg-brand-600 px-5 py-3 text-white">
+                <div className="flex items-baseline gap-3">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-white/70">Trazabilidad</span>
+                  <h2 className="text-lg font-bold">{trazCut}</h2>
+                  <span className="text-[11px] text-white/70">{trazRows.length} documentos</span>
+                </div>
+                <button
+                  onClick={() => sincronizarTrazabilidad(trazCut)}
+                  disabled={trazSincronizando || trazCargando}
+                  className="ml-auto rounded-md bg-white/15 px-2.5 py-1 text-[11px] font-medium hover:bg-white/25 disabled:opacity-50"
+                >
+                  {trazSincronizando ? "Actualizando..." : "Actualizar desde SISGED"}
+                </button>
+                <button
+                  onClick={() => setTrazCut(null)}
+                  className="rounded-full p-1 text-white/80 hover:bg-white/20 hover:text-white"
+                >
+                  <CloseIcon className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="overflow-auto">
+                {(trazCargando || trazSincronizando) && trazRows.length === 0 && (
+                  <div className="p-10 text-center text-sm text-gray-500">
+                    <div className="inline-block h-6 w-6 animate-spin rounded-full border-4 border-brand-600 border-t-transparent"></div>
+                    <p className="mt-3">Consultando trazabilidad en SISGED...</p>
+                  </div>
+                )}
+                {trazError && (
+                  <div className="m-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200">
+                    {trazError}
+                  </div>
+                )}
+                {!trazCargando && !trazSincronizando && !trazError && trazRows.length === 0 && (
+                  <div className="p-10 text-center text-sm text-gray-500">No hay documentos registrados para este CUT.</div>
+                )}
+                {trazRows.length > 0 && (
+                  <table className="w-full text-xs">
+                    <thead className="sticky top-0 bg-gray-50 text-[10px] uppercase tracking-wide text-gray-500 dark:bg-gray-700 dark:text-gray-300">
+                      <tr>
+                        <th className="px-3 py-2 text-start">N°</th>
+                        <th className="px-3 py-2 text-start">Documento</th>
+                        <th className="px-3 py-2 text-center">Adjunto</th>
+                        <th className="px-3 py-2 text-start">Asunto</th>
+                        <th className="px-3 py-2 text-start">Fecha creación</th>
+                        <th className="px-3 py-2 text-center">Estado</th>
+                        <th className="px-3 py-2 text-center">Folios</th>
+                        <th className="px-3 py-2 text-start">Remitente</th>
+                        <th className="px-3 py-2 text-start">Destino</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                      {trazRows.map((d, index) => (
+                        <tr key={d.id} className="align-top hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                          <td className="px-3 py-2 text-gray-500">{index + 1}</td>
+                          <td className="px-3 py-2 font-semibold text-gray-900 dark:text-white">{d.ndoc || "—"}</td>
+                          <td className="px-3 py-2 text-center">
+                            {d.adjunto ? (
+                              <span className="rounded bg-red-50 px-1.5 py-0.5 font-bold text-red-600 dark:bg-red-900/30 dark:text-red-300">
+                                {(d.ext || "PDF").replace(".", "").toUpperCase()}
+                              </span>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                          <td className="max-w-xs px-3 py-2 text-gray-700 dark:text-gray-200">{d.asunto || "—"}</td>
+                          <td className="whitespace-nowrap px-3 py-2">{formatFechaHora(d.stfecrea)}</td>
+                          <td className="px-3 py-2 text-center">{badgeEstado(d.estado)}</td>
+                          <td className="px-3 py-2 text-center">{d.fol ?? "—"}</td>
+                          <td className="max-w-[12rem] px-3 py-2 text-gray-700 dark:text-gray-200">{d.remi || "—"}</td>
+                          <td className="max-w-[12rem] px-3 py-2 text-gray-700 dark:text-gray-200">{d.destino || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 )}
               </div>
             </div>
