@@ -160,7 +160,9 @@ exports.updateExpediente = async (req, res) => {
 
     const [updated] = await Expediente.update(datos, { where: { id: req.params.id } });
     if (updated) {
-      res.json(await Expediente.findByPk(req.params.id, { include: incluirUsuarios }));
+      const expediente = await Expediente.findByPk(req.params.id, { include: incluirUsuarios });
+      await Expediente.vincularAsignaciones(expediente);
+      res.json(expediente);
     } else {
       res.status(404).json({ message: 'Expediente no encontrado' });
     }
@@ -171,6 +173,10 @@ exports.updateExpediente = async (req, res) => {
 
 exports.deleteExpediente = async (req, res) => {
   try {
+    await sequelize.models.AsignacionExpediente.update(
+      { id_expediente: null },
+      { where: { id_expediente: req.params.id } }
+    );
     const deleted = await Expediente.destroy({ where: { id: req.params.id } });
     if (deleted) {
       res.json({ message: 'Expediente eliminado' });

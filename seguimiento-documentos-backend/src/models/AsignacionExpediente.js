@@ -75,4 +75,13 @@ AsignacionExpediente.belongsTo(Usuario, { as: 'asignado', foreignKey: 'id_usuari
 AsignacionExpediente.belongsTo(Usuario, { as: 'creador', foreignKey: 'id_usuario_creador' });
 AsignacionExpediente.belongsTo(Usuario, { as: 'modificador', foreignKey: 'id_usuario_modificador' });
 
+AsignacionExpediente.addHook('beforeCreate', async (asignacion) => {
+  if (asignacion.id_expediente) return;
+  const expediente = await sequelize.models.Expediente.findOne({
+    where: { cut: asignacion.cut },
+    attributes: ['id'],
+  });
+  if (expediente) asignacion.id_expediente = expediente.id;
+});
+
 module.exports = AsignacionExpediente;

@@ -1,4 +1,4 @@
-const { DataTypes } = require("sequelize");
+const { DataTypes, Op } = require("sequelize");
 const sequelize = require("../config/database");
 const Usuario = require("./Usuario");
 
@@ -92,5 +92,20 @@ Expediente.belongsTo(Usuario, {
   as: "modificador",
   foreignKey: "id_usuario_modificador",
 });
+
+Expediente.vincularAsignaciones = async (expediente) => {
+  const AsignacionExpediente = sequelize.models.AsignacionExpediente;
+  if (!AsignacionExpediente || !expediente) return;
+  await AsignacionExpediente.update(
+    { id_expediente: null },
+    { where: { id_expediente: expediente.id, cut: { [Op.ne]: expediente.cut } } }
+  );
+  await AsignacionExpediente.update(
+    { id_expediente: expediente.id },
+    { where: { cut: expediente.cut } }
+  );
+};
+
+Expediente.addHook("afterSave", (expediente) => Expediente.vincularAsignaciones(expediente));
 
 module.exports = Expediente;
