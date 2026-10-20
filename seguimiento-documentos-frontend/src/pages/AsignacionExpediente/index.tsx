@@ -542,100 +542,83 @@ export default function AsignacionExpediente() {
 
         {/* Modal expediente por CUT */}
         {cutAbierto && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900/60 p-4 backdrop-blur-sm">
-            <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-gray-800">
-              <div className="relative bg-gradient-to-br from-brand-500 via-brand-600 to-brand-700 px-7 pb-7 pt-6 text-white">
-                <button
-                  onClick={cerrarExpediente}
-                  className="absolute right-5 top-5 rounded-full bg-white/10 p-1.5 text-white/90 transition hover:bg-white/25"
-                >
-                  <CloseIcon className="h-5 w-5" />
-                </button>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70">
-                  Expediente
-                </p>
-                <div className="mt-1 flex flex-wrap items-center gap-3">
-                  <h2 className="text-3xl font-bold tracking-tight">{cutAbierto}</h2>
-                  <button
-                    onClick={copiarCut}
-                    className="rounded-lg bg-white/15 px-3 py-1 text-xs font-medium transition hover:bg-white/25"
-                  >
-                    {copiado ? "Copiado" : "Copiar CUT"}
-                  </button>
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900/50 p-4">
+            <div className="flex max-h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-gray-800">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 bg-brand-600 px-5 py-3 text-white">
+                <div className="flex items-baseline gap-3">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-white/70">Expediente</span>
+                  <h2 className="text-lg font-bold">{cutAbierto}</h2>
                 </div>
+                <button
+                  onClick={copiarCut}
+                  className="rounded-md bg-white/15 px-2 py-0.5 text-[11px] font-medium hover:bg-white/25"
+                >
+                  {copiado ? "Copiado" : "Copiar"}
+                </button>
                 {expedienteCut && (
-                  <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
+                  <div className="flex items-center gap-2 text-[11px]">
                     <span
-                      className={`rounded-full px-3 py-1 font-bold ${
-                        expedienteCut.estupa === "TUPA"
-                          ? "bg-white text-brand-700"
-                          : "bg-white/15 text-white"
+                      className={`rounded-full px-2 py-0.5 font-bold ${
+                        expedienteCut.estupa === "TUPA" ? "bg-white text-brand-700" : "bg-white/15"
                       }`}
                     >
                       {expedienteCut.estupa === "TUPA" ? "TUPA" : "NO TUPA"}
                     </span>
                     {expedienteCut.origen && (
-                      <span className="rounded-full bg-white/15 px-3 py-1">
-                        Origen {expedienteCut.origen}
-                      </span>
-                    )}
-                    {expedienteCut.feccrea && (
-                      <span className="rounded-full bg-white/15 px-3 py-1">
-                        Creado {formatFechaHora(expedienteCut.feccrea)}
-                      </span>
+                      <span className="rounded-full bg-white/15 px-2 py-0.5">Origen {expedienteCut.origen}</span>
                     )}
                   </div>
                 )}
-                <p className="mt-4 text-[11px] text-white/70">
-                  {cutOrigen === "SISGED"
-                    ? "Traído de SISGED y guardado en tu tabla"
-                    : "Consultado desde tu tabla"}
-                </p>
+                <button
+                  onClick={cerrarExpediente}
+                  className="ml-auto rounded-full p-1 text-white/80 hover:bg-white/20 hover:text-white"
+                >
+                  <CloseIcon className="h-5 w-5" />
+                </button>
               </div>
 
-              <div className="overflow-y-auto bg-gray-50 p-6 dark:bg-gray-900/40">
+              <div className="overflow-y-auto bg-gray-50 p-3 dark:bg-gray-900/40">
                 {cutCargando && (
-                  <div className="grid animate-pulse grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="grid animate-pulse grid-cols-1 gap-3 md:grid-cols-2">
                     {[0, 1, 2, 3].map((i) => (
-                      <div key={i} className="h-40 rounded-2xl bg-white shadow-sm dark:bg-gray-800"></div>
+                      <div key={i} className="h-24 rounded-xl bg-white dark:bg-gray-800"></div>
                     ))}
                   </div>
                 )}
                 {!cutCargando && cutError && (
-                  <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200">
+                  <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200">
                     {cutError}
                   </div>
                 )}
                 {!cutCargando && expedienteCut && (
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                     {SECCIONES_EXPEDIENTE.map((seccion) => (
                       <section
                         key={seccion.titulo}
-                        className={`rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 ${
+                        className={`rounded-xl bg-white p-3 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 ${
                           seccion.campos.some((c) => c.formato === "largo") ? "md:col-span-2" : ""
                         }`}
                       >
-                        <h3 className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
-                          <span className="h-2 w-2 rounded-full bg-brand-500"></span>
+                        <h3 className="mb-2 text-[10px] font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
                           {seccion.titulo}
                         </h3>
-                        <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <dl className="grid grid-cols-2 gap-x-3 gap-y-2">
                           {seccion.campos.map((campo) => {
                             const valor = valorCampo(expedienteCut[campo.clave], campo.formato);
                             const esLargo = campo.formato === "largo";
                             return (
                               <div
                                 key={campo.clave}
-                                className={`rounded-xl bg-gray-50 px-4 py-3 dark:bg-gray-700/50 ${
-                                  esLargo ? "sm:col-span-2 border-l-4 border-brand-500" : ""
-                                }`}
+                                className={esLargo ? "col-span-2" : ""}
                               >
-                                <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                <dt className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                                   {campo.etiqueta}
                                 </dt>
                                 <dd
-                                  className={`mt-1 whitespace-pre-wrap break-words text-gray-900 dark:text-white ${
-                                    esLargo ? "text-sm leading-relaxed" : "text-sm font-semibold"
+                                  className={`whitespace-pre-wrap break-words text-gray-900 dark:text-white ${
+                                    esLargo
+                                      ? "border-l-2 border-brand-500 pl-2 text-xs leading-snug"
+                                      : "text-xs font-semibold"
                                   }`}
                                 >
                                   {valor}
