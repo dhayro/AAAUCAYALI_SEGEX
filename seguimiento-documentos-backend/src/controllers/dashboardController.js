@@ -104,18 +104,13 @@ exports.resumen = async (req, res) => {
       ? await AccionLlamada.count({ where: { estado: 'PENDIENTE', id_llamada: { [Op.in]: idsLlamadas } } })
       : 0;
 
-    // Las demás llamadas sin respuesta (plazo lejano o sin plazo) también se muestran, con menor prioridad.
-    const enAtencion = new Set([...llamadasVencidas, ...llamadasPorVencer].map((l) => l.id));
     const itemsLlamadas = [
       ...llamadasVencidas.map((l) => itemLlamada(l, 'LLAMADA_VENCIDA')),
       ...llamadasPorVencer.map((l) => itemLlamada(l, 'LLAMADA_POR_VENCER')),
-      ...llamadas
-        .filter((l) => !l.respondido && !enAtencion.has(l.id))
-        .map((l) => itemLlamada(l, 'LLAMADA_SIN_RESPUESTA')),
     ];
     const atencion = [...filas.filter((f) => f.motivo), ...itemsLlamadas]
       .sort((a, b) => PRIORIDAD_MOTIVO[a.motivo] - PRIORIDAD_MOTIVO[b.motivo] || (a.dias ?? 99999) - (b.dias ?? 99999))
-      .slice(0, 25)
+      .slice(0, 15)
       .map(({ id, cut, asignado, vence, dias, motivo }) => ({ id, cut, asignado, vence, dias, motivo }));
 
     res.json({
