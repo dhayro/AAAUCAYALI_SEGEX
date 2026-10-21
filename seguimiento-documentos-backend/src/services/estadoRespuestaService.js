@@ -65,8 +65,11 @@ const tiempoRespuestaHoras = (fechaAsignacion, ultimaRespuesta) => {
 };
 
 // Fecha y hora de Lima (UTC-5, sin horario de verano) con el mismo formato que el resto de la API.
-const aLima = (fecha) =>
-  fecha ? new Date(fecha.getTime() - 5 * 3600000).toISOString().replace('T', ' ').slice(0, 19) : null;
+const aLima = (valor) => {
+  if (!valor) return null;
+  const fecha = new Date(valor);
+  return new Date(fecha.getTime() - 5 * 3600000).toISOString().replace('T', ' ').slice(0, 19);
+};
 
 const compararFilas = (a, b) =>
   PRIORIDAD_ESTADO[a.estado] - PRIORIDAD_ESTADO[b.estado] ||
