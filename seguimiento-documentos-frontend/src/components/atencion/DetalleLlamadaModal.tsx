@@ -63,6 +63,7 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio }: Pr
     accion: () => Promise<unknown>;
   } | null>(null);
   const [procesandoConfirmar, setProcesandoConfirmar] = useState(false);
+  const [verAntecedentes, setVerAntecedentes] = useState(false);
   const [editandoArchivo, setEditandoArchivo] = useState<{ id: number; valor: string } | null>(null);
 
   const ejecutarConfirmacion = async () => {
@@ -546,23 +547,16 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio }: Pr
                   </section>
                 )}
 
-                <section className="space-y-3 rounded-xl bg-white p-4 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700">
+                <section className="flex items-center justify-between rounded-xl bg-white p-4 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
                     Antecedentes ({llamada.antecedentes?.length || 0})
                   </h3>
-                  <ol className="max-h-96 space-y-0 overflow-y-auto pr-2">
-                    {(llamada.antecedentes || []).map((h: any) => (
-                      <li key={h.id} className={`relative border-l-2 pb-4 pl-5 last:pb-0 ${colorUsuario(h.usuario?.id).borde}`}>
-                        <span className={`absolute -left-[7px] top-1 h-3 w-3 rounded-full ${colorUsuario(h.usuario?.id).etiqueta.split(" ")[0]}`} />
-                        <div className="text-xs text-gray-500">{formatFechaHora(h.fecha_registro)}</div>
-                        <div className="mt-0.5 font-semibold text-gray-900 dark:text-white">{TIPO_ANTECEDENTE[h.tipo] || h.tipo}</div>
-                        <div className="mt-0.5 whitespace-pre-wrap break-words text-sm text-gray-700 dark:text-gray-300">{h.detalle}</div>
-                        <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${colorUsuario(h.usuario?.id).etiqueta}`}>
-                          {nombre(h.usuario)}
-                        </span>
-                      </li>
-                    ))}
-                  </ol>
+                  <button
+                    onClick={() => setVerAntecedentes(true)}
+                    className="rounded border border-brand-600 px-3 py-1 text-xs font-semibold text-brand-600 hover:bg-brand-50 dark:border-brand-400 dark:text-brand-400 dark:hover:bg-gray-700"
+                  >
+                    Ver línea de tiempo
+                  </button>
                 </section>
               </>
             )}
@@ -581,6 +575,14 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio }: Pr
         onCancelar={() => setConfirmar(null)}
       />
 
+      {verAntecedentes && (
+        <AntecedentesModal
+          cut={llamada?.cut || ""}
+          antecedentes={llamada?.antecedentes || []}
+          onClose={() => setVerAntecedentes(false)}
+        />
+      )}
+
       {visor && (
         <VisorArchivoModal
           titulo={visor.titulo}
@@ -597,3 +599,36 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio }: Pr
   );
 }
 
+
+function AntecedentesModal({ cut, antecedentes, onClose }: { cut: string; antecedentes: any[]; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-gray-900/50 p-4">
+      <div className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-gray-800">
+        <div className="flex items-center gap-3 bg-brand-600 px-5 py-3 text-white">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-white/70">Antecedentes</span>
+          <h2 className="text-lg font-bold">{cut}</h2>
+          <span className="text-xs text-white/70">{antecedentes.length} eventos</span>
+          <button onClick={onClose} className="ml-auto rounded-full p-1 text-white/80 hover:bg-white/20 hover:text-white">
+            <CloseIcon className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="overflow-y-auto p-5">
+          {antecedentes.length === 0 && <div className="text-sm text-gray-500">Sin antecedentes registrados.</div>}
+          <ol className="space-y-0">
+            {antecedentes.map((h) => (
+              <li key={h.id} className={`relative border-l-2 pb-5 pl-5 last:pb-0 ${colorUsuario(h.usuario?.id).borde}`}>
+                <span className={`absolute -left-[7px] top-1 h-3 w-3 rounded-full ${colorUsuario(h.usuario?.id).etiqueta.split(" ")[0]}`} />
+                <div className="text-xs text-gray-500">{formatFechaHora(h.fecha_registro)}</div>
+                <div className="mt-0.5 font-semibold text-gray-900 dark:text-white">{TIPO_ANTECEDENTE[h.tipo] || h.tipo}</div>
+                <div className="mt-0.5 whitespace-pre-wrap break-words text-sm text-gray-700 dark:text-gray-300">{h.detalle}</div>
+                <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${colorUsuario(h.usuario?.id).etiqueta}`}>
+                  {nombre(h.usuario)}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
+    </div>
+  );
+}
