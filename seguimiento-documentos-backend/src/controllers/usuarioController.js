@@ -115,6 +115,18 @@ exports.consultarDni = async (req, res) => {
   try {
     const dni = String(req.params.dni || '').trim();
     if (!/^\d{8}$/.test(dni)) return res.status(400).json({ mensaje: 'El DNI debe tener 8 dígitos' });
+    // Primero la base local: si ya existe, no se consume la consulta a RENIEC.
+    const local = await Usuario.findOne({ where: { dni }, attributes: ['dni', 'nombre', 'apellido'] });
+    if (local) {
+      return res.json({
+        dni,
+        nombre: local.nombre,
+        apellido: local.apellido,
+        nombre_completo: `${local.nombre} ${local.apellido}`,
+        origen: 'LOCAL',
+      });
+    }
+
     const clave = process.env.DECOLECTA_API_KEY;
     if (!clave) return res.status(500).json({ mensaje: 'La consulta de RENIEC no está configurada' });
 
@@ -130,6 +142,7 @@ exports.consultarDni = async (req, res) => {
       nombre: datos.first_name || '',
       apellido: [datos.first_last_name, datos.second_last_name].filter(Boolean).join(' '),
       nombre_completo: datos.full_name || '',
+      origen: 'RENIEC',
     });
   } catch (error) {
     res.status(502).json({ mensaje: 'No se pudo consultar RENIEC' });
