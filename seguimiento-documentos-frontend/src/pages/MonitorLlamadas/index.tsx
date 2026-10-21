@@ -19,6 +19,7 @@ interface LlamadaMonitor {
   dias: number | null;
   responsable?: { id: number; nombre: string; apellido: string } | null;
   acciones_pendientes: number;
+  total_del_cut: number;
 }
 
 interface ResumenMonitor {
@@ -103,6 +104,11 @@ function TarjetaLlamada({
           <div className="truncate text-2xl font-bold text-gray-900 dark:text-white">{l.cut}</div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
+          {l.total_del_cut > 1 && (
+            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800 dark:bg-amber-900 dark:text-amber-100">
+              {l.total_del_cut} llamadas por este CUT
+            </span>
+          )}
           {nueva && (
             <span className="rounded-full bg-brand-600 px-3 py-1 text-xs font-bold text-white">Nueva</span>
           )}

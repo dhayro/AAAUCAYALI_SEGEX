@@ -8,6 +8,7 @@ import api from "@/utils/api";
 import { puedeGestionarAsignaciones } from "@/utils/sesion";
 import ExpedienteDetalleModal from "@/components/expedientes/ExpedienteDetalleModal";
 import { CloseIcon, SearchIcon } from "@/icons";
+import { formatFechaHora } from "@/components/expedientes/format";
 
 type AccionCatalogo = { id: number; nombre: string; requiere_archivo: boolean };
 type UsuarioSelect = { id: number; nombre: string; usuario: string; cargo?: string | null };
@@ -31,6 +32,7 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
   const [enviando, setEnviando] = useState(false);
   const [verCut, setVerCut] = useState<string | null>(null);
   const [seleccionadas, setSeleccionadas] = useState<Record<number, string>>({});
+  const [previas, setPrevias] = useState<any[]>([]);
   const [form, setForm] = useState({
     cut: "",
     fecha_llamada: ahoraLocal(),
@@ -41,6 +43,22 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
     respondido: false,
     id_responsable: "",
   });
+
+  // Busca llamadas anteriores del mismo CUT mientras se escribe.
+  useEffect(() => {
+    const cut = form.cut.trim();
+    if (cut.length < 5) {
+      setPrevias([]);
+      return;
+    }
+    const espera = setTimeout(() => {
+      api
+        .get(`/atenciones/llamadas/por-cut/${encodeURIComponent(cut)}`)
+        .then((res) => setPrevias(res.data || []))
+        .catch(() => setPrevias([]));
+    }, 400);
+    return () => clearTimeout(espera);
+  }, [form.cut]);
 
   useEffect(() => {
     api.get("/atenciones/acciones", { params: { solo_activas: "true" } })
@@ -136,6 +154,22 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
                   <SearchIcon className="h-5 w-5" />
                 </button>
               </div>
+              {previas.length > 0 && (
+                <div className="mt-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs dark:border-amber-700 dark:bg-amber-900/30">
+                  <div className="font-semibold text-amber-900 dark:text-amber-100">
+                    Este CUT ya tiene {previas.length} llamada{previas.length === 1 ? "" : "s"} registrada
+                    {previas.length === 1 ? "" : "s"}
+                  </div>
+                  <ul className="mt-1 space-y-1 text-amber-900 dark:text-amber-100">
+                    {previas.map((p) => (
+                      <li key={p.id}>
+                        {formatFechaHora(p.fecha_llamada)} · {p.respondido ? "Respondida" : "Sin respuesta"} ·{" "}
+                        {p.responsable ? `${p.responsable.nombre} ${p.responsable.apellido}` : "Sin responsable"} — {p.motivo}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
             <div>
               <Label>Fecha y hora de la llamada *</Label>

@@ -353,6 +353,21 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
                     <div className="text-xs text-gray-500">Motivo</div>
                     <div className="whitespace-pre-wrap">{llamada.motivo}</div>
                   </div>
+                  {(llamada.otras_del_cut || []).length > 0 && (
+                    <div className="md:col-span-3">
+                      <div className="text-xs text-gray-500">
+                        Otras llamadas de este CUT ({llamada.otras_del_cut.length})
+                      </div>
+                      <ul className="mt-1 space-y-1">
+                        {llamada.otras_del_cut.map((o: any) => (
+                          <li key={o.id} className="rounded-lg bg-amber-50 p-2 text-sm dark:bg-amber-900/30">
+                            <span className="font-semibold">{formatFechaHora(o.fecha_llamada)}</span> ·{" "}
+                            {o.respondido ? "Respondida" : "Sin respuesta"} · {nombre(o.responsable)} — {o.motivo}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                   <div>
                     <div className="text-xs text-gray-500">Atiende</div>
                     <div className="font-semibold">{nombre(llamada.responsable)}</div>

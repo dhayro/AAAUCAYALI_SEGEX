@@ -23,6 +23,7 @@ interface Llamada {
   respondido: boolean;
   responsable?: { id: number; nombre: string; apellido: string } | null;
   creador?: { id: number; nombre: string; apellido: string } | null;
+  total_del_cut?: number;
 }
 
 const nombre = (u?: { nombre: string; apellido: string } | null) => (u ? `${u.nombre} ${u.apellido}` : "—");
@@ -166,6 +167,11 @@ export default function Llamadas() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{l.cut}</span>
+                          {(l.total_del_cut ?? 1) > 1 && (
+                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800 dark:bg-amber-900 dark:text-amber-100">
+                              {l.total_del_cut} llamadas
+                            </span>
+                          )}
                           <button
                             onClick={() => setCutAbierto(l.cut)}
                             title="Ver expediente"
