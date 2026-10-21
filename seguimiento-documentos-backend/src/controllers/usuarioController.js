@@ -110,6 +110,33 @@ exports.obtenerTodosLosUsuarios = async (req, res) => {
   }
 };
 
+// Regla de contraseña: más de 6 caracteres, al menos una mayúscula y un número.
+const REGLA_PASSWORD = /^(?=.*[A-Z])(?=.*\d).{7,}$/;
+
+// Cambio de contraseña por el propio usuario: exige la contraseña actual.
+exports.cambiarMiPassword = async (req, res) => {
+  try {
+    const { actual, nueva, confirmar } = req.body;
+    const usuario = await Usuario.findByPk(req.user.id);
+    if (!usuario) return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+
+    const coincide = await bcrypt.compare(String(actual || ''), usuario.password);
+    if (!coincide) return res.status(400).json({ mensaje: 'La contraseña actual no es correcta' });
+    if (!REGLA_PASSWORD.test(String(nueva || ''))) {
+      return res.status(400).json({
+        mensaje: 'La contraseña debe tener más de 6 caracteres, al menos una mayúscula y al menos un número',
+      });
+    }
+    if (nueva !== confirmar) return res.status(400).json({ mensaje: 'La confirmación no coincide con la nueva contraseña' });
+
+    usuario.password = await bcrypt.hash(nueva, 10);
+    await usuario.save();
+    res.json({ mensaje: 'Contraseña actualizada correctamente' });
+  } catch (error) {
+    res.status(500).json({ mensaje: error.message });
+  }
+};
+
 // Consulta los nombres de una persona por su DNI en RENIEC (API de Decolecta).
 exports.consultarDni = async (req, res) => {
   try {

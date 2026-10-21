@@ -532,6 +532,7 @@ router.get('/', isAdmin, usuarioController.obtenerTodosLosUsuarios);
  *         description: Usuario no encontrado
  */
 router.get('/reniec/:dni', authenticateToken, isJefeOrAdmin, usuarioController.consultarDni);
+router.patch('/mi-password', authenticateToken, usuarioController.cambiarMiPassword);
 router.get('/:id', authenticateToken, usuarioController.obtenerUsuarioPorId);
 
 /**
