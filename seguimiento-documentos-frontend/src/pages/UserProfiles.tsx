@@ -37,6 +37,31 @@ const Dato = ({ titulo, valor }: { titulo: string; valor?: string | null }) => (
 export default function UserProfiles() {
   const [perfil, setPerfil] = useState<PerfilUsuario | null>(null);
   const [cargando, setCargando] = useState(true);
+  const [clave, setClave] = useState({ actual: "", nueva: "", confirmar: "" });
+  const [guardandoClave, setGuardandoClave] = useState(false);
+
+  const reglas = [
+    { texto: "Más de 6 caracteres", ok: clave.nueva.length >= 7 },
+    { texto: "Al menos una mayúscula", ok: /[A-Z]/.test(clave.nueva) },
+    { texto: "Al menos un número", ok: /\d/.test(clave.nueva) },
+    { texto: "La confirmación coincide", ok: clave.nueva !== "" && clave.nueva === clave.confirmar },
+  ];
+
+  const cambiarPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!clave.actual) return toast.error("Escriba su contraseña actual");
+    if (!reglas.every((r) => r.ok)) return toast.error("La nueva contraseña no cumple los requisitos");
+    setGuardandoClave(true);
+    try {
+      await api.patch("/usuarios/mi-password", clave);
+      toast.success("Contraseña actualizada correctamente");
+      setClave({ actual: "", nueva: "", confirmar: "" });
+    } catch (error: any) {
+      toast.error(error.response?.data?.mensaje || "No se pudo cambiar la contraseña");
+    } finally {
+      setGuardandoClave(false);
+    }
+  };
 
   useEffect(() => {
     const id = usuarioActualId();
@@ -127,6 +152,51 @@ export default function UserProfiles() {
             </section>
           </>
         )}
+
+        <section className="rounded-2xl bg-white p-6 shadow dark:bg-gray-800">
+          <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+            Cambiar contraseña
+          </h2>
+          <form onSubmit={cambiarPassword} className="grid max-w-xl gap-4">
+            <input
+              type="password"
+              placeholder="Contraseña actual"
+              value={clave.actual}
+              onChange={(e) => setClave({ ...clave, actual: e.target.value })}
+              className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            />
+            <input
+              type="password"
+              placeholder="Nueva contraseña"
+              value={clave.nueva}
+              onChange={(e) => setClave({ ...clave, nueva: e.target.value })}
+              className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            />
+            <input
+              type="password"
+              placeholder="Confirmar nueva contraseña"
+              value={clave.confirmar}
+              onChange={(e) => setClave({ ...clave, confirmar: e.target.value })}
+              className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            />
+            <ul className="space-y-1 text-xs">
+              {reglas.map((r) => (
+                <li key={r.texto} className={r.ok ? "font-medium text-green-700 dark:text-green-300" : "text-gray-500 dark:text-gray-400"}>
+                  {r.ok ? "✓" : "○"} {r.texto}
+                </li>
+              ))}
+            </ul>
+            <div>
+              <button
+                type="submit"
+                disabled={guardandoClave}
+                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+              >
+                {guardandoClave ? "Guardando..." : "Guardar contraseña"}
+              </button>
+            </div>
+          </form>
+        </section>
       </div>
     </>
   );
