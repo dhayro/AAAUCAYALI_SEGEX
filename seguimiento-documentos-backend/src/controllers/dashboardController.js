@@ -2,7 +2,7 @@ const { Op } = require('sequelize');
 const AsignacionExpediente = require('../models/AsignacionExpediente');
 const LlamadaAdministrado = require('../models/LlamadaAdministrado');
 const AccionLlamada = require('../models/AccionLlamada');
-const { resumenPorAsignacion, tiempoRespuestaHoras, ESTADOS } = require('../services/estadoRespuestaService');
+const { resumenPorAsignacion, tiempoRespuestaHoras, ESTADOS, aLima } = require('../services/estadoRespuestaService');
 const { hoyLima, sumarDiasCalendario } = require('../utils/fechas');
 const Usuario = require('../models/Usuario');
 
@@ -140,6 +140,70 @@ exports.resumen = async (req, res) => {
         acciones_pendientes: accionesPendientes,
       },
       atencion,
+    });
+  } catch (error) {
+    res.status(500).json({ mensaje: error.message });
+  }
+};
+
+// Llamadas sin respuesta, ordenadas por fecha límite (las vencidas primero). Mismo alcance por perfil.
+exports.monitorLlamadas = async (req, res) => {
+  try {
+    const gestor = esGestor(req.user);
+    const hoy = hoyLima();
+    const where = { respondido: false };
+    if (!gestor) where[Op.or] = [{ id_responsable: req.user.id }, { id_usuario_creador: req.user.id }];
+
+    const llamadas = await LlamadaAdministrado.findAll({
+      where,
+      attributes: ['id', 'cut', 'nombre_llamante', 'telefono', 'motivo', 'fecha_llamada', 'fecha_respuesta'],
+      include: [{ model: Usuario, as: 'responsable', attributes: ['id', 'nombre', 'apellido'], required: false }],
+    });
+
+    const ids = llamadas.map((l) => l.id);
+    const pendientes = ids.length
+      ? await AccionLlamada.findAll({
+          attributes: ['id_llamada'],
+          where: { estado: 'PENDIENTE', id_llamada: { [Op.in]: ids } },
+          raw: true,
+        })
+      : [];
+    const accionesPorLlamada = {};
+    pendientes.forEach((a) => {
+      accionesPorLlamada[a.id_llamada] = (accionesPorLlamada[a.id_llamada] || 0) + 1;
+    });
+
+    const todas = llamadas
+      .map((l) => {
+        const plain = l.get({ plain: true });
+        return {
+          id: l.id,
+          cut: l.cut,
+          nombre_llamante: l.nombre_llamante,
+          telefono: l.telefono,
+          motivo: l.motivo,
+          fecha_llamada: aLima(l.fecha_llamada),
+          fecha_respuesta: l.fecha_respuesta,
+          dias: l.fecha_respuesta ? diasEntre(l.fecha_respuesta, hoy) : null,
+          responsable: plain.responsable,
+          acciones_pendientes: accionesPorLlamada[l.id] || 0,
+        };
+      })
+      .sort((a, b) => {
+        if (a.dias === null && b.dias === null) return a.id - b.id;
+        if (a.dias === null) return 1;
+        if (b.dias === null) return -1;
+        return a.dias - b.dias || a.id - b.id;
+      });
+
+    res.json({
+      resumen: {
+        total: todas.length,
+        vencidas: todas.filter((f) => f.dias !== null && f.dias < 0).length,
+        por_vencer: todas.filter((f) => f.dias !== null && f.dias >= 0 && f.dias <= DIAS_POR_VENCER).length,
+        sin_plazo: todas.filter((f) => f.dias === null).length,
+      },
+      llamadas: todas.slice(0, 100),
     });
   } catch (error) {
     res.status(500).json({ mensaje: error.message });

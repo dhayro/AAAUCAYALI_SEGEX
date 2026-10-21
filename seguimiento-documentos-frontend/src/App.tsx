@@ -8,6 +8,7 @@ import Calendar from "./pages/Calendar";
 import BarChart from "./pages/Charts/BarChart";
 import LineChart from "./pages/Charts/LineChart";
 import Home from "./pages/Inicio";
+import MonitorLlamadas from "./pages/MonitorLlamadas";
 import FormElements from "./pages/Forms/FormElements";
 import Blank from "./pages/OtherPage/Blank";
 import NotFound from "./pages/OtherPage/NotFound";
@@ -59,6 +60,16 @@ export default function App() {
           {/* Auth Layout */}
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
+
+          {/* Monitor a pantalla completa, sin menús */}
+          <Route
+            path="/monitor-llamadas"
+            element={
+              <ProtectedRoute>
+                <MonitorLlamadas />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Dashboard Layout - Protected */}
           <Route

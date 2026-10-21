@@ -25,4 +25,18 @@ const { authenticateToken } = require('../middleware/auth');
  */
 router.get('/resumen', authenticateToken, controller.resumen);
 
+/**
+ * @swagger
+ * /api/dashboard/monitor-llamadas:
+ *   get:
+ *     summary: Llamadas sin respuesta ordenadas por fecha límite
+ *     tags: [Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Resumen y lista de llamadas sin respuesta
+ */
+router.get('/monitor-llamadas', authenticateToken, controller.monitorLlamadas);
+
 module.exports = router;
