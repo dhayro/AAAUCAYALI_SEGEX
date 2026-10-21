@@ -199,7 +199,9 @@ exports.listarLlamadas = async (req, res) => {
       distinct: true,
     });
 
-    res.json({ llamadas: rows, totalLlamadas: count, totalPaginas: Math.ceil(count / limit), paginaActual: page });
+    const conteo = await conteoPorCut(rows.map((r) => r.cut), req.user);
+    const llamadas = rows.map((r) => ({ ...r.get({ plain: true }), total_del_cut: conteo[r.cut] || 1 }));
+    res.json({ llamadas, totalLlamadas: count, totalPaginas: Math.ceil(count / limit), paginaActual: page });
   } catch (error) {
     res.status(500).json({ mensaje: error.message });
   }
@@ -211,7 +213,49 @@ exports.obtenerLlamada = async (req, res) => {
     if (!llamada || !puedeVerLlamada(llamada, req.user)) {
       return res.status(404).json({ mensaje: 'Llamada no encontrada' });
     }
-    res.json(await obtenerLlamada(llamada.id));
+    const datos = await obtenerLlamada(llamada.id);
+    datos.otras_del_cut = await LlamadaAdministrado.findAll({
+      where: { cut: llamada.cut, id: { [Op.ne]: llamada.id }, ...ambitoDe(req.user) },
+      attributes: ['id', 'fecha_llamada', 'respondido', 'fecha_respuesta', 'motivo'],
+      include: [{ model: Usuario, as: 'responsable', attributes: ['id', 'nombre', 'apellido'] }],
+      order: [['fecha_llamada', 'DESC']],
+    });
+    res.json(datos);
+  } catch (error) {
+    res.status(500).json({ mensaje: error.message });
+  }
+};
+
+// Alcance de llamadas visibles para el usuario (gestores ven todas; el resto, las suyas).
+const ambitoDe = (usuario) =>
+  esGestor(usuario) ? {} : { [Op.or]: [{ id_responsable: usuario.id }, { id_usuario_creador: usuario.id }] };
+
+// Cuántas llamadas visibles tiene cada CUT, para avisar de reincidencias.
+const conteoPorCut = async (cuts, usuario) => {
+  const conteo = {};
+  if (!cuts.length) return conteo;
+  const filas = await LlamadaAdministrado.findAll({
+    attributes: ['cut'],
+    where: { cut: { [Op.in]: cuts }, ...ambitoDe(usuario) },
+    raw: true,
+  });
+  filas.forEach((f) => {
+    conteo[f.cut] = (conteo[f.cut] || 0) + 1;
+  });
+  return conteo;
+};
+
+// Todas las llamadas visibles de un CUT, para el aviso al registrar una llamada nueva.
+exports.llamadasDelCut = async (req, res) => {
+  try {
+    const cut = textoMayuscula(req.params.cut);
+    const llamadas = await LlamadaAdministrado.findAll({
+      where: { cut, ...ambitoDe(req.user) },
+      attributes: ['id', 'fecha_llamada', 'respondido', 'fecha_respuesta', 'motivo'],
+      include: [{ model: Usuario, as: 'responsable', attributes: ['id', 'nombre', 'apellido'] }],
+      order: [['fecha_llamada', 'DESC']],
+    });
+    res.json(llamadas);
   } catch (error) {
     res.status(500).json({ mensaje: error.message });
   }

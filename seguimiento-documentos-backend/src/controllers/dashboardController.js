@@ -173,6 +173,21 @@ exports.monitorLlamadas = async (req, res) => {
       accionesPorLlamada[a.id_llamada] = (accionesPorLlamada[a.id_llamada] || 0) + 1;
     });
 
+    // Cuántas llamadas (sin importar si están respondidas) tiene cada CUT de la lista.
+    const ambito = gestor ? {} : { [Op.or]: [{ id_responsable: req.user.id }, { id_usuario_creador: req.user.id }] };
+    const cuts = [...new Set(llamadas.map((l) => l.cut))];
+    const porCut = {};
+    if (cuts.length) {
+      const delCut = await LlamadaAdministrado.findAll({
+        attributes: ['cut'],
+        where: { cut: { [Op.in]: cuts }, ...ambito },
+        raw: true,
+      });
+      delCut.forEach((f) => {
+        porCut[f.cut] = (porCut[f.cut] || 0) + 1;
+      });
+    }
+
     const todas = llamadas
       .map((l) => {
         const plain = l.get({ plain: true });
@@ -187,6 +202,7 @@ exports.monitorLlamadas = async (req, res) => {
           dias: l.fecha_respuesta ? diasEntre(l.fecha_respuesta, hoy) : null,
           responsable: plain.responsable,
           acciones_pendientes: accionesPorLlamada[l.id] || 0,
+          total_del_cut: porCut[l.cut] || 1,
         };
       })
       .sort((a, b) => {

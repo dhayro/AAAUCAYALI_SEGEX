@@ -40,6 +40,7 @@ router.delete('/acciones/:id', authenticateToken, isSecretariaOrAbove, controlle
 // Llamadas de administrados
 router.get('/llamadas', authenticateToken, controller.listarLlamadas);
 router.post('/llamadas', authenticateToken, controller.crearLlamada);
+router.get('/llamadas/por-cut/:cut', authenticateToken, controller.llamadasDelCut);
 router.get('/llamadas/:id', authenticateToken, controller.obtenerLlamada);
 router.put('/llamadas/:id', authenticateToken, controller.actualizarLlamada);
 router.patch('/llamadas/:id/responsable', authenticateToken, isSecretariaOrAbove, controller.reasignarLlamada);
