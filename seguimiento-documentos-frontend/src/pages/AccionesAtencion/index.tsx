@@ -1,10 +1,11 @@
 import PageMeta from "@/components/common/PageMeta";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import api from "@/utils/api";
-import { PencilIcon, PlusIcon, CloseIcon } from "@/icons";
+import { PencilIcon, TrashBinIcon, PlusIcon, CloseIcon } from "@/icons";
 
 interface Accion {
   id: number;
@@ -13,7 +14,7 @@ interface Accion {
   activo: boolean;
 }
 
-const formVacio = { nombre: "", requiere_archivo: true, activo: true };
+const formVacio = { nombre: "", requiere_archivo: true };
 
 const selectClass =
   "w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700";
@@ -27,11 +28,17 @@ export default function AccionesAtencion() {
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [filters, setFilters] = useState({ filtro: "" });
   const [totalCount, setTotalCount] = useState(0);
+  const [eliminando, setEliminando] = useState<Accion | null>(null);
+  const [procesando, setProcesando] = useState(false);
 
   const fetchAcciones = useCallback(async () => {
     setLoading(true);
     try {
-      const params: any = { page: pagination.pageIndex + 1, limit: pagination.pageSize };
+      const params: any = {
+        page: pagination.pageIndex + 1,
+        limit: pagination.pageSize,
+        solo_activas: "true",
+      };
       if (filters.filtro) params.filtro = filters.filtro;
       const response = await api.get("/atenciones/acciones", { params });
       setAcciones(response.data.acciones || []);
@@ -54,7 +61,7 @@ export default function AccionesAtencion() {
   };
 
   const handleEdit = (accion: Accion) => {
-    setFormData({ nombre: accion.nombre, requiere_archivo: accion.requiere_archivo, activo: accion.activo });
+    setFormData({ nombre: accion.nombre, requiere_archivo: accion.requiere_archivo });
     setEditingId(accion.id);
     setShowModal(true);
   };
@@ -70,8 +77,8 @@ export default function AccionesAtencion() {
         await api.put(`/atenciones/acciones/${editingId}`, formData);
         toast.success("Acción actualizada correctamente");
       } else {
-        await api.post("/atenciones/acciones", formData);
-        toast.success("Acción creada correctamente");
+        const res = await api.post("/atenciones/acciones", formData);
+        toast.success(res.data.mensaje || "Acción creada correctamente");
       }
       setShowModal(false);
       await fetchAcciones();
@@ -80,7 +87,22 @@ export default function AccionesAtencion() {
     }
   };
 
-  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const confirmarEliminar = async () => {
+    if (!eliminando) return;
+    setProcesando(true);
+    try {
+      await api.delete(`/atenciones/acciones/${eliminando.id}`);
+      toast.success("Acción eliminada correctamente");
+      setEliminando(null);
+      await fetchAcciones();
+    } catch {
+      toast.error("Error al eliminar la acción");
+    } finally {
+      setProcesando(false);
+    }
+  };
+
+  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFilters((prev) => ({ ...prev, [name]: value }));
     setPagination({ pageIndex: 0, pageSize: 10 });
@@ -133,31 +155,16 @@ export default function AccionesAtencion() {
                     required
                   />
                 </div>
-                <div className={editingId ? "grid grid-cols-2 gap-3" : ""}>
-                  <div>
-                    <Label>Requiere archivo</Label>
-                    <select
-                      value={formData.requiere_archivo ? "true" : "false"}
-                      onChange={(e) => setFormData({ ...formData, requiere_archivo: e.target.value === "true" })}
-                      className={selectClass}
-                    >
-                      <option value="true">Sí</option>
-                      <option value="false">No</option>
-                    </select>
-                  </div>
-                  {editingId && (
-                    <div>
-                      <Label>Estado</Label>
-                      <select
-                        value={formData.activo ? "true" : "false"}
-                        onChange={(e) => setFormData({ ...formData, activo: e.target.value === "true" })}
-                        className={selectClass}
-                      >
-                        <option value="true">Activa</option>
-                        <option value="false">Inactiva</option>
-                      </select>
-                    </div>
-                  )}
+                <div>
+                  <Label>Requiere archivo</Label>
+                  <select
+                    value={formData.requiere_archivo ? "true" : "false"}
+                    onChange={(e) => setFormData({ ...formData, requiere_archivo: e.target.value === "true" })}
+                    className={selectClass}
+                  >
+                    <option value="true">Sí</option>
+                    <option value="false">No</option>
+                  </select>
                 </div>
 
                 <div className="flex gap-3 border-t pt-4 dark:border-gray-700">
@@ -191,7 +198,6 @@ export default function AccionesAtencion() {
                     <th className="px-6 py-4 text-start text-sm font-semibold">#</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">Acción</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Requiere archivo</th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold">Estado</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Acciones</th>
                   </tr>
                 </thead>
@@ -201,21 +207,13 @@ export default function AccionesAtencion() {
                       <td className="px-6 py-4 text-sm">{pagination.pageIndex * pagination.pageSize + index + 1}</td>
                       <td className="px-6 py-4 font-medium">{a.nombre}</td>
                       <td className="px-6 py-4 text-center text-sm">{a.requiere_archivo ? "Sí" : "No"}</td>
-                      <td className="px-6 py-4 text-center">
-                        <span
-                          className={`rounded-full px-3 py-1 text-xs font-bold ${
-                            a.activo
-                              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                              : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
-                          }`}
-                        >
-                          {a.activo ? "Activa" : "Inactiva"}
-                        </span>
-                      </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-3">
                           <button onClick={() => handleEdit(a)} className="text-green-600 hover:text-green-800 dark:text-green-400">
                             <PencilIcon className="h-5 w-5" />
+                          </button>
+                          <button onClick={() => setEliminando(a)} className="text-red-600 hover:text-red-800 dark:text-red-400">
+                            <TrashBinIcon className="h-5 w-5" />
                           </button>
                         </div>
                       </td>
@@ -265,6 +263,22 @@ export default function AccionesAtencion() {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        abierto={eliminando !== null}
+        titulo="Eliminar acción"
+        mensaje={
+          <>
+            Se quitará <strong>{eliminando?.nombre}</strong> del catálogo. Las llamadas que ya la usan la mantienen; si
+            se vuelve a crear con el mismo nombre, se reactiva.
+          </>
+        }
+        textoConfirmar="Sí, eliminar"
+        peligro
+        procesando={procesando}
+        onConfirmar={confirmarEliminar}
+        onCancelar={() => setEliminando(null)}
+      />
     </>
   );
 }
