@@ -402,10 +402,14 @@ exports.reasignarLlamada = async (req, res) => {
 
 // ---------- Acciones de la llamada ----------
 
+const MENSAJE_RESPONDIDA =
+  'La llamada está respondida: sus acciones y archivos no se pueden modificar. Márquela como no respondida para editarlos';
+
 const llamadaDeAccion = async (idAccionLlamada) => {
   const accion = await AccionLlamada.findByPk(idAccionLlamada);
   if (!accion) return { accion: null, llamada: null };
   const llamada = await LlamadaAdministrado.findByPk(accion.id_llamada);
+  if (llamada && llamada.respondido) throw errorConEstado(MENSAJE_RESPONDIDA);
   return { accion, llamada };
 };
 
@@ -418,6 +422,7 @@ exports.agregarAccion = async (req, res) => {
     if (!puedeOperarLlamada(llamada, req.user)) {
       return res.status(403).json({ mensaje: 'Solo el responsable puede agregar acciones' });
     }
+    if (llamada.respondido) throw errorConEstado(MENSAJE_RESPONDIDA);
     const [idAccion] = await idsAccionesValidas([{ id_accion: req.body.id_accion }]);
     const catalogo = await AccionAtencion.findByPk(idAccion, { attributes: ['nombre'] });
     await AccionLlamada.create({

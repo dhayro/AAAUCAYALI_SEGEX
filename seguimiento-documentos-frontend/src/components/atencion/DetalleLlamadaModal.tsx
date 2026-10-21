@@ -109,7 +109,9 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
     setUsuarios(res.data || []);
   };
 
-  const puedeOperar = !soloLectura && llamada && (gestiona || llamada.id_responsable === usuarioId);
+  // Puede marcar la llamada como respondida o no; con la llamada respondida, sus acciones quedan cerradas.
+  const puedeMarcar = !soloLectura && llamada && (gestiona || llamada.id_responsable === usuarioId);
+  const puedeOperar = puedeMarcar && !llamada?.respondido;
 
   const notificar = async (fn: () => Promise<any>, ok: string): Promise<boolean> => {
     try {
@@ -384,7 +386,7 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
                     >
                       {llamada.respondido ? "RESPONDIDO" : "NO RESPONDIDO"}
                     </span>
-                    {puedeOperar && (
+                    {puedeMarcar && (
                       <div className="flex flex-col">
                         <button
                           onClick={cambiarRespondido}
@@ -405,6 +407,11 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
                   <h3 className="text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
                     Acciones ({llamada.acciones?.length || 0})
                   </h3>
+                  {llamada.respondido && (
+                    <div className="rounded-xl bg-green-50 p-3 text-sm text-green-800 ring-1 ring-green-200 dark:bg-green-900/30 dark:text-green-100 dark:ring-green-800">
+                      La llamada está respondida: las acciones están cerradas. Para editarlas, márquela como no respondida.
+                    </div>
+                  )}
                   {(llamada.acciones || []).length === 0 && (
                     <div className="rounded-xl bg-white p-4 text-sm text-gray-500 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700">
                       Esta llamada no tiene acciones; no requiere trabajo adicional.
@@ -429,7 +436,7 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
                         {accion.estado === "EJECUTADO" && !gestiona && (
                           <span className="ml-auto text-xs text-gray-500">Ejecutada · no admite cambios</span>
                         )}
-                        {gestiona && (
+                        {gestiona && !llamada.respondido && (
                           <button
                             onClick={() => cambiarEstado(accion)}
                             className="ml-auto rounded border border-brand-600 px-2 py-0.5 text-xs font-semibold text-brand-600 hover:bg-brand-50 dark:border-brand-400 dark:text-brand-400"
