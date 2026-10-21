@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "@/utils/api";
 import { CloseIcon } from "@/icons";
-import { formatFecha } from "@/components/expedientes/format";
+import { formatFechaHora } from "@/components/expedientes/format";
 
 type Props = {
   asignacionId: number;
@@ -13,6 +13,13 @@ const ETIQUETA_EVENTO: Record<string, string> = {
   SOLICITUD_PRORROGA: "Solicitud de prórroga",
   PRORROGA_ACEPTADA: "Prórroga aceptada",
   PRORROGA_RECHAZADA: "Prórroga rechazada",
+  RESPUESTA_REGISTRADA: "Respuesta registrada",
+  ARCHIVO_SUBIDO: "Archivo subido",
+  ARCHIVO_EDITADO: "Archivo editado",
+  ARCHIVO_REEMPLAZADO: "Archivo reemplazado",
+  ARCHIVO_ELIMINADO: "Archivo eliminado",
+  EVALUACION_APROBADA: "Evaluación: aprobada y cerrada",
+  EVALUACION_OBSERVADA: "Evaluación: observada",
 };
 
 export default function HistorialAsignacionModal({ asignacionId, cut, onClose }: Props) {
@@ -53,7 +60,7 @@ export default function HistorialAsignacionModal({ asignacionId, cut, onClose }:
           {cargando && <div className="p-10 text-center text-sm text-gray-500">Cargando historial...</div>}
           {!cargando && error && <div className="m-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>}
           {!cargando && !error && rows.length === 0 && (
-            <div className="p-10 text-center text-sm text-gray-500">Esta asignación no tiene eventos de prórroga.</div>
+            <div className="p-10 text-center text-sm text-gray-500">Esta asignación no tiene eventos registrados.</div>
           )}
           {!cargando && rows.length > 0 && (
             <table className="w-full text-sm">
@@ -69,11 +76,11 @@ export default function HistorialAsignacionModal({ asignacionId, cut, onClose }:
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 {rows.map((h) => (
                   <tr key={h.id}>
-                    <td className="whitespace-nowrap px-4 py-2">{formatFecha(h.fecha_evento)}</td>
+                    <td className="whitespace-nowrap px-4 py-2">{formatFechaHora(h.fecha_registro ?? h.fecha_evento)}</td>
                     <td className="px-4 py-2 font-semibold">{ETIQUETA_EVENTO[h.tipo] || h.tipo}</td>
                     <td className="px-4 py-2 text-center">{h.plazo ?? "—"}</td>
                     <td className="px-4 py-2">{h.usuario ? `${h.usuario.nombre} ${h.usuario.apellido}` : "—"}</td>
-                    <td className="px-4 py-2 text-gray-600 dark:text-gray-300">{h.observacion || "—"}</td>
+                    <td className="whitespace-pre-wrap break-words px-4 py-2 text-gray-600 dark:text-gray-300">{h.observacion || "—"}</td>
                   </tr>
                 ))}
               </tbody>

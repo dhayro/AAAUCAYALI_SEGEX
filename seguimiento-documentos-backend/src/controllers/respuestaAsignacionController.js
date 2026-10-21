@@ -4,6 +4,7 @@ const AsignacionExpediente = require('../models/AsignacionExpediente');
 const RespuestaAsignacion = require('../models/RespuestaAsignacion');
 const ArchivoRespuestaAsignacion = require('../models/ArchivoRespuestaAsignacion');
 const Usuario = require('../models/Usuario');
+const { registrarEvento } = require('../services/historialAsignacionService');
 
 const CARPETA_ARCHIVOS = path.join(__dirname, '../../uploads/asignaciones');
 fs.mkdirSync(CARPETA_ARCHIVOS, { recursive: true });
@@ -64,6 +65,7 @@ exports.crearRespuesta = async (req, res) => {
     if (!texto) throw errorConEstado('Escriba la respuesta o avance');
 
     await RespuestaAsignacion.create({ id_asignacion: asignacion.id, texto, id_usuario: req.user.id });
+    await registrarEvento(asignacion.id, req.user.id, 'RESPUESTA_REGISTRADA', texto);
     res.status(201).json(await listarRespuestasDe(asignacion.id));
   } catch (error) {
     res.status(error.status || 400).json({ mensaje: error.message });
@@ -103,6 +105,7 @@ exports.subirArchivo = async (req, res) => {
       tamano: req.file.size,
       id_usuario: req.user.id,
     });
+    await registrarEvento(asignacion.id, req.user.id, 'ARCHIVO_SUBIDO', `${descripcion} · ${req.file.originalname}`);
     res.status(201).json(await respuestaCompleta(respuesta.id));
   } catch (error) {
     limpiarTemporal();
@@ -124,6 +127,7 @@ exports.eliminarArchivo = async (req, res) => {
 
     const ruta = path.join(CARPETA_ARCHIVOS, path.basename(archivo.nombre_guardado));
     await archivo.destroy();
+    await registrarEvento(asignacion.id, req.user.id, 'ARCHIVO_ELIMINADO', `${archivo.descripcion} · ${archivo.nombre_original}`);
     fs.unlink(ruta, () => {});
     res.json(await respuestaCompleta(respuesta.id));
   } catch (error) {
@@ -145,7 +149,9 @@ exports.editarArchivo = async (req, res) => {
     const descripcion = textoMayuscula(req.body.descripcion);
     if (!descripcion) throw errorConEstado('Describa qué contiene el archivo');
 
+    const anterior = archivo.descripcion;
     await archivo.update({ descripcion });
+    await registrarEvento(asignacion.id, req.user.id, 'ARCHIVO_EDITADO', `${anterior} → ${descripcion}`);
     res.json(await respuestaCompleta(respuesta.id));
   } catch (error) {
     res.status(error.status || 500).json({ mensaje: error.message });
@@ -169,6 +175,7 @@ exports.reemplazarArchivo = async (req, res) => {
     }
 
     const anterior = archivo.nombre_guardado;
+    const nombreAnterior = archivo.nombre_original;
     await archivo.update({
       nombre_original: req.file.originalname,
       nombre_guardado: req.file.filename,
@@ -176,6 +183,12 @@ exports.reemplazarArchivo = async (req, res) => {
       tamano: req.file.size,
     });
     fs.unlink(path.join(CARPETA_ARCHIVOS, path.basename(anterior)), () => {});
+    await registrarEvento(
+      asignacion.id,
+      req.user.id,
+      'ARCHIVO_REEMPLAZADO',
+      `${archivo.descripcion} · ${nombreAnterior} → ${req.file.originalname}`
+    );
     res.json(await respuestaCompleta(respuesta.id));
   } catch (error) {
     limpiarTemporal();

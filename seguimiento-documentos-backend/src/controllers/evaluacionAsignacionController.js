@@ -4,6 +4,7 @@ const EvaluacionAsignacion = require('../models/EvaluacionAsignacion');
 const RespuestaAsignacion = require('../models/RespuestaAsignacion');
 const Usuario = require('../models/Usuario');
 const Cargo = require('../models/Cargo');
+const { registrarEvento } = require('../services/historialAsignacionService');
 const {
   ESTADOS,
   resumenPorAsignacion,
@@ -93,6 +94,13 @@ exports.evaluar = async (req, res) => {
       fecha_ultima_respuesta: actual.ultima_respuesta,
       id_usuario: req.user.id,
     });
+
+    await registrarEvento(
+      asignacion.id,
+      req.user.id,
+      resultado === 'APROBADA' ? 'EVALUACION_APROBADA' : 'EVALUACION_OBSERVADA',
+      observacion || (resultado === 'APROBADA' ? 'RESPUESTA APROBADA' : null)
+    );
 
     const actualizada = await resumenPorAsignacion([asignacion.id]);
     res.status(201).json(filaEvaluable(asignacion, actualizada));
