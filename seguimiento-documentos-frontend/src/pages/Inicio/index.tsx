@@ -198,9 +198,16 @@ export default function Inicio() {
                 ayuda={`De ${resumen.llamadas.total} registradas`}
               />
               <Tarjeta
-                titulo="Acciones de llamada pendientes"
+                titulo="Llamadas respondidas"
+                valor={resumen.llamadas.respondidas}
+                ayuda="Ya se dio respuesta al administrado"
+                tono="exito"
+              />
+              <Tarjeta
+                titulo="Acciones pendientes de ejecutar"
                 valor={resumen.llamadas.acciones_pendientes}
-                ayuda="Aún no ejecutadas"
+                ayuda="Registradas en llamadas, falta ejecutarlas"
+                tono={resumen.llamadas.acciones_pendientes > 0 ? "alerta" : "neutro"}
               />
             </div>
 
