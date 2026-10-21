@@ -2,6 +2,9 @@
 
 const LIMA = "America/Lima";
 
+// Tope de "por vencer" para todo el sistema (igual que en asignaciones).
+export const DIAS_POR_VENCER = 5;
+
 const formatoYMD = (fecha: Date) =>
   new Intl.DateTimeFormat("en-CA", { timeZone: LIMA, year: "numeric", month: "2-digit", day: "2-digit" }).format(fecha);
 
@@ -39,6 +42,6 @@ export const estadoPlazo = (respondido: boolean, fechaLimite?: string | null) =>
   const dias = diasEntre(fechaLimite.slice(0, 10), hoyYMD());
   if (dias < 0) return { texto: `Vencido hace ${-dias} d`, clases: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100" };
   if (dias === 0) return { texto: "Vence hoy", clases: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100" };
-  if (dias <= 2) return { texto: `Quedan ${dias} d`, clases: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100" };
+  if (dias <= DIAS_POR_VENCER) return { texto: `Por vencer: quedan ${dias} d`, clases: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100" };
   return { texto: `Quedan ${dias} d`, clases: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100" };
 };

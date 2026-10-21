@@ -180,7 +180,7 @@ export default function Inicio() {
                 tono={resumen.llamadas.vencidas > 0 ? "peligro" : "neutro"}
               />
               <Tarjeta
-                titulo="Llamadas por vencer (2 días)"
+                titulo="Llamadas por vencer (5 días)"
                 valor={resumen.llamadas.por_vencer}
                 ayuda="Sin respuesta, el plazo vence pronto"
                 tono={resumen.llamadas.por_vencer > 0 ? "alerta" : "neutro"}

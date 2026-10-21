@@ -109,7 +109,7 @@ export default function Llamadas() {
             <select name="plazo" value={filters.plazo} onChange={handleFilterChange} className={selectClass}>
               <option value="">Todos</option>
               <option value="VENCIDAS">Vencidas</option>
-              <option value="POR_VENCER">Por vencer (2 días)</option>
+              <option value="POR_VENCER">Por vencer (5 días)</option>
             </select>
           </div>
         </div>

@@ -174,14 +174,14 @@ exports.listarLlamadas = async (req, res) => {
     if (req.query.respondido !== undefined && req.query.respondido !== '') {
       where.respondido = parseBoolean(req.query.respondido);
     }
-    // Plazo: VENCIDAS = sin respuesta con fecha límite ya pasada; POR_VENCER = vence en los próximos 2 días.
+    // Plazo: VENCIDAS = sin respuesta con fecha límite ya pasada; POR_VENCER = vence en los próximos 5 días.
     const hoy = hoyLima();
     if (req.query.plazo === 'VENCIDAS') {
       where.respondido = false;
       where.fecha_respuesta = { [Op.lt]: hoy };
     } else if (req.query.plazo === 'POR_VENCER') {
       where.respondido = false;
-      where.fecha_respuesta = { [Op.between]: [hoy, sumarDiasCalendario(hoy, 2)] };
+      where.fecha_respuesta = { [Op.between]: [hoy, sumarDiasCalendario(hoy, 5)] };
     }
     if (!esGestor(req.user)) {
       where[Op.or] = [{ id_responsable: req.user.id }, { id_usuario_creador: req.user.id }];

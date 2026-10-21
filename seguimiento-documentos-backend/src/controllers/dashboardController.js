@@ -10,7 +10,6 @@ const PERFILES_GESTION = ['admin', 'jefe', 'secretaria'];
 const esGestor = (usuario) => PERFILES_GESTION.includes(usuario.perfil);
 
 const DIAS_POR_VENCER = 5;
-const DIAS_POR_VENCER_LLAMADA = 2;
 const PRIORIDAD_MOTIVO = {
   OBSERVADA: 0,
   VENCIDA: 1,
@@ -85,7 +84,7 @@ exports.resumen = async (req, res) => {
     const idsLlamadas = llamadas.map((l) => l.id);
 
     // Llamadas sin respuesta cuyo plazo ya venció, o que vencen en los próximos días.
-    const limiteLlamada = sumarDiasCalendario(hoy, DIAS_POR_VENCER_LLAMADA);
+    const limiteLlamada = sumarDiasCalendario(hoy, DIAS_POR_VENCER);
     const sinResponder = llamadas.filter((l) => !l.respondido && l.fecha_respuesta);
     const llamadasVencidas = sinResponder.filter((l) => l.fecha_respuesta < hoy);
     const llamadasPorVencer = sinResponder.filter((l) => l.fecha_respuesta >= hoy && l.fecha_respuesta <= limiteLlamada);
