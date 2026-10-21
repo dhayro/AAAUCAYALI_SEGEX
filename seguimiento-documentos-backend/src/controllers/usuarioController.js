@@ -110,6 +110,32 @@ exports.obtenerTodosLosUsuarios = async (req, res) => {
   }
 };
 
+// Consulta los nombres de una persona por su DNI en RENIEC (API de Decolecta).
+exports.consultarDni = async (req, res) => {
+  try {
+    const dni = String(req.params.dni || '').trim();
+    if (!/^\d{8}$/.test(dni)) return res.status(400).json({ mensaje: 'El DNI debe tener 8 dígitos' });
+    const clave = process.env.DECOLECTA_API_KEY;
+    if (!clave) return res.status(500).json({ mensaje: 'La consulta de RENIEC no está configurada' });
+
+    const respuesta = await fetch(`https://api.decolecta.com/v1/reniec/dni?numero=${dni}`, {
+      headers: { Authorization: `Bearer ${clave}`, 'Content-Type': 'application/json' },
+    });
+    if (respuesta.status === 404) return res.status(404).json({ mensaje: 'No se encontró el DNI en RENIEC' });
+    if (!respuesta.ok) return res.status(502).json({ mensaje: 'RENIEC no respondió correctamente' });
+
+    const datos = await respuesta.json();
+    res.json({
+      dni: datos.document_number || dni,
+      nombre: datos.first_name || '',
+      apellido: [datos.first_last_name, datos.second_last_name].filter(Boolean).join(' '),
+      nombre_completo: datos.full_name || '',
+    });
+  } catch (error) {
+    res.status(502).json({ mensaje: 'No se pudo consultar RENIEC' });
+  }
+};
+
 exports.obtenerUsuarioPorId = async (req, res) => {
   try {
     const usuarioId = parseInt(req.params.id);

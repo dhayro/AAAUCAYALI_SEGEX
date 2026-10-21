@@ -531,6 +531,7 @@ router.get('/', isAdmin, usuarioController.obtenerTodosLosUsuarios);
  *       404:
  *         description: Usuario no encontrado
  */
+router.get('/reniec/:dni', authenticateToken, isJefeOrAdmin, usuarioController.consultarDni);
 router.get('/:id', authenticateToken, usuarioController.obtenerUsuarioPorId);
 
 /**
