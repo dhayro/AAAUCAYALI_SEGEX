@@ -35,6 +35,7 @@ const subirArchivo = (req, res, next) =>
 router.get('/acciones', authenticateToken, controller.listarAcciones);
 router.post('/acciones', authenticateToken, isSecretariaOrAbove, controller.crearAccion);
 router.put('/acciones/:id', authenticateToken, isSecretariaOrAbove, controller.actualizarAccion);
+router.delete('/acciones/:id', authenticateToken, isSecretariaOrAbove, controller.eliminarAccion);
 
 // Llamadas de administrados
 router.get('/llamadas', authenticateToken, controller.listarLlamadas);

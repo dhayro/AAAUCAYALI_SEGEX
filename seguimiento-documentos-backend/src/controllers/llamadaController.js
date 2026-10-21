@@ -108,15 +108,29 @@ exports.crearAccion = async (req, res) => {
   try {
     const nombre = textoMayuscula(req.body.nombre);
     if (!nombre) throw errorConEstado('El nombre de la acción es obligatorio');
-    const nueva = await AccionAtencion.create({
-      nombre,
-      requiere_archivo: parseBoolean(req.body.requiere_archivo),
-      activo: req.body.activo === undefined ? true : parseBoolean(req.body.activo),
-    });
+    const requiereArchivo = parseBoolean(req.body.requiere_archivo);
+
+    const existente = await AccionAtencion.findOne({ where: { nombre } });
+    if (existente && existente.activo) throw errorConEstado(MENSAJE_NOMBRE_REPETIDO);
+    if (existente) {
+      await existente.update({ requiere_archivo: requiereArchivo, activo: true });
+      return res.json({ ...existente.toJSON(), mensaje: 'Acción reactivada' });
+    }
+
+    const nueva = await AccionAtencion.create({ nombre, requiere_archivo: requiereArchivo, activo: true });
     res.status(201).json(nueva);
   } catch (error) {
-    const mensaje = esNombreRepetido(error) ? MENSAJE_NOMBRE_REPETIDO : error.message;
-    res.status(error.status || 400).json({ mensaje });
+    res.status(error.status || 400).json({ mensaje: error.message });
+  }
+};
+
+exports.eliminarAccion = async (req, res) => {
+  try {
+    const [desactivada] = await AccionAtencion.update({ activo: false }, { where: { id: req.params.id } });
+    if (!desactivada) return res.status(404).json({ mensaje: 'Acción no encontrada' });
+    res.json({ mensaje: 'Acción eliminada' });
+  } catch (error) {
+    res.status(500).json({ mensaje: error.message });
   }
 };
 
