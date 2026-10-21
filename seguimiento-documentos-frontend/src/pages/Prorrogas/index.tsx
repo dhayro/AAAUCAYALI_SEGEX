@@ -9,6 +9,7 @@ import HistorialAsignacionModal from "@/components/asignaciones/HistorialAsignac
 import ProrrogaMasivaModal, { type ModoMasivo } from "@/components/asignaciones/ProrrogaMasivaModal";
 import { formatFecha } from "@/components/expedientes/format";
 import api from "@/utils/api";
+import { puedeGestionarAsignaciones } from "@/utils/sesion";
 
 interface UsuarioResumen {
   id: number;
@@ -46,6 +47,7 @@ export default function Prorrogas() {
   const [cutAbierto, setCutAbierto] = useState<string | null>(null);
   const [revision, setRevision] = useState<Prorroga | null>(null);
   const [historial, setHistorial] = useState<Prorroga | null>(null);
+  const gestiona = puedeGestionarAsignaciones();
   const [seleccion, setSeleccion] = useState<number[]>([]);
   const [masivo, setMasivo] = useState<ModoMasivo | null>(null);
 
@@ -120,7 +122,7 @@ export default function Prorrogas() {
           </div>
         </div>
 
-        {seleccion.length > 0 && (
+        {gestiona && seleccion.length > 0 && (
           <div className="flex flex-wrap items-center gap-3 rounded-lg border border-brand-200 bg-brand-50 p-3 dark:border-brand-800 dark:bg-brand-900/20">
             <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">
               {seleccion.length} seleccionada(s)
@@ -158,7 +160,7 @@ export default function Prorrogas() {
                 <thead>
                   <tr className="border-b bg-gray-50 dark:bg-gray-700">
                     <th className="px-4 py-4 text-center">
-                      <input
+                      {gestiona && <input
                         type="checkbox"
                         aria-label="Seleccionar pendientes"
                         checked={
@@ -174,7 +176,7 @@ export default function Prorrogas() {
                               : []
                           )
                         }
-                      />
+                      />}
                     </th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">#</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">CUT</th>
@@ -192,7 +194,7 @@ export default function Prorrogas() {
                   {prorrogas.map((p, index) => (
                     <tr key={p.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700">
                       <td className="px-4 py-4 text-center">
-                        {p.estado_prorroga === "PENDIENTE" && (
+                        {gestiona && p.estado_prorroga === "PENDIENTE" && (
                           <input
                             type="checkbox"
                             aria-label={`Seleccionar ${p.cut}`}
@@ -232,7 +234,7 @@ export default function Prorrogas() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-2">
-                          {p.estado_prorroga === "PENDIENTE" && (
+                          {gestiona && p.estado_prorroga === "PENDIENTE" && (
                             <button
                               onClick={() => setRevision(p)}
                               className="rounded bg-amber-500 px-2 py-1 text-xs font-semibold text-white hover:bg-amber-600"

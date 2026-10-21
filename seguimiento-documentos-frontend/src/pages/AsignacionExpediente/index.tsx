@@ -10,6 +10,7 @@ import HistorialAsignacionModal from "@/components/asignaciones/HistorialAsignac
 import ProrrogaMasivaModal from "@/components/asignaciones/ProrrogaMasivaModal";
 import { formatFecha } from "@/components/expedientes/format";
 import api from "@/utils/api";
+import { puedeGestionarAsignaciones } from "@/utils/sesion";
 import { PencilIcon, TrashBinIcon, PlusIcon, CloseIcon } from "@/icons";
 
 interface UsuarioResumen {
@@ -120,6 +121,8 @@ export default function AsignacionExpediente() {
   const [prorrogaMasiva, setProrrogaMasiva] = useState(false);
 
   const [cutAbierto, setCutAbierto] = useState<string | null>(null);
+
+  const gestiona = puedeGestionarAsignaciones();
 
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [filters, setFilters] = useState({ cut: "" });
@@ -319,13 +322,15 @@ export default function AsignacionExpediente() {
               Asigna expedientes a usuarios con plazos calendario, prórroga y observaciones
             </p>
           </div>
-          <button
-            onClick={handleOpenModal}
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
-          >
-            <PlusIcon className="h-5 w-5" />
-            Nueva Asignación
-          </button>
+          {gestiona && (
+            <button
+              onClick={handleOpenModal}
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+            >
+              <PlusIcon className="h-5 w-5" />
+              Nueva Asignación
+            </button>
+          )}
         </div>
 
         <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
@@ -521,7 +526,7 @@ export default function AsignacionExpediente() {
           <ExpedienteDetalleModal cut={cutAbierto} onClose={() => setCutAbierto(null)} />
         )}
 
-        {seleccion.length > 0 && (
+        {gestiona && seleccion.length > 0 && (
           <div className="flex flex-wrap items-center gap-3 rounded-lg border border-brand-200 bg-brand-50 p-3 dark:border-brand-800 dark:bg-brand-900/20">
             <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">
               {seleccion.length} seleccionada(s)
@@ -554,6 +559,7 @@ export default function AsignacionExpediente() {
                 <thead>
                   <tr className="border-b bg-gray-50 dark:bg-gray-700">
                     <th className="px-4 py-4 text-center">
+                      {gestiona && (
                       <input
                         type="checkbox"
                         aria-label="Seleccionar las que pueden pedir prórroga"
@@ -567,6 +573,7 @@ export default function AsignacionExpediente() {
                           )
                         }
                       />
+                      )}
                     </th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">#</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">CUT</th>
@@ -585,7 +592,7 @@ export default function AsignacionExpediente() {
                   {asignaciones.map((a, index) => (
                     <tr key={a.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700">
                       <td className="px-4 py-4 text-center">
-                        {puedeProrrogar(a) && (
+                        {gestiona && puedeProrrogar(a) && (
                           <input
                             type="checkbox"
                             aria-label={`Seleccionar ${a.cut}`}
@@ -641,7 +648,7 @@ export default function AsignacionExpediente() {
                       <td className="max-w-xs px-6 py-4 text-sm">{a.observacion || "—"}</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-3">
-                          {puedeProrrogar(a) && (
+                          {gestiona && puedeProrrogar(a) && (
                             <button
                               onClick={() => handleOpenProrroga(a)}
                               className="rounded border border-blue-600 px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-400"
@@ -655,18 +662,22 @@ export default function AsignacionExpediente() {
                           >
                             Historial
                           </button>
-                          <button
-                            onClick={() => handleEdit(a)}
-                            className="text-green-600 hover:text-green-800 dark:text-green-400"
-                          >
-                            <PencilIcon className="h-5 w-5" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(a.id)}
-                            className="text-red-600 hover:text-red-800 dark:text-red-400"
-                          >
-                            <TrashBinIcon className="h-5 w-5" />
-                          </button>
+                          {gestiona && (
+                            <>
+                              <button
+                                onClick={() => handleEdit(a)}
+                                className="text-green-600 hover:text-green-800 dark:text-green-400"
+                              >
+                                <PencilIcon className="h-5 w-5" />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(a.id)}
+                                className="text-red-600 hover:text-red-800 dark:text-red-400"
+                              >
+                                <TrashBinIcon className="h-5 w-5" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
