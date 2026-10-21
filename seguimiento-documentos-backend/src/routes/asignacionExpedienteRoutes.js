@@ -164,6 +164,7 @@ router.patch('/:id/prorroga', authenticateToken, isSecretariaOrAbove, controller
 router.patch('/:id/prorroga/aceptar', authenticateToken, isSecretariaOrAbove, controller.aceptarProrroga);
 router.patch('/:id/prorroga/rechazar', authenticateToken, isSecretariaOrAbove, controller.rechazarProrroga);
 router.get('/:id/historial', authenticateToken, controller.obtenerHistorial);
+router.get('/por-cut/:cut', authenticateToken, isSecretariaOrAbove, controller.asignacionesDelCut);
 router.post('/prorroga-masiva/solicitar', authenticateToken, isSecretariaOrAbove, controller.prorrogarMasivo);
 router.post('/prorroga-masiva/aceptar', authenticateToken, isSecretariaOrAbove, controller.aceptarProrrogaMasivo);
 router.post('/prorroga-masiva/rechazar', authenticateToken, isSecretariaOrAbove, controller.rechazarProrrogaMasivo);

@@ -262,6 +262,21 @@ exports.cargaMasiva = async (req, res) => {
   }
 };
 
+// Asignaciones activas de un CUT, para avisar al crear una nueva.
+exports.asignacionesDelCut = async (req, res) => {
+  try {
+    const cut = normalizarTexto(req.params.cut);
+    const asignaciones = await AsignacionExpediente.findAll({
+      where: { cut, estado: true },
+      include: includes,
+      order: [['fecha_asignacion', 'DESC']],
+    });
+    res.json(asignaciones);
+  } catch (error) {
+    res.status(500).json({ mensaje: error.message });
+  }
+};
+
 exports.actualizar = async (req, res) => {
   try {
     const actual = await AsignacionExpediente.findByPk(req.params.id);
