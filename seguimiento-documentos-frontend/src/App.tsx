@@ -36,7 +36,7 @@ import DocumentosNoAsignados from "./pages/DocumentosNoAsignados";
 import DocumentosProrroga from "./pages/DocumentosProrroga";
 import DocumentosRespuestas from "./pages/DocumentosRespuestas";
 import ReporteAsignaciones from "./pages/ReporteAsignaciones";
-import ReporteDocumentosRespuestas from "./pages/ReporteDocumentosRespuestas";
+import ReporteLlamadas from "./pages/ReporteLlamadas";
 import SISGED from "./pages/SISGED";
 import ImportarSISGED from "./pages/ImportarSISGED";
 import SincronizarDatos from "./pages/SISGED/SincronizarDatos";
@@ -87,7 +87,7 @@ export default function App() {
             <Route path="/documentos-prorroga" element={<DocumentosProrroga />} />
             <Route path="/documentos-respuestas" element={<DocumentosRespuestas />} />
             <Route path="/reporte-asignaciones" element={<ReporteAsignaciones />} />
-            <Route path="/reporte-respuestas" element={<ReporteDocumentosRespuestas />} />
+            <Route path="/reporte-llamadas" element={<ReporteLlamadas />} />
             <Route path="/expedientes" element={<Expedientes />} />
             <Route path="/usuarios" element={<Usuarios />} />
             <Route path="/areas" element={<Areas />} />

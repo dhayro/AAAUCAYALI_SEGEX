@@ -92,6 +92,7 @@ exports.llamadas = async (req, res) => {
     if (fecha) where.fecha_llamada = fecha;
     if (normalizar(respondido)) where.respondido = respondido === 'true';
     if (normalizar(id_responsable)) where.id_responsable = parseInt(id_responsable, 10);
+    if (normalizar(req.query.cut)) where.cut = { [Op.like]: `%${normalizar(req.query.cut).toUpperCase()}%` };
 
     const llamadas = await LlamadaAdministrado.findAll({
       where,

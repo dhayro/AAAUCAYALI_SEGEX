@@ -44,60 +44,6 @@ const visibleParaPerfil = (items: NavItem[]) => {
 
 const navItems: NavItem[] = [
   {
-    icon: <GridIcon fontSize={24} />,
-    name: "Dashboard",
-    key: "dashboard",
-    path: "/",
-  },
-  {
-    icon: <PageIcon fontSize={24} />,
-    name: "Expedientes",
-    key: "expedientes",
-    path: "/expedientes",
-  },
-  {
-    icon: <PieChartIcon fontSize={24} />,
-    name: "Reportes",
-    key: "reportes",
-    subItems: [
-      {
-        name: "Asignaciones",
-        key: "reporte-asignaciones",
-        path: "/reporte-asignaciones",
-      },
-      {
-        name: "Respuestas",
-        key: "reporte-respuestas",
-        path: "/reporte-respuestas",
-      },
-    ],
-  },
-  {
-    icon: <TableIcon fontSize={24} />,
-    name: "Asignación de Expediente",
-    key: "asignacion-expediente",
-    path: "/asignacion-expediente",
-  },
-  {
-    icon: <TableIcon fontSize={24} />,
-    name: "Prórrogas",
-    key: "prorrogas",
-    path: "/prorrogas",
-  },
-  {
-    icon: <TableIcon fontSize={24} />,
-    name: "Evaluación de Respuestas",
-    key: "evaluacion-respuestas",
-    path: "/evaluacion-respuestas",
-    gestoresOnly: true,
-  },
-  {
-    icon: <TableIcon fontSize={24} />,
-    name: "Control de Llamadas",
-    key: "llamadas",
-    path: "/llamadas",
-  },
-  {
     icon: <ListIcon fontSize={24} />,
     name: "Maestros",
     key: "maestros",
@@ -131,6 +77,60 @@ const navItems: NavItem[] = [
         name: "Usuarios",
         key: "usuarios",
         path: "/usuarios",
+      },
+    ],
+  },
+  {
+    icon: <GridIcon fontSize={24} />,
+    name: "Dashboard",
+    key: "dashboard",
+    path: "/",
+  },
+  {
+    icon: <PageIcon fontSize={24} />,
+    name: "Expedientes",
+    key: "expedientes",
+    path: "/expedientes",
+  },
+  {
+    icon: <TableIcon fontSize={24} />,
+    name: "Asignación de Expediente",
+    key: "asignacion-expediente",
+    path: "/asignacion-expediente",
+  },
+  {
+    icon: <TableIcon fontSize={24} />,
+    name: "Prórrogas",
+    key: "prorrogas",
+    path: "/prorrogas",
+  },
+  {
+    icon: <TableIcon fontSize={24} />,
+    name: "Evaluación de Respuestas",
+    key: "evaluacion-respuestas",
+    path: "/evaluacion-respuestas",
+    gestoresOnly: true,
+  },
+  {
+    icon: <TableIcon fontSize={24} />,
+    name: "Control de Llamadas",
+    key: "llamadas",
+    path: "/llamadas",
+  },
+  {
+    icon: <PieChartIcon fontSize={24} />,
+    name: "Reportes",
+    key: "reportes",
+    subItems: [
+      {
+        name: "Asignaciones",
+        key: "reporte-asignaciones",
+        path: "/reporte-asignaciones",
+      },
+      {
+        name: "Llamadas",
+        key: "reporte-llamadas",
+        path: "/reporte-llamadas",
       },
     ],
   },
