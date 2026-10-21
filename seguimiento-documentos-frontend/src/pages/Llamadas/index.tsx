@@ -26,6 +26,8 @@ interface Llamada {
 
 const nombre = (u?: { nombre: string; apellido: string } | null) => (u ? `${u.nombre} ${u.apellido}` : "—");
 
+const iniciales = (u: { nombre: string; apellido: string }) => `${u.nombre.charAt(0)}${u.apellido.charAt(0)}`.toUpperCase();
+
 
 
 export default function Llamadas() {
@@ -117,10 +119,10 @@ export default function Llamadas() {
                     <th className="px-6 py-4 text-start text-sm font-semibold">CUT</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Fecha y hora</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">Quien llama</th>
-                    <th className="px-6 py-4 text-start text-sm font-semibold">Registró</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">Motivo</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Fecha respuesta</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Respondido</th>
+                    <th className="px-6 py-4 text-start text-sm font-semibold">Registrada por</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">Atiende</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Ver</th>
                   </tr>
@@ -129,7 +131,7 @@ export default function Llamadas() {
                   {llamadas.map((l, index) => (
                     <tr
                       key={l.id}
-                      className={`border-b border-l-4 hover:bg-gray-50 dark:hover:bg-gray-700 ${colorUsuario(l.creador?.id).borde}`}
+                      className={`border-b border-l-4 hover:bg-gray-50 dark:hover:bg-gray-700 ${colorUsuario(l.responsable?.id).borde}`}
                     >
                       <td className="px-6 py-4 text-sm">{pagination.pageIndex * pagination.pageSize + index + 1}</td>
                       <td className="px-6 py-4">
@@ -165,20 +167,23 @@ export default function Llamadas() {
                           {l.respondido ? "SÍ" : "NO"}
                         </span>
                       </td>
+                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{nombre(l.creador)}</td>
                       <td className="px-6 py-4">
-                        {l.creador ? (
-                          <span
-                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                              colorUsuario(l.creador.id).etiqueta
-                            }`}
-                          >
-                            {nombre(l.creador)}
-                          </span>
+                        {l.responsable ? (
+                          <div className="flex items-center gap-3">
+                            <span
+                              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                                colorUsuario(l.responsable.id).etiqueta
+                              }`}
+                            >
+                              {iniciales(l.responsable)}
+                            </span>
+                            <span className="text-sm font-semibold text-gray-900 dark:text-white">{nombre(l.responsable)}</span>
+                          </div>
                         ) : (
                           "—"
                         )}
                       </td>
-                      <td className="px-6 py-4 text-sm">{nombre(l.responsable)}</td>
                       <td className="px-6 py-4 text-center">
                         <button
                           onClick={() => setDetalleId(l.id)}
