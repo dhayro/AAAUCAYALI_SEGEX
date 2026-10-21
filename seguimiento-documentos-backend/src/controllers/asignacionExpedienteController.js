@@ -79,7 +79,11 @@ exports.obtenerTodas = async (req, res) => {
     res.json({
       asignaciones: rows.map((a) => {
         const r = resumen.get(a.id);
-        return { ...a.get({ plain: true }), respuesta: { ...r, ultima_respuesta: aLima(r.ultima_respuesta) } };
+        const evaluacion = r.evaluacion && { ...r.evaluacion, fecha_evaluacion: aLima(r.evaluacion.fecha_evaluacion) };
+        return {
+          ...a.get({ plain: true }),
+          respuesta: { ...r, ultima_respuesta: aLima(r.ultima_respuesta), evaluacion },
+        };
       }),
       totalAsignaciones: count,
       totalPaginas: Math.ceil(count / limit),

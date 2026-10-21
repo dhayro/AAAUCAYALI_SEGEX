@@ -43,7 +43,17 @@ interface Asignacion {
   observacion?: string | null;
   numero_orden?: string | null;
   asignado?: (UsuarioResumen & { Cargo?: { nombre: string } | null }) | null;
-  respuesta?: { total: number; ultima_respuesta: string | null; estado: string } | null;
+  respuesta?: {
+    total: number;
+    ultima_respuesta: string | null;
+    estado: string;
+    evaluacion?: {
+      resultado: string;
+      observacion?: string | null;
+      fecha_evaluacion: string;
+      evaluador?: { nombre: string; apellido: string } | null;
+    } | null;
+  } | null;
 }
 
 const etiquetaUsuario = (nombre: string, cargo?: string | null) =>
@@ -539,6 +549,7 @@ export default function AsignacionExpediente() {
         {respuestasTarget && (
           <RespuestasAsignacionModal
             asignacion={respuestasTarget}
+            ultimaEvaluacion={respuestasTarget.respuesta?.evaluacion ?? null}
             onClose={() => setRespuestasTarget(null)}
           />
         )}
@@ -677,6 +688,14 @@ export default function AsignacionExpediente() {
                             <div className="mt-1 text-xs text-gray-500">
                               {a.respuesta.total} · última {formatFechaHora(a.respuesta.ultima_respuesta)}
                             </div>
+                            {a.respuesta.estado === "OBSERVADA" && a.respuesta.evaluacion?.observacion && (
+                              <div
+                                className="mx-auto mt-1 max-w-[14rem] truncate text-xs font-medium text-amber-700 dark:text-amber-300"
+                                title={a.respuesta.evaluacion.observacion}
+                              >
+                                Observación: {a.respuesta.evaluacion.observacion}
+                              </div>
+                            )}
                           </>
                         ) : (
                           <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${ESTADO_RESPUESTA.SIN_RESPUESTA.clases}`}>

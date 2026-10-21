@@ -9,11 +9,19 @@ import { colorUsuario } from "@/utils/colorUsuario";
 import { puedeGestionarAsignaciones, usuarioActualId } from "@/utils/sesion";
 import { CloseIcon } from "@/icons";
 
+type Evaluacion = {
+  resultado: string;
+  observacion?: string | null;
+  fecha_evaluacion: string;
+  evaluador?: { nombre: string; apellido: string } | null;
+};
+
 type Props = {
   asignacion: { id: number; cut: string; id_usuario: number };
   onClose: () => void;
   onCambio?: () => void;
   soloLectura?: boolean;
+  ultimaEvaluacion?: Evaluacion | null;
 };
 
 type Archivo = { id: number; descripcion: string; nombre_original: string; mimetype?: string; fecha_subida: string };
@@ -22,7 +30,13 @@ type Respuesta = { id: number; texto: string; fecha_creacion: string; id_usuario
 const nombre = (u?: { nombre: string; apellido: string } | null) => (u ? `${u.nombre} ${u.apellido}` : "—");
 const esPdf = (a: Archivo) => (a.mimetype || "").includes("pdf") || a.nombre_original.toLowerCase().endsWith(".pdf");
 
-export default function RespuestasAsignacionModal({ asignacion, onClose, onCambio, soloLectura = false }: Props) {
+export default function RespuestasAsignacionModal({
+  asignacion,
+  onClose,
+  onCambio,
+  soloLectura = false,
+  ultimaEvaluacion = null,
+}: Props) {
   const gestiona = puedeGestionarAsignaciones();
   const usuarioId = usuarioActualId();
   const puedeEscribir = !soloLectura && (gestiona || asignacion.id_usuario === usuarioId);
@@ -39,6 +53,10 @@ export default function RespuestasAsignacionModal({ asignacion, onClose, onCambi
   const [editando, setEditando] = useState<{ id: number; descripcion: string } | null>(null);
   const [guardandoEdicion, setGuardandoEdicion] = useState(false);
   const [reemplazando, setReemplazando] = useState<number | null>(null);
+
+  const observacionPendiente =
+    ultimaEvaluacion?.resultado === "OBSERVADA" &&
+    !respuestas.some((r) => new Date(r.fecha_creacion) > new Date(ultimaEvaluacion.fecha_evaluacion));
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -188,6 +206,19 @@ export default function RespuestasAsignacionModal({ asignacion, onClose, onCambi
           </div>
 
           <div className="space-y-4 overflow-y-auto bg-gray-50 p-4 dark:bg-gray-900/40">
+            {observacionPendiente && ultimaEvaluacion && (
+              <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-900/30">
+                <div className="text-xs font-semibold uppercase text-amber-800 dark:text-amber-200">
+                  Observada por {nombre(ultimaEvaluacion.evaluador)} · {formatFechaHora(ultimaEvaluacion.fecha_evaluacion)}
+                </div>
+                <div className="mt-1 whitespace-pre-wrap break-words text-sm text-amber-900 dark:text-amber-100">
+                  {ultimaEvaluacion.observacion || "Sin detalle"}
+                </div>
+                <div className="mt-2 text-xs text-amber-800 dark:text-amber-200">
+                  Responda abajo con lo que falta o corrija lo observado.
+                </div>
+              </div>
+            )}
             {puedeEscribir && (
               <div className="space-y-2 rounded-xl bg-white p-4 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700">
                 <textarea
