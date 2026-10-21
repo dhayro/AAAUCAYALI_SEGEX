@@ -16,6 +16,10 @@ const ArchivoAccion = sequelize.define('ArchivoAccion', {
     type: DataTypes.STRING(255),
     allowNull: false,
   },
+  descripcion: {
+    type: DataTypes.STRING(255),
+    comment: 'Qué contiene el archivo, para identificarlo',
+  },
   nombre_guardado: {
     type: DataTypes.STRING(255),
     allowNull: false,

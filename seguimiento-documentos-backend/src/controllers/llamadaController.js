@@ -5,6 +5,7 @@ const AccionAtencion = require('../models/AccionAtencion');
 const LlamadaAdministrado = require('../models/LlamadaAdministrado');
 const AccionLlamada = require('../models/AccionLlamada');
 const ArchivoAccion = require('../models/ArchivoAccion');
+const HistorialLlamada = require('../models/HistorialLlamada');
 const Expediente = require('../models/Expediente');
 const Usuario = require('../models/Usuario');
 
@@ -24,11 +25,16 @@ const parseBoolean = (valor) => valor === true || valor === 'true' || valor === 
 
 const errorConEstado = (mensaje) => Object.assign(new Error(mensaje), { status: 400 });
 
+const nombreCompleto = (u) => (u ? `${u.nombre} ${u.apellido}` : '—');
+
 const puedeVerLlamada = (llamada, usuario) =>
   esGestor(usuario) || llamada.id_responsable === usuario.id || llamada.id_usuario_creador === usuario.id;
 
 const puedeOperarLlamada = (llamada, usuario) =>
   esGestor(usuario) || llamada.id_responsable === usuario.id;
+
+const registrarHistorial = (idLlamada, tipo, detalle, idUsuario) =>
+  HistorialLlamada.create({ id_llamada: idLlamada, tipo, detalle, id_usuario: idUsuario });
 
 const includesLlamada = [
   { model: Usuario, as: 'responsable', attributes: ['id', 'nombre', 'apellido', 'usuario'] },
@@ -38,12 +44,26 @@ const includesLlamada = [
     as: 'acciones',
     include: [
       { model: AccionAtencion, as: 'accion', attributes: ['id', 'nombre', 'requiere_archivo'] },
-      { model: ArchivoAccion, as: 'archivos', attributes: ['id', 'nombre_original', 'mimetype', 'tamano', 'fecha_subida', 'id_usuario'] },
+      {
+        model: ArchivoAccion,
+        as: 'archivos',
+        attributes: ['id', 'nombre_original', 'descripcion', 'mimetype', 'tamano', 'fecha_subida', 'id_usuario'],
+      },
     ],
   },
 ];
 
-const obtenerLlamada = (id) => LlamadaAdministrado.findByPk(id, { include: includesLlamada });
+const obtenerLlamada = async (id) => {
+  const llamada = await LlamadaAdministrado.findByPk(id, { include: includesLlamada });
+  if (!llamada) return null;
+  const datos = llamada.toJSON();
+  datos.antecedentes = await HistorialLlamada.findAll({
+    where: { id_llamada: id },
+    include: [{ model: Usuario, as: 'usuario', attributes: ['id', 'nombre', 'apellido', 'usuario'] }],
+    order: [['id', 'ASC']],
+  });
+  return datos;
+};
 
 const idsAccionesValidas = async (acciones) => {
   const ids = acciones.map((a) => parseInt(a.id_accion, 10));
@@ -129,11 +149,11 @@ exports.listarLlamadas = async (req, res) => {
 
 exports.obtenerLlamada = async (req, res) => {
   try {
-    const llamada = await obtenerLlamada(req.params.id);
+    const llamada = await LlamadaAdministrado.findByPk(req.params.id);
     if (!llamada || !puedeVerLlamada(llamada, req.user)) {
       return res.status(404).json({ mensaje: 'Llamada no encontrada' });
     }
-    res.json(llamada);
+    res.json(await obtenerLlamada(llamada.id));
   } catch (error) {
     res.status(500).json({ mensaje: error.message });
   }
@@ -177,6 +197,8 @@ exports.crearLlamada = async (req, res) => {
       id_usuario_modificador: req.user.id,
     });
 
+    await registrarHistorial(llamada.id, 'REGISTRO', 'Llamada registrada', req.user.id);
+
     for (let i = 0; i < idsAcciones.length; i++) {
       await AccionLlamada.create({
         id_llamada: llamada.id,
@@ -204,6 +226,7 @@ exports.actualizarLlamada = async (req, res) => {
       return res.status(403).json({ mensaje: 'No puede modificar esta llamada' });
     }
 
+    const respondidoAnterior = llamada.respondido;
     const cambios = { id_usuario_modificador: req.user.id };
     if (req.body.fecha_llamada !== undefined) cambios.fecha_llamada = new Date(req.body.fecha_llamada);
     if (req.body.nombre_llamante !== undefined) cambios.nombre_llamante = textoMayuscula(req.body.nombre_llamante);
@@ -213,6 +236,20 @@ exports.actualizarLlamada = async (req, res) => {
     if (req.body.respondido !== undefined) cambios.respondido = parseBoolean(req.body.respondido);
 
     await llamada.update(cambios);
+
+    if (cambios.respondido !== undefined && cambios.respondido !== respondidoAnterior) {
+      await registrarHistorial(
+        llamada.id,
+        cambios.respondido ? 'RESPONDIDO' : 'NO_RESPONDIDO',
+        cambios.respondido ? 'Marcada como respondida al administrado' : 'Marcada como no respondida',
+        req.user.id
+      );
+    }
+    const otrosCambios = Object.keys(cambios).filter((k) => !['respondido', 'id_usuario_modificador'].includes(k));
+    if (otrosCambios.length > 0) {
+      await registrarHistorial(llamada.id, 'EDICION', `Datos editados: ${otrosCambios.join(', ')}`, req.user.id);
+    }
+
     res.json(await obtenerLlamada(llamada.id));
   } catch (error) {
     res.status(400).json({ mensaje: error.message });
@@ -224,10 +261,18 @@ exports.reasignarLlamada = async (req, res) => {
     const llamada = await LlamadaAdministrado.findByPk(req.params.id);
     if (!llamada) return res.status(404).json({ mensaje: 'Llamada no encontrada' });
     const idResponsable = parseInt(req.body.id_responsable, 10);
-    const usuario = await Usuario.findByPk(idResponsable, { attributes: ['id'] });
-    if (!usuario) return res.status(400).json({ mensaje: 'El usuario responsable no existe' });
+    const nuevo = await Usuario.findByPk(idResponsable, { attributes: ['id', 'nombre', 'apellido'] });
+    if (!nuevo) return res.status(400).json({ mensaje: 'El usuario responsable no existe' });
 
+    const anterior = await Usuario.findByPk(llamada.id_responsable, { attributes: ['nombre', 'apellido'] });
     await llamada.update({ id_responsable: idResponsable, id_usuario_modificador: req.user.id });
+    await registrarHistorial(
+      llamada.id,
+      'REASIGNACION',
+      `De ${nombreCompleto(anterior)} a ${nombreCompleto(nuevo)}`,
+      req.user.id
+    );
+
     res.json(await obtenerLlamada(llamada.id));
   } catch (error) {
     res.status(400).json({ mensaje: error.message });
@@ -253,6 +298,7 @@ exports.agregarAccion = async (req, res) => {
       return res.status(403).json({ mensaje: 'Solo el responsable puede agregar acciones' });
     }
     const [idAccion] = await idsAccionesValidas([{ id_accion: req.body.id_accion }]);
+    const catalogo = await AccionAtencion.findByPk(idAccion, { attributes: ['nombre'] });
     await AccionLlamada.create({
       id_llamada: llamada.id,
       id_accion: idAccion,
@@ -261,6 +307,7 @@ exports.agregarAccion = async (req, res) => {
       id_usuario_creador: req.user.id,
       id_usuario_modificador: req.user.id,
     });
+    await registrarHistorial(llamada.id, 'ACCION_AGREGADA', `Acción agregada: ${catalogo.nombre}`, req.user.id);
     res.status(201).json(await obtenerLlamada(llamada.id));
   } catch (error) {
     res.status(error.status || 400).json({ mensaje: error.message });
@@ -277,25 +324,42 @@ exports.actualizarAccionLlamada = async (req, res) => {
       return res.status(403).json({ mensaje: 'Solo el responsable puede actualizar esta acción' });
     }
 
+    const catalogo = await AccionAtencion.findByPk(accion.id_accion, { attributes: ['nombre', 'requiere_archivo'] });
     const cambios = { id_usuario_modificador: req.user.id };
+    const historial = [];
+
     if (req.body.estado !== undefined) {
       const estado = String(req.body.estado).toUpperCase();
       if (!['PENDIENTE', 'EJECUTADO'].includes(estado)) throw errorConEstado('Estado no válido');
-      if (estado === 'EJECUTADO') {
-        const catalogo = await AccionAtencion.findByPk(accion.id_accion, { attributes: ['requiere_archivo'] });
-        if (catalogo.requiere_archivo) {
-          const archivos = await ArchivoAccion.count({ where: { id_accion_llamada: accion.id } });
-          if (archivos === 0) throw errorConEstado('Esta acción requiere al menos un archivo de avance antes de marcarla como ejecutada');
+      if (estado !== accion.estado) {
+        if (estado === 'EJECUTADO') {
+          if (catalogo.requiere_archivo) {
+            const archivos = await ArchivoAccion.count({ where: { id_accion_llamada: accion.id } });
+            if (archivos === 0) {
+              throw errorConEstado('Esta acción requiere al menos un archivo de avance antes de marcarla como ejecutada');
+            }
+          }
+          cambios.fecha_ejecucion = req.body.fecha_ejecucion || new Date().toISOString().slice(0, 10);
+          historial.push(['ACCION_EJECUTADA', `Ejecutada: ${catalogo.nombre}`]);
+        } else {
+          cambios.fecha_ejecucion = null;
+          historial.push(['ACCION_PENDIENTE', `Marcada como pendiente: ${catalogo.nombre}`]);
         }
-        cambios.fecha_ejecucion = req.body.fecha_ejecucion || new Date().toISOString().slice(0, 10);
-      } else {
-        cambios.fecha_ejecucion = null;
+        cambios.estado = estado;
       }
-      cambios.estado = estado;
     }
-    if (req.body.observacion !== undefined) cambios.observacion = textoMayuscula(req.body.observacion);
+    if (req.body.observacion !== undefined) {
+      const observacion = textoMayuscula(req.body.observacion);
+      if (observacion !== accion.observacion) {
+        cambios.observacion = observacion;
+        historial.push(['OBSERVACION', `Observación de ${catalogo.nombre}: ${observacion || '(sin texto)'}`]);
+      }
+    }
 
     await accion.update(cambios);
+    for (const [tipo, detalle] of historial) {
+      await registrarHistorial(llamada.id, tipo, detalle, req.user.id);
+    }
     res.json(await obtenerLlamada(llamada.id));
   } catch (error) {
     res.status(error.status || 400).json({ mensaje: error.message });
@@ -307,6 +371,11 @@ exports.actualizarAccionLlamada = async (req, res) => {
 exports.subirArchivo = async (req, res) => {
   try {
     if (!req.file) throw errorConEstado('Seleccione un archivo para subir');
+    const descripcion = textoMayuscula(req.body.descripcion);
+    if (!descripcion) {
+      fs.unlink(req.file.path, () => {});
+      throw errorConEstado('Describa qué contiene el archivo antes de subirlo');
+    }
     const { accion, llamada } = await llamadaDeAccion(req.params.id);
     if (!accion || !llamada || !puedeVerLlamada(llamada, req.user)) {
       fs.unlink(req.file.path, () => {});
@@ -320,14 +389,51 @@ exports.subirArchivo = async (req, res) => {
     await ArchivoAccion.create({
       id_accion_llamada: accion.id,
       nombre_original: req.file.originalname,
+      descripcion,
       nombre_guardado: req.file.filename,
       mimetype: req.file.mimetype,
       tamano: req.file.size,
       id_usuario: req.user.id,
     });
+    await registrarHistorial(llamada.id, 'ARCHIVO_SUBIDO', `${descripcion} (${req.file.originalname})`, req.user.id);
     res.status(201).json(await obtenerLlamada(llamada.id));
   } catch (error) {
     if (req.file) fs.unlink(req.file.path, () => {});
+    res.status(error.status || 400).json({ mensaje: error.message });
+  }
+};
+
+exports.eliminarArchivo = async (req, res) => {
+  try {
+    const archivo = await ArchivoAccion.findByPk(req.params.id);
+    if (!archivo) return res.status(404).json({ mensaje: 'Archivo no encontrado' });
+    const { accion, llamada } = await llamadaDeAccion(archivo.id_accion_llamada);
+    if (!accion || !llamada || !puedeVerLlamada(llamada, req.user)) {
+      return res.status(404).json({ mensaje: 'Archivo no encontrado' });
+    }
+    if (!puedeOperarLlamada(llamada, req.user)) {
+      return res.status(403).json({ mensaje: 'Solo el responsable puede eliminar archivos' });
+    }
+
+    const catalogo = await AccionAtencion.findByPk(accion.id_accion, { attributes: ['requiere_archivo'] });
+    if (accion.estado === 'EJECUTADO' && catalogo.requiere_archivo) {
+      const cuantos = await ArchivoAccion.count({ where: { id_accion_llamada: accion.id } });
+      if (cuantos <= 1) {
+        throw errorConEstado('Esta acción está ejecutada y necesita al menos un archivo; suba el nuevo antes de eliminar este');
+      }
+    }
+
+    const ruta = path.join(CARPETA_ARCHIVOS, path.basename(archivo.nombre_guardado));
+    await archivo.destroy();
+    fs.unlink(ruta, () => {});
+    await registrarHistorial(
+      llamada.id,
+      'ARCHIVO_ELIMINADO',
+      `${archivo.descripcion || ''} (${archivo.nombre_original})`.trim(),
+      req.user.id
+    );
+    res.json(await obtenerLlamada(llamada.id));
+  } catch (error) {
     res.status(error.status || 400).json({ mensaje: error.message });
   }
 };
