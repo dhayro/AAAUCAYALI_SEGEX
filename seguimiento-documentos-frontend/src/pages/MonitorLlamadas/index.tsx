@@ -35,7 +35,10 @@ interface UsuarioOpcion {
   id: number;
   nombre: string;
   usuario: string;
+  cargo?: string | null;
 }
+
+const etiquetaUsuario = (u: UsuarioOpcion) => (u.cargo ? `${u.nombre} (${u.cargo})` : u.nombre);
 
 const INTERVALO_MS = 10000;
 const DURACION_NUEVA_MS = 120000;
@@ -310,9 +313,9 @@ export default function MonitorLlamadas() {
                   const id = Number(valor);
                   const u = usuarios.find((x) => x.id === id);
                   setResponsable(id);
-                  setResponsableNombre(u ? `${u.nombre} (${u.usuario})` : "");
+                  setResponsableNombre(u ? etiquetaUsuario(u) : "");
                 }}
-                options={usuarios.map((u) => ({ id: u.id, nombre: `${u.nombre} (${u.usuario})` }))}
+                options={usuarios.map((u) => ({ id: u.id, nombre: etiquetaUsuario(u) }))}
                 onSearch={(termino) => fetchUsuarios(termino)}
                 placeholder="Atiende: todos · buscar persona"
                 selectedLabel={responsableNombre}
