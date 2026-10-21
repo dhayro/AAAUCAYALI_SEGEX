@@ -171,7 +171,6 @@ exports.cargaMasiva = async (req, res) => {
     const errores = [];
     const validas = [];
     const vista = [];
-    const omitidas = [];
     filas.forEach((f, i) => {
       const fila = i + 2; // la fila 1 del Excel es el encabezado
       const cut = normalizarTexto(f.cut);
@@ -198,7 +197,7 @@ exports.cargaMasiva = async (req, res) => {
         fecha,
         fecha_vencimiento: problemas.length || isNaN(plazo) ? '' : sumarDiasCalendario(fecha, plazo),
         observacion: normalizarTexto(f.observacion) ?? '',
-        estado: problemas.length ? 'ERROR' : cut && asignadosPrevios.has(cut) ? 'OMITIDA' : 'LISTA',
+        estado: problemas.length ? 'ERROR' : cut && asignadosPrevios.has(cut) ? 'AVISO' : 'LISTA',
         mensaje: problemas.length
           ? problemas.join('; ')
           : cut && asignadosPrevios.has(cut)
@@ -208,8 +207,6 @@ exports.cargaMasiva = async (req, res) => {
 
       if (problemas.length) {
         errores.push({ fila, mensaje: problemas.join('; ') });
-      } else if (cut && asignadosPrevios.has(cut)) {
-        omitidas.push(fila);
       } else {
         validas.push({
           cut,
@@ -231,7 +228,6 @@ exports.cargaMasiva = async (req, res) => {
         errores,
         total: filas.length,
         listas: validas.length,
-        omitidas: omitidas.length,
       });
     }
 
@@ -257,7 +253,7 @@ exports.cargaMasiva = async (req, res) => {
       }
     });
 
-    res.status(201).json({ creadas: validas.length, omitidas: omitidas.length });
+    res.status(201).json({ creadas: validas.length });
   } catch (error) {
     res.status(500).json({ mensaje: error.message });
   }
