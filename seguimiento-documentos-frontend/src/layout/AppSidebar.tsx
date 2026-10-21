@@ -35,7 +35,7 @@ type NavItem = {
 };
 
 // Menús que ve el perfil personal (además de Perfil, para sus propios datos).
-const MENUS_PERSONAL = ["dashboard", "asignacion-expediente", "llamadas", "profile", "logout"];
+const MENUS_PERSONAL = ["dashboard", "asignacion-expediente", "llamadas", "mi-desempeno", "profile", "logout"];
 
 const visibleParaPerfil = (items: NavItem[]) => {
   if (perfilActual() === "personal") return items.filter((item) => MENUS_PERSONAL.includes(item.key ?? ""));
@@ -163,6 +163,12 @@ const navItems: NavItem[] = [
         path: "/reporte-historial",
       },
     ],
+  },
+  {
+    icon: <UserCircleIcon fontSize={24} />,
+    name: "Mi desempeño",
+    key: "mi-desempeno",
+    path: "/mi-desempeno",
   },
 ];
 
