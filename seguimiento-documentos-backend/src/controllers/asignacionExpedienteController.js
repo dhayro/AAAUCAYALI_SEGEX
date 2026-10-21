@@ -155,119 +155,132 @@ exports.actualizar = async (req, res) => {
   }
 };
 
-exports.prorrogar = async (req, res) => {
+const errorConEstado = (mensaje) => Object.assign(new Error(mensaje), { status: 400 });
+
+const solicitarProrroga = async (actual, datos, userId) => {
+  if (actual.estado_prorroga === 'PENDIENTE') {
+    throw errorConEstado('Ya hay una prórroga pendiente de aceptación');
+  }
+  if (actual.estado_prorroga === 'ACEPTADA') {
+    throw errorConEstado('La asignación ya tiene una prórroga aceptada');
+  }
+
+  const plazo = parsePlazo(datos.plazo_prorroga);
+  const motivo = normalizarTexto(datos.motivo);
+  if (!motivo) {
+    throw errorConEstado('Debe indicar el motivo de la prórroga');
+  }
+  const hoy = hoyLima();
+
+  await actual.update({
+    fecha_prorroga: hoy,
+    plazo_prorroga: plazo,
+    estado_prorroga: 'PENDIENTE',
+    motivo_prorroga: motivo,
+    fecha_vencimiento_prorroga: null,
+    id_usuario_modificador: userId,
+  });
+  await HistorialAsignacion.create({
+    id_asignacion: actual.id,
+    tipo: 'SOLICITUD_PRORROGA',
+    plazo,
+    fecha_evento: hoy,
+    observacion: motivo,
+    id_usuario: userId,
+  });
+};
+
+const aceptarProrrogaPendiente = async (actual, datos, userId) => {
+  if (actual.estado_prorroga !== 'PENDIENTE') {
+    throw errorConEstado('No hay una prórroga pendiente para aceptar');
+  }
+
+  const plazo = datos.plazo_prorroga !== undefined
+    ? parsePlazo(datos.plazo_prorroga)
+    : actual.plazo_prorroga;
+
+  await actual.update({
+    plazo_prorroga: plazo,
+    estado_prorroga: 'ACEPTADA',
+    fecha_vencimiento_prorroga: sumarDiasCalendario(actual.fecha_vencimiento, plazo),
+    id_usuario_modificador: userId,
+  });
+  await HistorialAsignacion.create({
+    id_asignacion: actual.id,
+    tipo: 'PRORROGA_ACEPTADA',
+    plazo,
+    fecha_evento: hoyLima(),
+    observacion: normalizarTexto(datos.observacion),
+    id_usuario: userId,
+  });
+};
+
+const rechazarProrrogaPendiente = async (actual, datos, userId) => {
+  if (actual.estado_prorroga !== 'PENDIENTE') {
+    throw errorConEstado('No hay una prórroga pendiente para rechazar');
+  }
+  const motivo = normalizarTexto(datos.observacion);
+  if (!motivo) {
+    throw errorConEstado('Debe indicar el motivo del rechazo');
+  }
+
+  await actual.update({
+    estado_prorroga: 'RECHAZADA',
+    fecha_vencimiento_prorroga: null,
+    id_usuario_modificador: userId,
+  });
+  await HistorialAsignacion.create({
+    id_asignacion: actual.id,
+    tipo: 'PRORROGA_RECHAZADA',
+    plazo: actual.plazo_prorroga,
+    fecha_evento: hoyLima(),
+    observacion: motivo,
+    id_usuario: userId,
+  });
+};
+
+const accionIndividual = (accion) => async (req, res) => {
   try {
     const actual = await AsignacionExpediente.findByPk(req.params.id);
     if (!actual) {
       return res.status(404).json({ mensaje: 'Asignación no encontrada' });
     }
-
-    if (actual.estado_prorroga === 'PENDIENTE') {
-      return res.status(400).json({ mensaje: 'Ya hay una prórroga pendiente de aceptación' });
-    }
-    if (actual.estado_prorroga === 'ACEPTADA') {
-      return res.status(400).json({ mensaje: 'La asignación ya tiene una prórroga aceptada' });
-    }
-
-    const plazo = parsePlazo(req.body.plazo_prorroga);
-    const motivo = normalizarTexto(req.body.motivo);
-    if (!motivo) {
-      return res.status(400).json({ mensaje: 'Debe indicar el motivo de la prórroga' });
-    }
-    const hoy = hoyLima();
-
-    await actual.update({
-      fecha_prorroga: hoy,
-      plazo_prorroga: plazo,
-      estado_prorroga: 'PENDIENTE',
-      motivo_prorroga: motivo,
-      fecha_vencimiento_prorroga: null,
-      id_usuario_modificador: req.user.id,
-    });
-    await HistorialAsignacion.create({
-      id_asignacion: actual.id,
-      tipo: 'SOLICITUD_PRORROGA',
-      plazo,
-      fecha_evento: hoy,
-      observacion: motivo,
-      id_usuario: req.user.id,
-    });
-
+    await accion(actual, req.body, req.user.id);
     res.json(await obtenerConRelaciones(actual.id));
   } catch (error) {
-    res.status(400).json({ mensaje: error.message });
+    res.status(error.status || 400).json({ mensaje: error.message });
   }
 };
 
-exports.aceptarProrroga = async (req, res) => {
-  try {
-    const actual = await AsignacionExpediente.findByPk(req.params.id);
-    if (!actual) {
-      return res.status(404).json({ mensaje: 'Asignación no encontrada' });
-    }
-    if (actual.estado_prorroga !== 'PENDIENTE') {
-      return res.status(400).json({ mensaje: 'No hay una prórroga pendiente para aceptar' });
-    }
-
-    const plazo = req.body.plazo_prorroga !== undefined
-      ? parsePlazo(req.body.plazo_prorroga)
-      : actual.plazo_prorroga;
-    const hoy = hoyLima();
-
-    await actual.update({
-      plazo_prorroga: plazo,
-      estado_prorroga: 'ACEPTADA',
-      fecha_vencimiento_prorroga: sumarDiasCalendario(actual.fecha_vencimiento, plazo),
-      id_usuario_modificador: req.user.id,
-    });
-    await HistorialAsignacion.create({
-      id_asignacion: actual.id,
-      tipo: 'PRORROGA_ACEPTADA',
-      plazo,
-      fecha_evento: hoy,
-      observacion: normalizarTexto(req.body.observacion),
-      id_usuario: req.user.id,
-    });
-
-    res.json(await obtenerConRelaciones(actual.id));
-  } catch (error) {
-    res.status(400).json({ mensaje: error.message });
+const accionMasiva = (accion) => async (req, res) => {
+  const ids = Array.isArray(req.body.ids)
+    ? [...new Set(req.body.ids.map(Number).filter((n) => Number.isInteger(n) && n > 0))]
+    : [];
+  if (ids.length === 0) {
+    return res.status(400).json({ mensaje: 'Seleccione al menos una asignación' });
   }
+
+  const ok = [];
+  const errores = [];
+  for (const id of ids) {
+    try {
+      const actual = await AsignacionExpediente.findByPk(id);
+      if (!actual) throw errorConEstado('Asignación no encontrada');
+      await accion(actual, req.body, req.user.id);
+      ok.push(id);
+    } catch (error) {
+      errores.push({ id, mensaje: error.message });
+    }
+  }
+  res.json({ total: ids.length, ok, errores });
 };
 
-exports.rechazarProrroga = async (req, res) => {
-  try {
-    const actual = await AsignacionExpediente.findByPk(req.params.id);
-    if (!actual) {
-      return res.status(404).json({ mensaje: 'Asignación no encontrada' });
-    }
-    if (actual.estado_prorroga !== 'PENDIENTE') {
-      return res.status(400).json({ mensaje: 'No hay una prórroga pendiente para rechazar' });
-    }
-    const motivo = normalizarTexto(req.body.observacion);
-    if (!motivo) {
-      return res.status(400).json({ mensaje: 'Debe indicar el motivo del rechazo' });
-    }
-
-    await actual.update({
-      estado_prorroga: 'RECHAZADA',
-      fecha_vencimiento_prorroga: null,
-      id_usuario_modificador: req.user.id,
-    });
-    await HistorialAsignacion.create({
-      id_asignacion: actual.id,
-      tipo: 'PRORROGA_RECHAZADA',
-      plazo: actual.plazo_prorroga,
-      fecha_evento: hoyLima(),
-      observacion: motivo,
-      id_usuario: req.user.id,
-    });
-
-    res.json(await obtenerConRelaciones(actual.id));
-  } catch (error) {
-    res.status(400).json({ mensaje: error.message });
-  }
-};
+exports.prorrogar = accionIndividual(solicitarProrroga);
+exports.aceptarProrroga = accionIndividual(aceptarProrrogaPendiente);
+exports.rechazarProrroga = accionIndividual(rechazarProrrogaPendiente);
+exports.prorrogarMasivo = accionMasiva(solicitarProrroga);
+exports.aceptarProrrogaMasivo = accionMasiva(aceptarProrrogaPendiente);
+exports.rechazarProrrogaMasivo = accionMasiva(rechazarProrrogaPendiente);
 
 exports.obtenerHistorial = async (req, res) => {
   try {
