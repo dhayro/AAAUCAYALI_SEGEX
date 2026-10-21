@@ -148,6 +148,13 @@ export default function AsignacionExpediente() {
   const [prorrogaMasiva, setProrrogaMasiva] = useState(false);
   const [erroresCarga, setErroresCarga] = useState<{ fila: number; mensaje: string }[]>([]);
   const [cargandoExcel, setCargandoExcel] = useState(false);
+  const [vistaPrevia, setVistaPrevia] = useState<{
+    filas: any[];
+    errores: { fila: number; mensaje: string }[];
+    total: number;
+  } | null>(null);
+  const [datosPendientes, setDatosPendientes] = useState<any[]>([]);
+  const [confirmandoCarga, setConfirmandoCarga] = useState(false);
 
   const [cutAbierto, setCutAbierto] = useState<string | null>(null);
 
@@ -259,9 +266,10 @@ export default function AsignacionExpediente() {
         toast.error("El archivo no tiene filas con CUT");
         return;
       }
+      // Primero se revisa el archivo: la vista previa no crea nada.
+      setDatosPendientes(datos);
       const res = await api.post("/asignaciones-expediente/carga-masiva", { filas: datos });
-      toast.success(`Se crearon ${res.data.creadas} asignaciones`);
-      await fetchAsignaciones();
+      setVistaPrevia(res.data);
     } catch (error: any) {
       const errores = error.response?.data?.errores;
       if (errores) {
@@ -272,6 +280,26 @@ export default function AsignacionExpediente() {
       }
     } finally {
       setCargandoExcel(false);
+    }
+  };
+
+  const confirmarCarga = async () => {
+    setConfirmandoCarga(true);
+    try {
+      const res = await api.post("/asignaciones-expediente/carga-masiva", { filas: datosPendientes, confirmar: true });
+      toast.success(`Se crearon ${res.data.creadas} asignaciones`);
+      setVistaPrevia(null);
+      setDatosPendientes([]);
+      await fetchAsignaciones();
+    } catch (error: any) {
+      const errores = error.response?.data?.errores;
+      if (errores) {
+        setErroresCarga(errores);
+        setVistaPrevia(null);
+      }
+      toast.error(error.response?.data?.mensaje || "No se pudo cargar el archivo");
+    } finally {
+      setConfirmandoCarga(false);
     }
   };
 
@@ -676,6 +704,77 @@ export default function AsignacionExpediente() {
             >
               Limpiar selección
             </button>
+          </div>
+        )}
+
+        {vistaPrevia && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+            <div className="flex max-h-[90vh] w-full max-w-5xl flex-col rounded-lg bg-white shadow-2xl dark:bg-gray-800">
+              <div className="border-b p-5 dark:border-gray-700">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Vista previa de la carga</h2>
+                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                  {vistaPrevia.total} fila{vistaPrevia.total === 1 ? "" : "s"} · {vistaPrevia.filas.length - vistaPrevia.errores.length} lista
+                  {vistaPrevia.filas.length - vistaPrevia.errores.length === 1 ? "" : "s"} · {vistaPrevia.errores.length} con error
+                  {vistaPrevia.errores.length > 0 && " · corrija el archivo y vuelva a cargarlo para poder confirmar"}
+                </p>
+              </div>
+
+              <div className="overflow-auto p-5">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-700 dark:text-gray-300">
+                    <tr>
+                      <th className="px-3 py-2 text-start">Fila</th>
+                      <th className="px-3 py-2 text-start">CUT</th>
+                      <th className="px-3 py-2 text-start">Asignado a</th>
+                      <th className="px-3 py-2 text-center">Plazo</th>
+                      <th className="px-3 py-2 text-center">Asignación</th>
+                      <th className="px-3 py-2 text-center">Vence</th>
+                      <th className="px-3 py-2 text-start">Observación</th>
+                      <th className="px-3 py-2 text-start">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                    {vistaPrevia.filas.map((f) => (
+                      <tr key={f.fila} className={f.problemas ? "bg-red-50 dark:bg-red-900/20" : ""}>
+                        <td className="px-3 py-2">{f.fila}</td>
+                        <td className="px-3 py-2 font-medium">{f.cut || "—"}</td>
+                        <td className="px-3 py-2">{f.nombre || f.usuario || "—"}</td>
+                        <td className="px-3 py-2 text-center">{f.plazo || "—"}</td>
+                        <td className="px-3 py-2 text-center">{formatFecha(f.fecha)}</td>
+                        <td className="px-3 py-2 text-center">{formatFecha(f.fecha_vencimiento)}</td>
+                        <td className="max-w-xs truncate px-3 py-2">{f.observacion || "—"}</td>
+                        <td className="px-3 py-2">
+                          {f.problemas ? (
+                            <span className="text-red-700 dark:text-red-300">{f.problemas}</span>
+                          ) : (
+                            <span className="font-semibold text-green-700 dark:text-green-300">Lista</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex flex-col gap-3 border-t p-5 sm:flex-row sm:justify-end dark:border-gray-700">
+                <button
+                  onClick={() => {
+                    setVistaPrevia(null);
+                    setDatosPendientes([]);
+                  }}
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmarCarga}
+                  disabled={confirmandoCarga || vistaPrevia.errores.length > 0 || vistaPrevia.filas.length === 0}
+                  className="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {confirmandoCarga ? "Creando..." : `Confirmar y crear ${vistaPrevia.filas.length} asignaciones`}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
