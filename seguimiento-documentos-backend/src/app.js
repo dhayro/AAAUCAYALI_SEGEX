@@ -19,6 +19,7 @@ const procedimientoRoutes = require('./routes/procedimientoRoutes');
 const asignacionExpedienteRoutes = require('./routes/asignacionExpedienteRoutes');
 const evaluacionAsignacionRoutes = require('./routes/evaluacionAsignacionRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const reporteRoutes = require('./routes/reporteRoutes');
 const initAdmin = require('./utils/initAdmin');
 const initTipoDocumentos = require('./utils/initTipoDocumentos');
 
@@ -96,6 +97,7 @@ app.use('/api/procedimientos', procedimientoRoutes);
 app.use('/api/asignaciones-expediente', asignacionExpedienteRoutes);
 app.use('/api/evaluaciones-asignacion', evaluacionAsignacionRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/reportes', reporteRoutes);
 
 // Cargar todos los modelos
 const Area = require('./models/Area');
