@@ -39,28 +39,10 @@ const navItems: NavItem[] = [
     path: "/",
   },
   {
-    icon: <TableIcon fontSize={24} />,
-    name: "Documentos",
-    key: "documentos",
-    path: "/documentos",
-  },
-  {
     icon: <PageIcon fontSize={24} />,
     name: "Expedientes",
     key: "expedientes",
     path: "/expedientes",
-  },
-  {
-    icon: <TableIcon fontSize={24} />,
-    name: "Documentos Prórroga",
-    key: "prorroga",
-    path: "/documentos-prorroga",
-  },
-  {
-    icon: <TableIcon fontSize={24} />,
-    name: "Documentos Respuestas",
-    key: "respuestas",
-    path: "/documentos-respuestas",
   },
   {
     icon: <PieChartIcon fontSize={24} />,
@@ -78,12 +60,6 @@ const navItems: NavItem[] = [
         path: "/reporte-respuestas",
       },
     ],
-  },
-  {
-    icon: <TableIcon fontSize={24} />,
-    name: "Docs Sin Asignar",
-    key: "docs-sin-asignar",
-    path: "/documentos-sin-asignar",
   },
   {
     icon: <TableIcon fontSize={24} />,
