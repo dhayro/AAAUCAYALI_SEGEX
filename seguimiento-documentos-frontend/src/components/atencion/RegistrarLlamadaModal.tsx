@@ -163,7 +163,7 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
                   <ul className="mt-1 space-y-1 text-amber-900 dark:text-amber-100">
                     {previas.map((p) => (
                       <li key={p.id}>
-                        {formatFechaHora(p.fecha_llamada)} · {p.respondido ? "Respondida" : "Sin respuesta"} ·{" "}
+                        {formatFechaHora(p.fecha_llamada)} · llamó {p.nombre_llamante} · {p.respondido ? "Respondida" : "Sin respuesta"} ·{" "}
                         {p.responsable ? `${p.responsable.nombre} ${p.responsable.apellido}` : "Sin responsable"} — {p.motivo}
                       </li>
                     ))}

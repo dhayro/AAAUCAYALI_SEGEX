@@ -361,7 +361,8 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
                       <ul className="mt-1 space-y-1">
                         {llamada.otras_del_cut.map((o: any) => (
                           <li key={o.id} className="rounded-lg bg-amber-50 p-2 text-sm dark:bg-amber-900/30">
-                            <span className="font-semibold">{formatFechaHora(o.fecha_llamada)}</span> ·{" "}
+                            <span className="font-semibold">{formatFechaHora(o.fecha_llamada)}</span> · llamó{" "}
+                            <span className="font-semibold">{o.nombre_llamante}</span> ·{" "}
                             {o.respondido ? "Respondida" : "Sin respuesta"} · {nombre(o.responsable)} — {o.motivo}
                           </li>
                         ))}
