@@ -19,8 +19,8 @@ interface Llamada {
   motivo: string;
   fecha_respuesta?: string | null;
   respondido: boolean;
-  responsable?: { nombre: string; apellido: string } | null;
-  creador?: { nombre: string; apellido: string } | null;
+  responsable?: { id: number; nombre: string; apellido: string } | null;
+  creador?: { id: number; nombre: string; apellido: string } | null;
 }
 
 const nombre = (u?: { nombre: string; apellido: string } | null) => (u ? `${u.nombre} ${u.apellido}` : "—");
