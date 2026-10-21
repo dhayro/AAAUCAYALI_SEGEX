@@ -7,6 +7,7 @@ import DatePickerLima from "@/components/form/DatePickerLima";
 import SearchableSelect from "@/components/form/SearchableSelect";
 import ExpedienteDetalleModal from "@/components/expedientes/ExpedienteDetalleModal";
 import HistorialAsignacionModal from "@/components/asignaciones/HistorialAsignacionModal";
+import ProrrogaMasivaModal from "@/components/asignaciones/ProrrogaMasivaModal";
 import { formatFecha } from "@/components/expedientes/format";
 import api from "@/utils/api";
 import { PencilIcon, TrashBinIcon, PlusIcon, CloseIcon } from "@/icons";
@@ -115,6 +116,8 @@ export default function AsignacionExpediente() {
   const [prorrogaTarget, setProrrogaTarget] = useState<Asignacion | null>(null);
   const [prorrogaData, setProrrogaData] = useState({ plazo: "", motivo: "" });
   const [historialTarget, setHistorialTarget] = useState<Asignacion | null>(null);
+  const [seleccion, setSeleccion] = useState<number[]>([]);
+  const [prorrogaMasiva, setProrrogaMasiva] = useState(false);
 
   const [cutAbierto, setCutAbierto] = useState<string | null>(null);
 
@@ -135,6 +138,7 @@ export default function AsignacionExpediente() {
       const response = await api.get("/asignaciones-expediente", { params });
       setAsignaciones(response.data.asignaciones || []);
       setTotalCount(response.data.totalAsignaciones || 0);
+      setSeleccion([]);
     } catch (error) {
       console.error("Error fetching asignaciones:", error);
       toast.error("Error al cargar asignaciones");
@@ -492,6 +496,19 @@ export default function AsignacionExpediente() {
           </div>
         )}
 
+        {prorrogaMasiva && (
+          <ProrrogaMasivaModal
+            modo="solicitar"
+            ids={seleccion}
+            onClose={() => setProrrogaMasiva(false)}
+            onDone={() => {
+              setProrrogaMasiva(false);
+              setSeleccion([]);
+              fetchAsignaciones();
+            }}
+          />
+        )}
+
         {historialTarget && (
           <HistorialAsignacionModal
             asignacionId={historialTarget.id}
@@ -502,6 +519,26 @@ export default function AsignacionExpediente() {
 
         {cutAbierto && (
           <ExpedienteDetalleModal cut={cutAbierto} onClose={() => setCutAbierto(null)} />
+        )}
+
+        {seleccion.length > 0 && (
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-brand-200 bg-brand-50 p-3 dark:border-brand-800 dark:bg-brand-900/20">
+            <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+              {seleccion.length} seleccionada(s)
+            </span>
+            <button
+              onClick={() => setProrrogaMasiva(true)}
+              className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700"
+            >
+              Solicitar prórroga a seleccionadas
+            </button>
+            <button
+              onClick={() => setSeleccion([])}
+              className="ml-auto text-sm text-gray-600 underline hover:text-gray-800 dark:text-gray-300"
+            >
+              Limpiar selección
+            </button>
+          </div>
         )}
 
         {/* Tabla */}
@@ -516,6 +553,21 @@ export default function AsignacionExpediente() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b bg-gray-50 dark:bg-gray-700">
+                    <th className="px-4 py-4 text-center">
+                      <input
+                        type="checkbox"
+                        aria-label="Seleccionar las que pueden pedir prórroga"
+                        checked={
+                          asignaciones.some((a) => puedeProrrogar(a)) &&
+                          asignaciones.filter((a) => puedeProrrogar(a)).every((a) => seleccion.includes(a.id))
+                        }
+                        onChange={(e) =>
+                          setSeleccion(
+                            e.target.checked ? asignaciones.filter((a) => puedeProrrogar(a)).map((a) => a.id) : []
+                          )
+                        }
+                      />
+                    </th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">#</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">CUT</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">Asignado a</th>
@@ -532,6 +584,20 @@ export default function AsignacionExpediente() {
                 <tbody>
                   {asignaciones.map((a, index) => (
                     <tr key={a.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="px-4 py-4 text-center">
+                        {puedeProrrogar(a) && (
+                          <input
+                            type="checkbox"
+                            aria-label={`Seleccionar ${a.cut}`}
+                            checked={seleccion.includes(a.id)}
+                            onChange={(e) =>
+                              setSeleccion((prev) =>
+                                e.target.checked ? [...prev, a.id] : prev.filter((x) => x !== a.id)
+                              )
+                            }
+                          />
+                        )}
+                      </td>
                       <td className="px-6 py-4 text-sm">
                         {pagination.pageIndex * pagination.pageSize + index + 1}
                       </td>

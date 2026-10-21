@@ -6,6 +6,7 @@ import Label from "@/components/form/Label";
 import ExpedienteDetalleModal from "@/components/expedientes/ExpedienteDetalleModal";
 import RevisionProrrogaModal from "@/components/asignaciones/RevisionProrrogaModal";
 import HistorialAsignacionModal from "@/components/asignaciones/HistorialAsignacionModal";
+import ProrrogaMasivaModal, { type ModoMasivo } from "@/components/asignaciones/ProrrogaMasivaModal";
 import { formatFecha } from "@/components/expedientes/format";
 import api from "@/utils/api";
 
@@ -45,6 +46,8 @@ export default function Prorrogas() {
   const [cutAbierto, setCutAbierto] = useState<string | null>(null);
   const [revision, setRevision] = useState<Prorroga | null>(null);
   const [historial, setHistorial] = useState<Prorroga | null>(null);
+  const [seleccion, setSeleccion] = useState<number[]>([]);
+  const [masivo, setMasivo] = useState<ModoMasivo | null>(null);
 
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [filters, setFilters] = useState({ cut: "", estado_prorroga: "PENDIENTE" });
@@ -65,6 +68,7 @@ export default function Prorrogas() {
       const response = await api.get("/asignaciones-expediente", { params });
       setProrrogas(response.data.asignaciones || []);
       setTotalCount(response.data.totalAsignaciones || 0);
+      setSeleccion([]);
     } catch (error) {
       console.error("Error fetching prórrogas:", error);
       toast.error("Error al cargar prórrogas");
@@ -116,6 +120,32 @@ export default function Prorrogas() {
           </div>
         </div>
 
+        {seleccion.length > 0 && (
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-brand-200 bg-brand-50 p-3 dark:border-brand-800 dark:bg-brand-900/20">
+            <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+              {seleccion.length} seleccionada(s)
+            </span>
+            <button
+              onClick={() => setMasivo("aceptar")}
+              className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-green-700"
+            >
+              Aceptar seleccionadas
+            </button>
+            <button
+              onClick={() => setMasivo("rechazar")}
+              className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-700"
+            >
+              Rechazar seleccionadas
+            </button>
+            <button
+              onClick={() => setSeleccion([])}
+              className="ml-auto text-sm text-gray-600 underline hover:text-gray-800 dark:text-gray-300"
+            >
+              Limpiar selección
+            </button>
+          </div>
+        )}
+
         <div className="overflow-hidden rounded-lg bg-white shadow dark:bg-gray-800">
           <div className="overflow-x-auto">
             {loading ? (
@@ -127,6 +157,25 @@ export default function Prorrogas() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b bg-gray-50 dark:bg-gray-700">
+                    <th className="px-4 py-4 text-center">
+                      <input
+                        type="checkbox"
+                        aria-label="Seleccionar pendientes"
+                        checked={
+                          prorrogas.some((p) => p.estado_prorroga === "PENDIENTE") &&
+                          prorrogas
+                            .filter((p) => p.estado_prorroga === "PENDIENTE")
+                            .every((p) => seleccion.includes(p.id))
+                        }
+                        onChange={(e) =>
+                          setSeleccion(
+                            e.target.checked
+                              ? prorrogas.filter((p) => p.estado_prorroga === "PENDIENTE").map((p) => p.id)
+                              : []
+                          )
+                        }
+                      />
+                    </th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">#</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">CUT</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">Asignado a</th>
@@ -141,6 +190,20 @@ export default function Prorrogas() {
                 <tbody>
                   {prorrogas.map((p, index) => (
                     <tr key={p.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="px-4 py-4 text-center">
+                        {p.estado_prorroga === "PENDIENTE" && (
+                          <input
+                            type="checkbox"
+                            aria-label={`Seleccionar ${p.cut}`}
+                            checked={seleccion.includes(p.id)}
+                            onChange={(e) =>
+                              setSeleccion((prev) =>
+                                e.target.checked ? [...prev, p.id] : prev.filter((x) => x !== p.id)
+                              )
+                            }
+                          />
+                        )}
+                      </td>
                       <td className="px-6 py-4 text-sm">{pagination.pageIndex * pagination.pageSize + index + 1}</td>
                       <td className="px-6 py-4 font-medium">
                         <button onClick={() => setCutAbierto(p.cut)} className="text-blue-600 hover:underline dark:text-blue-400">
@@ -226,6 +289,18 @@ export default function Prorrogas() {
         </div>
       </div>
 
+      {masivo && (
+        <ProrrogaMasivaModal
+          modo={masivo}
+          ids={seleccion}
+          onClose={() => setMasivo(null)}
+          onDone={() => {
+            setMasivo(null);
+            setSeleccion([]);
+            fetchProrrogas();
+          }}
+        />
+      )}
       {revision && (
         <RevisionProrrogaModal
           asignacion={revision}
