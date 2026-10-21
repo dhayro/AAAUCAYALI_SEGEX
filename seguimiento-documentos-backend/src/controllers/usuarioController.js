@@ -124,9 +124,13 @@ exports.obtenerUsuarioPorId = async (req, res) => {
       return res.status(403).json({ mensaje: 'No tienes permiso para ver este usuario' });
     }
 
-    const usuario = await Usuario.findByPk(usuarioId);
+    const usuario = await Usuario.findByPk(usuarioId, {
+      include: [{ model: Cargo, attributes: ['id', 'nombre'], required: false }],
+    });
     if (usuario) {
-      res.json(formatUsuarioResponse(usuario));
+      const datos = formatUsuarioResponse(usuario);
+      datos.cargo = usuario.Cargo ? usuario.Cargo.nombre : null;
+      res.json(datos);
     } else {
       res.status(404).json({ mensaje: 'Usuario no encontrado' });
     }
