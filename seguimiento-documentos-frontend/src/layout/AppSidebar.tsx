@@ -150,30 +150,6 @@ const othersItems: NavItem[] = [
     path: "/signin",
     cerrarSesion: true,
   },
-  {
-    icon: <PieChartIcon fontSize={24} />,
-    name: "SISGED",
-    key: "sisged",
-    path: "/sisged",
-  },
-  {
-    icon: <TableIcon fontSize={24} />,
-    name: "Importar SISGED",
-    key: "importar-sisged",
-    path: "/importar-sisged",
-  },
-  {
-    icon: <PieChartIcon fontSize={24} />,
-    name: "Sincronizar SISGED",
-    key: "sincronizar-sisged",
-    path: "/sincronizar-sisged",
-  },
-  {
-    icon: <TableIcon fontSize={24} />,
-    name: "Admin Tokens SISGED",
-    key: "admin-tokens-sisged",
-    path: "/admin-sisged-tokens",
-  },
 ];
 
 const AppSidebar: React.FC = () => {
