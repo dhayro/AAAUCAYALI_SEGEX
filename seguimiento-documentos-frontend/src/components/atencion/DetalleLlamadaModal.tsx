@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import SearchableSelect from "@/components/form/SearchableSelect";
 import Input from "@/components/form/input/InputField";
 import VisorArchivoModal from "@/components/expedientes/VisorArchivoModal";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { formatFecha, formatFechaHora } from "@/components/expedientes/format";
 import api from "@/utils/api";
 import { puedeGestionarAsignaciones, usuarioActualId } from "@/utils/sesion";
@@ -28,6 +29,7 @@ const TIPO_ANTECEDENTE: Record<string, string> = {
   OBSERVACION: "Observación",
   ARCHIVO_SUBIDO: "Archivo subido",
   ARCHIVO_ELIMINADO: "Archivo eliminado",
+  ARCHIVO_EDITADO: "Descripción de archivo editada",
 };
 
 const esPdf = (archivo: any) => (archivo.mimetype || "").includes("pdf") || archivo.nombre_original?.toLowerCase().endsWith(".pdf");
@@ -44,6 +46,26 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio }: Pr
   const [subiendo, setSubiendo] = useState<number | null>(null);
   const [descripciones, setDescripciones] = useState<Record<number, string>>({});
   const [visor, setVisor] = useState<{ titulo: string; url: string | null; cargando: boolean; error: string } | null>(null);
+  const [confirmar, setConfirmar] = useState<{
+    titulo: string;
+    mensaje: React.ReactNode;
+    textoConfirmar: string;
+    peligro: boolean;
+    accion: () => Promise<unknown>;
+  } | null>(null);
+  const [procesandoConfirmar, setProcesandoConfirmar] = useState(false);
+  const [editandoArchivo, setEditandoArchivo] = useState<{ id: number; valor: string } | null>(null);
+
+  const ejecutarConfirmacion = async () => {
+    if (!confirmar) return;
+    setProcesandoConfirmar(true);
+    try {
+      await confirmar.accion();
+    } finally {
+      setProcesandoConfirmar(false);
+      setConfirmar(null);
+    }
+  };
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -87,36 +109,70 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio }: Pr
 
   const cambiarEstado = (accion: any) => {
     const ejecutar = accion.estado !== "EJECUTADO";
-    const pregunta = ejecutar
-      ? `¿Confirma que la acción "${accion.accion?.nombre}" está ejecutada?`
-      : `¿Confirma que la acción "${accion.accion?.nombre}" vuelve a estar pendiente?`;
-    if (!window.confirm(pregunta)) return;
-    notificar(
-      () => api.patch(`/atenciones/acciones-llamada/${accion.id}`, { estado: ejecutar ? "EJECUTADO" : "PENDIENTE" }),
-      ejecutar ? "Acción marcada como ejecutada" : "Acción marcada como pendiente"
-    );
+    setConfirmar({
+      titulo: ejecutar ? "Marcar como ejecutada" : "Marcar como pendiente",
+      mensaje: (
+        <>
+          La acción <strong>{accion.accion?.nombre}</strong> quedará {ejecutar ? "ejecutada" : "pendiente"}. Se
+          registrará en el antecedente.
+        </>
+      ),
+      textoConfirmar: ejecutar ? "Sí, ejecutada" : "Sí, pendiente",
+      peligro: false,
+      accion: () =>
+        notificar(
+          () => api.patch(`/atenciones/acciones-llamada/${accion.id}`, { estado: ejecutar ? "EJECUTADO" : "PENDIENTE" }),
+          ejecutar ? "Acción marcada como ejecutada" : "Acción marcada como pendiente"
+        ),
+    });
   };
 
   const cambiarRespondido = () => {
     const respondido = !llamada.respondido;
-    const pregunta = respondido
-      ? "¿Confirma que ya se respondió al administrado?"
-      : "¿Confirma que el administrado todavía no ha sido respondido?";
-    if (!window.confirm(pregunta)) return;
-    notificar(
-      () => api.put(`/atenciones/llamadas/${llamadaId}`, { respondido }),
-      respondido ? "Marcada como respondida" : "Marcada como no respondida"
-    );
+    setConfirmar({
+      titulo: respondido ? "Marcar como respondida" : "Marcar como no respondida",
+      mensaje: respondido
+        ? "Confirme que ya se dio respuesta al administrado."
+        : "Confirme que el administrado todavía no ha recibido respuesta.",
+      textoConfirmar: "Sí, confirmar",
+      peligro: false,
+      accion: () =>
+        notificar(
+          () => api.put(`/atenciones/llamadas/${llamadaId}`, { respondido }),
+          respondido ? "Marcada como respondida" : "Marcada como no respondida"
+        ),
+    });
   };
 
   const reasignar = () => {
     if (!nuevoResponsable) return toast.error("Seleccione el usuario que atenderá");
     const elegido = usuarios.find((u) => String(u.id) === nuevoResponsable);
-    if (!window.confirm(`¿Confirma reasignar esta llamada a ${elegido?.nombre ?? "el usuario seleccionado"}?`)) return;
-    notificar(
-      () => api.patch(`/atenciones/llamadas/${llamadaId}/responsable`, { id_responsable: Number(nuevoResponsable) }),
-      "Responsable actualizado"
+    setConfirmar({
+      titulo: "Reasignar llamada",
+      mensaje: (
+        <>
+          La llamada pasará a <strong>{elegido?.nombre ?? "el usuario seleccionado"}</strong>. Quien atiende cambiará
+          desde ahora.
+        </>
+      ),
+      textoConfirmar: "Sí, reasignar",
+      peligro: false,
+      accion: () =>
+        notificar(
+          () => api.patch(`/atenciones/llamadas/${llamadaId}/responsable`, { id_responsable: Number(nuevoResponsable) }),
+          "Responsable actualizado"
+        ),
+    });
+  };
+
+  const guardarDescripcion = async (archivo: any) => {
+    const valor = editandoArchivo?.valor.trim() ?? "";
+    if (!valor) return toast.error("La descripción no puede quedar vacía");
+    const ok = await notificar(
+      () => api.patch(`/atenciones/archivos/${archivo.id}`, { descripcion: valor }),
+      "Descripción actualizada"
     );
+    if (ok) setEditandoArchivo(null);
   };
 
   const subirArchivos = async (accion: any, archivos: FileList) => {
@@ -144,8 +200,24 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio }: Pr
     }
   };
 
+  const pedirReemplazo = (accion: any, viejo: any, archivo: File) => {
+    setConfirmar({
+      titulo: "Reemplazar archivo",
+      mensaje: (
+        <>
+          <div>
+            Se quitará <strong>{viejo.descripcion || viejo.nombre_original}</strong> y se subirá{" "}
+            <strong>{archivo.name}</strong> con la misma descripción.
+          </div>
+        </>
+      ),
+      textoConfirmar: "Sí, reemplazar",
+      peligro: false,
+      accion: () => reemplazarArchivo(accion, viejo, archivo),
+    });
+  };
+
   const reemplazarArchivo = async (accion: any, viejo: any, archivo: File) => {
-    if (!window.confirm(`¿Confirma reemplazar "${viejo.nombre_original}" por "${archivo.name}"?`)) return;
     setSubiendo(accion.id);
     try {
       const fd = new FormData();
@@ -164,8 +236,18 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio }: Pr
   };
 
   const eliminarArchivo = (archivo: any) => {
-    if (!window.confirm(`¿Confirma eliminar "${archivo.descripcion || archivo.nombre_original}"? Esta acción no se puede deshacer.`)) return;
-    notificar(() => api.delete(`/atenciones/archivos/${archivo.id}`), "Archivo eliminado");
+    setConfirmar({
+      titulo: "Eliminar archivo",
+      mensaje: (
+        <>
+          Se eliminará <strong>{archivo.descripcion || archivo.nombre_original}</strong>. No se puede deshacer, pero
+          queda registrado en el antecedente.
+        </>
+      ),
+      textoConfirmar: "Sí, eliminar",
+      peligro: true,
+      accion: () => notificar(() => api.delete(`/atenciones/archivos/${archivo.id}`), "Archivo eliminado"),
+    });
   };
 
   const verArchivo = async (archivo: any) => {
@@ -308,10 +390,33 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio }: Pr
                         {(accion.archivos || []).map((archivo: any) => (
                           <div key={archivo.id} className="flex flex-wrap items-center gap-3 rounded-lg bg-gray-50 p-2 dark:bg-gray-700/50">
                             <div className="min-w-0 flex-1">
-                              <div className="truncate text-sm font-semibold">{archivo.descripcion || archivo.nombre_original}</div>
-                              <div className="truncate text-xs text-gray-500">
-                                {archivo.nombre_original} · Subido {formatFechaHora(archivo.fecha_subida)}
-                              </div>
+                              {editandoArchivo?.id === archivo.id ? (
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    value={editandoArchivo.valor}
+                                    onChange={(e) => setEditandoArchivo({ id: archivo.id, valor: e.target.value })}
+                                  />
+                                  <button
+                                    onClick={() => guardarDescripcion(archivo)}
+                                    className="rounded bg-brand-500 px-2 py-1 text-xs font-semibold text-white hover:bg-brand-600"
+                                  >
+                                    Guardar
+                                  </button>
+                                  <button
+                                    onClick={() => setEditandoArchivo(null)}
+                                    className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 dark:border-gray-600 dark:text-gray-300"
+                                  >
+                                    Cancelar
+                                  </button>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="truncate text-sm font-semibold">{archivo.descripcion || archivo.nombre_original}</div>
+                                  <div className="truncate text-xs text-gray-500">
+                                    {archivo.nombre_original} · Subido {formatFechaHora(archivo.fecha_subida)}
+                                  </div>
+                                </>
+                              )}
                             </div>
                             <button
                               onClick={() => verArchivo(archivo)}
@@ -321,6 +426,12 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio }: Pr
                             </button>
                             {puedeOperar && (
                               <>
+                                <button
+                                  onClick={() => setEditandoArchivo({ id: archivo.id, valor: archivo.descripcion || "" })}
+                                  className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-600 hover:bg-white dark:border-gray-600 dark:text-gray-300"
+                                >
+                                  Editar
+                                </button>
                                 <label className="cursor-pointer rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-600 hover:bg-white dark:border-gray-600 dark:text-gray-300">
                                   Reemplazar
                                   <input
@@ -330,7 +441,7 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio }: Pr
                                     disabled={subiendo === accion.id}
                                     onChange={(e) => {
                                       const archivoNuevo = e.target.files?.[0];
-                                      if (archivoNuevo) reemplazarArchivo(accion, archivo, archivoNuevo);
+                                      if (archivoNuevo) pedirReemplazo(accion, archivo, archivoNuevo);
                                       e.target.value = "";
                                     }}
                                   />
@@ -443,6 +554,17 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio }: Pr
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        abierto={confirmar !== null}
+        titulo={confirmar?.titulo ?? ""}
+        mensaje={confirmar?.mensaje ?? ""}
+        textoConfirmar={confirmar?.textoConfirmar}
+        peligro={confirmar?.peligro}
+        procesando={procesandoConfirmar}
+        onConfirmar={ejecutarConfirmacion}
+        onCancelar={() => setConfirmar(null)}
+      />
 
       {visor && (
         <VisorArchivoModal
