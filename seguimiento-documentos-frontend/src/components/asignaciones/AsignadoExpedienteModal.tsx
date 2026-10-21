@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import api from "@/utils/api";
 import { CloseIcon } from "@/icons";
 import { formatFecha } from "@/components/expedientes/format";
+import HistorialAsignacionModal from "@/components/asignaciones/HistorialAsignacionModal";
 
 type Props = {
   cut: string;
@@ -18,6 +19,7 @@ export default function AsignadoExpedienteModal({ cut, onClose }: Props) {
   const [rows, setRows] = useState<any[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const [historialId, setHistorialId] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelado = false;
@@ -68,6 +70,7 @@ export default function AsignadoExpedienteModal({ cut, onClose }: Props) {
                   <th className="px-4 py-2 text-center">Vencimiento</th>
                   <th className="px-4 py-2 text-center">Prórroga</th>
                   <th className="px-4 py-2 text-center">Vence prórroga</th>
+                  <th className="px-4 py-2 text-center">Historial</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -97,6 +100,14 @@ export default function AsignadoExpedienteModal({ cut, onClose }: Props) {
                     <td className="whitespace-nowrap px-4 py-2 text-center">
                       {a.estado_prorroga === "ACEPTADA" ? formatFecha(a.fecha_vencimiento_prorroga) : "—"}
                     </td>
+                    <td className="px-4 py-2 text-center">
+                      <button
+                        onClick={() => setHistorialId(a.id)}
+                        className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                      >
+                        Historial
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -104,6 +115,10 @@ export default function AsignadoExpedienteModal({ cut, onClose }: Props) {
           )}
         </div>
       </div>
+
+      {historialId !== null && (
+        <HistorialAsignacionModal asignacionId={historialId} cut={cut} onClose={() => setHistorialId(null)} />
+      )}
     </div>
   );
 }
