@@ -11,5 +11,16 @@ export const perfilActual = (): string | null => {
   }
 };
 
+export const usuarioActualId = (): number | null => {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return null;
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return payload.id ?? null;
+  } catch {
+    return null;
+  }
+};
+
 export const puedeGestionarAsignaciones = (): boolean =>
   PERFILES_GESTION.includes(perfilActual() ?? "");

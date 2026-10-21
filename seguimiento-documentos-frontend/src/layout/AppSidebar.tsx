@@ -98,6 +98,12 @@ const navItems: NavItem[] = [
     path: "/prorrogas",
   },
   {
+    icon: <TableIcon fontSize={24} />,
+    name: "Control de Llamadas",
+    key: "llamadas",
+    path: "/llamadas",
+  },
+  {
     icon: <ListIcon fontSize={24} />,
     name: "Maestros",
     key: "maestros",
@@ -121,6 +127,11 @@ const navItems: NavItem[] = [
         name: "Procedimientos",
         key: "procedimientos",
         path: "/procedimientos",
+      },
+      {
+        name: "Acciones de Atención",
+        key: "acciones-atencion",
+        path: "/acciones-atencion",
       },
       {
         name: "Usuarios",
