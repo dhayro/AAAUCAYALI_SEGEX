@@ -5,6 +5,8 @@ import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import RegistrarLlamadaModal from "@/components/atencion/RegistrarLlamadaModal";
 import DetalleLlamadaModal from "@/components/atencion/DetalleLlamadaModal";
+import ExpedienteDetalleModal from "@/components/expedientes/ExpedienteDetalleModal";
+import { SearchIcon } from "@/icons";
 import { formatFecha, formatFechaHora } from "@/components/expedientes/format";
 import api from "@/utils/api";
 
@@ -28,6 +30,7 @@ export default function Llamadas() {
   const [loading, setLoading] = useState(true);
   const [registrando, setRegistrando] = useState(false);
   const [detalleId, setDetalleId] = useState<number | null>(null);
+  const [cutAbierto, setCutAbierto] = useState<string | null>(null);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [filters, setFilters] = useState({ cut: "", respondido: "" });
   const [totalCount, setTotalCount] = useState(0);
@@ -122,7 +125,19 @@ export default function Llamadas() {
                   {llamadas.map((l, index) => (
                     <tr key={l.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700">
                       <td className="px-6 py-4 text-sm">{pagination.pageIndex * pagination.pageSize + index + 1}</td>
-                      <td className="px-6 py-4 font-medium">{l.cut}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{l.cut}</span>
+                          <button
+                            onClick={() => setCutAbierto(l.cut)}
+                            title="Ver expediente"
+                            aria-label={`Ver expediente ${l.cut}`}
+                            className="rounded-md p-1 text-brand-600 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-gray-700"
+                          >
+                            <SearchIcon className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
                       <td className="whitespace-nowrap px-6 py-4 text-center text-sm">{formatFechaHora(l.fecha_llamada)}</td>
                       <td className="px-6 py-4 text-sm">
                         <div>{l.nombre_llamante}</div>
@@ -208,6 +223,7 @@ export default function Llamadas() {
           }}
         />
       )}
+      {cutAbierto && <ExpedienteDetalleModal cut={cutAbierto} onClose={() => setCutAbierto(null)} />}
       {detalleId !== null && (
         <DetalleLlamadaModal llamadaId={detalleId} onClose={() => setDetalleId(null)} onCambio={fetchLlamadas} />
       )}

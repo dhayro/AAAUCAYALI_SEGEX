@@ -62,6 +62,22 @@ export default function ExpedienteDetalleModal({ cut, onClose }: Props) {
   const [error, setError] = useState("");
   const [copiado, setCopiado] = useState(false);
   const [trazabilidadAbierta, setTrazabilidadAbierta] = useState(false);
+  const [asignaciones, setAsignaciones] = useState<any[]>([]);
+
+  useEffect(() => {
+    let cancelado = false;
+    api
+      .get("/asignaciones-expediente", { params: { cut, estado: "true", limit: 50 } })
+      .then((res) => {
+        if (!cancelado) setAsignaciones((res.data.asignaciones || []).filter((a: any) => a.cut === cut));
+      })
+      .catch(() => {
+        if (!cancelado) setAsignaciones([]);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [cut]);
 
   useEffect(() => {
     let cancelado = false;
@@ -146,6 +162,31 @@ export default function ExpedienteDetalleModal({ cut, onClose }: Props) {
               <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200">
                 {error}
               </div>
+            )}
+            {!cargando && expediente && (
+              <section className="mb-3 rounded-xl bg-white p-3 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700">
+                <h3 className="mb-2 text-[10px] font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                  Asignación
+                </h3>
+                {asignaciones.length === 0 ? (
+                  <div className="text-xs text-gray-500">Sin asignar en el sistema (o no visible para tu perfil).</div>
+                ) : (
+                  <div className="space-y-2">
+                    {asignaciones.map((a) => (
+                      <div key={a.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                        <span className="font-semibold text-gray-900 dark:text-white">
+                          {a.asignado ? `${a.asignado.nombre} ${a.asignado.apellido}` : "—"}
+                        </span>
+                        {a.asignado?.Cargo?.nombre && <span className="text-gray-500">{a.asignado.Cargo.nombre}</span>}
+                        <span className="text-gray-500">Asignado {formatFecha(a.fecha_asignacion)}</span>
+                        <span className="text-gray-500">Vence {formatFecha(a.fecha_vencimiento)}</span>
+                        {a.numero_orden && <span className="text-gray-500">Orden {a.numero_orden}</span>}
+                        {a.estado_prorroga && <span className="font-semibold">Prórroga: {a.estado_prorroga}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
             )}
             {!cargando && expediente && (
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
