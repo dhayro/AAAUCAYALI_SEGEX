@@ -1,4 +1,5 @@
 import PageMeta from "@/components/common/PageMeta";
+import MiDesempeno from "@/components/perfil/MiDesempeno";
 import { formatFecha } from "@/components/expedientes/format";
 import api from "@/utils/api";
 import { usuarioActualId } from "@/utils/sesion";
@@ -152,6 +153,8 @@ export default function UserProfiles() {
             </section>
           </>
         )}
+
+        <MiDesempeno />
 
         <section className="rounded-2xl bg-white p-6 shadow dark:bg-gray-800">
           <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
