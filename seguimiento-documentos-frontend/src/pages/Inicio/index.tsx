@@ -14,7 +14,8 @@ type Motivo =
   | "POR_EVALUAR"
   | "RESPONDIDA"
   | "LLAMADA_VENCIDA"
-  | "LLAMADA_POR_VENCER";
+  | "LLAMADA_POR_VENCER"
+  | "LLAMADA_SIN_RESPUESTA";
 
 interface ResumenDashboard {
   alcance: "TODOS" | "PERSONAL";
@@ -41,10 +42,11 @@ interface ResumenDashboard {
     por_vencer: number;
     acciones_pendientes: number;
   };
-  atencion: { id: number | string; cut: string; asignado: string | null; vence: string; dias: number; motivo: Motivo }[];
+  atencion: { id: number | string; cut: string; asignado: string | null; vence: string; dias: number | null; motivo: Motivo }[];
 }
 
 const MOTIVO: Record<Motivo, { texto: string; clases: string }> = {
+  LLAMADA_SIN_RESPUESTA: { texto: "Llamada sin respuesta", clases: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200" },
   OBSERVADA: { texto: "Observada: responder", clases: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100" },
   VENCIDA: { texto: "Vencida", clases: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100" },
   POR_VENCER: { texto: "Por vencer", clases: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100" },
@@ -57,7 +59,7 @@ const MOTIVO: Record<Motivo, { texto: string; clases: string }> = {
   },
 };
 
-const textoDias = (dias: number) => (dias < 0 ? `Vencida hace ${-dias} d` : dias === 0 ? "Vence hoy" : `${dias} d`);
+const textoDias = (dias: number | null) => (dias === null ? "sin plazo" : dias < 0 ?`Vencida hace ${-dias} d` : dias === 0 ? "Vence hoy" : `${dias} d`);
 
 interface TarjetaProps {
   titulo: string;

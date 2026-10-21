@@ -11,18 +11,20 @@ type Motivo =
   | "POR_EVALUAR"
   | "RESPONDIDA"
   | "LLAMADA_VENCIDA"
-  | "LLAMADA_POR_VENCER";
+  | "LLAMADA_POR_VENCER"
+  | "LLAMADA_SIN_RESPUESTA";
 
 interface Pendiente {
   id: number | string;
   cut: string;
   asignado: string | null;
   vence: string;
-  dias: number;
+  dias: number | null;
   motivo: Motivo;
 }
 
 const MOTIVO: Record<Motivo, { texto: string; ruta: string; clases: string }> = {
+  LLAMADA_SIN_RESPUESTA: { texto: "Llamada sin respuesta", ruta: "/llamadas", clases: "text-gray-600 dark:text-gray-300" },
   OBSERVADA: { texto: "Observada: responder", ruta: "/asignacion-expediente", clases: "text-amber-700 dark:text-amber-300" },
   VENCIDA: { texto: "Asignación vencida", ruta: "/asignacion-expediente", clases: "text-red-600 dark:text-red-400" },
   POR_VENCER: { texto: "Asignación por vencer", ruta: "/asignacion-expediente", clases: "text-amber-700 dark:text-amber-300" },
@@ -32,7 +34,7 @@ const MOTIVO: Record<Motivo, { texto: string; ruta: string; clases: string }> = 
   LLAMADA_POR_VENCER: { texto: "Llamada por vencer", ruta: "/llamadas", clases: "text-amber-700 dark:text-amber-300" },
 };
 
-const textoDias = (dias: number) => (dias < 0 ? `vencida hace ${-dias} d` : dias === 0 ? "vence hoy" : `${dias} d`);
+const textoDias = (dias: number | null) => (dias === null ? "sin plazo" : dias < 0 ?`vencida hace ${-dias} d` : dias === 0 ? "vence hoy" : `${dias} d`);
 
 export default function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
