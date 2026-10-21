@@ -6,7 +6,6 @@ import Label from "@/components/form/Label";
 import RegistrarLlamadaModal from "@/components/atencion/RegistrarLlamadaModal";
 import DetalleLlamadaModal from "@/components/atencion/DetalleLlamadaModal";
 import ExpedienteDetalleModal from "@/components/expedientes/ExpedienteDetalleModal";
-import { SearchIcon } from "@/icons";
 import { colorUsuario } from "@/utils/colorUsuario";
 import { formatFecha, formatFechaHora } from "@/components/expedientes/format";
 import { BadgePlazo } from "@/components/atencion/EditorPlazo";
@@ -166,20 +165,18 @@ export default function Llamadas() {
                       <td className="px-6 py-4 text-sm">{pagination.pageIndex * pagination.pageSize + index + 1}</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium">{l.cut}</span>
+                          <button
+                            onClick={() => setCutAbierto(l.cut)}
+                            title="Ver expediente"
+                            className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+                          >
+                            {l.cut}
+                          </button>
                           {(l.total_del_cut ?? 1) > 1 && (
                             <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800 dark:bg-amber-900 dark:text-amber-100">
                               {l.total_del_cut} llamadas
                             </span>
                           )}
-                          <button
-                            onClick={() => setCutAbierto(l.cut)}
-                            title="Ver expediente"
-                            aria-label={`Ver expediente ${l.cut}`}
-                            className="rounded-md p-1 text-brand-600 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-gray-700"
-                          >
-                            <SearchIcon className="h-4 w-4" />
-                          </button>
                         </div>
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-center text-sm">{formatFechaHora(l.fecha_llamada)}</td>
