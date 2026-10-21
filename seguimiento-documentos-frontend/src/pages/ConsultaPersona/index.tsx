@@ -198,6 +198,7 @@ export default function ConsultaPersona() {
           nombreArchivo="Consulta-Asignaciones"
           columnas={COLUMNAS_ASIGNACIONES}
           paramsExtra={paramsAsignaciones}
+          textoAccion="Consultar"
           anchoMinimo={1000}
         />
       ) : (
@@ -209,6 +210,7 @@ export default function ConsultaPersona() {
           nombreArchivo="Consulta-Llamadas"
           columnas={COLUMNAS_LLAMADAS}
           conCut
+          textoAccion="Consultar"
           paramsExtra={paramsLlamadas}
           filtrosExtra={
             <div className="min-w-[220px] flex-1">

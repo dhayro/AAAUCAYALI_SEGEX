@@ -32,6 +32,7 @@ interface Props {
   filtrosExtra?: ReactNode;
   nombreArchivo: string;
   anchoMinimo?: number;
+  textoAccion?: string;
 }
 
 const hoyYMD = () =>
@@ -49,6 +50,7 @@ export default function ReporteTabla({
   filtrosExtra,
   nombreArchivo,
   anchoMinimo = 1000,
+  textoAccion = "Generar reporte",
 }: Props) {
   const [filas, setFilas] = useState<any[]>([]);
   const [totales, setTotales] = useState<Record<string, number>>({});
@@ -134,7 +136,7 @@ export default function ReporteTabla({
               disabled={cargando}
               className="w-full rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
             >
-              {cargando ? "Generando..." : "Generar reporte"}
+              {cargando ? "Cargando..." : textoAccion}
             </button>
           </div>
         </div>
@@ -155,7 +157,7 @@ export default function ReporteTabla({
             {cargando ? (
               <div className="p-12 text-center text-gray-500">Generando reporte...</div>
             ) : !generado ? (
-              <div className="p-12 text-center text-gray-500">Seleccione el rango de fechas y pulse Generar reporte</div>
+              <div className="p-12 text-center text-gray-500">Seleccione el rango de fechas y pulse {textoAccion}</div>
             ) : filas.length === 0 ? (
               <div className="p-12 text-center text-gray-500">No hay datos para este rango</div>
             ) : (
