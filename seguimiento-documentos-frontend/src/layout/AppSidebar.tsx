@@ -132,6 +132,36 @@ const navItems: NavItem[] = [
         key: "reporte-llamadas",
         path: "/reporte-llamadas",
       },
+      {
+        name: "Resumen del periodo",
+        key: "reporte-resumen",
+        path: "/reporte-resumen",
+      },
+      {
+        name: "Productividad",
+        key: "reporte-productividad",
+        path: "/reporte-productividad",
+      },
+      {
+        name: "Prórrogas",
+        key: "reporte-prorrogas",
+        path: "/reporte-prorrogas",
+      },
+      {
+        name: "Expedientes sin asignar",
+        key: "reporte-sin-asignar",
+        path: "/reporte-sin-asignar",
+      },
+      {
+        name: "Acciones de llamada",
+        key: "reporte-acciones",
+        path: "/reporte-acciones",
+      },
+      {
+        name: "Historial por CUT",
+        key: "reporte-historial",
+        path: "/reporte-historial",
+      },
     ],
   },
 ];
