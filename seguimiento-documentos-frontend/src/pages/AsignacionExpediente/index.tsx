@@ -59,6 +59,37 @@ const getEmptyForm = () => ({
   numero_orden: "",
 });
 
+const DIAS_PARA_PRORROGA = 5;
+
+const diasEntre = (fecha: string, hoy: string) =>
+  Math.round(
+    (Date.parse(`${fecha.slice(0, 10)}T00:00:00Z`) - Date.parse(`${hoy}T00:00:00Z`)) / 86400000
+  );
+
+const vencimientoVigente = (a: Asignacion) =>
+  a.plazo_prorroga ? a.fecha_vencimiento_prorroga : a.fecha_vencimiento;
+
+const puedeProrrogar = (a: Asignacion) => {
+  const vence = vencimientoVigente(a);
+  if (!vence || a.plazo_prorroga) return false;
+  return diasEntre(vence, hoyLima()) <= DIAS_PARA_PRORROGA;
+};
+
+const DiasRestantes = ({ a }: { a: Asignacion }) => {
+  const vence = vencimientoVigente(a);
+  if (!vence) return <span className="text-gray-400">—</span>;
+  const dias = diasEntre(vence, hoyLima());
+  const clases =
+    dias < 0
+      ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
+      : dias <= DIAS_PARA_PRORROGA
+      ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100"
+      : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100";
+  const texto =
+    dias < 0 ? `Vencido hace ${-dias} d` : dias === 0 ? "Vence hoy" : `${dias} día${dias === 1 ? "" : "s"}`;
+  return <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${clases}`}>{texto}</span>;
+};
+
 const nombreUsuario = (u?: UsuarioResumen | null) =>
   u ? `${u.nombre} ${u.apellido}` : "—";
 
@@ -460,6 +491,7 @@ export default function AsignacionExpediente() {
                     <th className="px-6 py-4 text-center text-sm font-semibold">Vencimiento</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Prórroga</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Vence prórroga</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold">Días restantes</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">Observación</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Acciones</th>
                   </tr>
@@ -500,15 +532,20 @@ export default function AsignacionExpediente() {
                       <td className="px-6 py-4 text-center text-sm">
                         {formatFecha(a.fecha_vencimiento_prorroga)}
                       </td>
+                      <td className="px-6 py-4 text-center text-sm">
+                        <DiasRestantes a={a} />
+                      </td>
                       <td className="max-w-xs px-6 py-4 text-sm">{a.observacion || "—"}</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-3">
-                          <button
-                            onClick={() => handleOpenProrroga(a)}
-                            className="rounded border border-blue-600 px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-400"
-                          >
-                            Prórroga
-                          </button>
+                          {puedeProrrogar(a) && (
+                            <button
+                              onClick={() => handleOpenProrroga(a)}
+                              className="rounded border border-blue-600 px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-400"
+                            >
+                              Prórroga
+                            </button>
+                          )}
                           <button
                             onClick={() => handleEdit(a)}
                             className="text-green-600 hover:text-green-800 dark:text-green-400"
