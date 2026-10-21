@@ -6,7 +6,8 @@ import DatePickerLima from "@/components/form/DatePickerLima";
 import SearchableSelect from "@/components/form/SearchableSelect";
 import api from "@/utils/api";
 import { puedeGestionarAsignaciones } from "@/utils/sesion";
-import { CloseIcon } from "@/icons";
+import ExpedienteDetalleModal from "@/components/expedientes/ExpedienteDetalleModal";
+import { CloseIcon, SearchIcon } from "@/icons";
 
 type AccionCatalogo = { id: number; nombre: string; requiere_archivo: boolean };
 type UsuarioSelect = { id: number; nombre: string; usuario: string; cargo?: string | null };
@@ -28,6 +29,7 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
   const [usuarios, setUsuarios] = useState<UsuarioSelect[]>([]);
   const [cargandoUsuarios, setCargandoUsuarios] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const [verCut, setVerCut] = useState<string | null>(null);
   const [seleccionadas, setSeleccionadas] = useState<Record<number, string>>({});
   const [form, setForm] = useState({
     cut: "",
@@ -107,6 +109,7 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
   };
 
   return (
+    <>
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
       <form onSubmit={enviar} className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-2xl dark:bg-gray-800">
         <div className="flex items-center justify-between border-b p-5 dark:border-gray-700">
@@ -120,7 +123,19 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
               <Label>CUT *</Label>
-              <Input value={form.cut} onChange={(e) => setForm({ ...form, cut: e.target.value })} placeholder="Ej: 163943-2026" />
+              <div className="flex items-center gap-2">
+                <Input value={form.cut} onChange={(e) => setForm({ ...form, cut: e.target.value })} placeholder="Ej: 163943-2026" />
+                <button
+                  type="button"
+                  onClick={() => form.cut.trim() && setVerCut(form.cut.trim())}
+                  disabled={!form.cut.trim()}
+                  title="Ver expediente"
+                  aria-label="Ver expediente"
+                  className="rounded-md p-2 text-brand-600 hover:bg-brand-50 disabled:opacity-40 dark:text-brand-400 dark:hover:bg-gray-700"
+                >
+                  <SearchIcon className="h-5 w-5" />
+                </button>
+              </div>
             </div>
             <div>
               <Label>Fecha y hora de la llamada *</Label>
@@ -229,5 +244,7 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
         </div>
       </form>
     </div>
+    {verCut && <ExpedienteDetalleModal cut={verCut} onClose={() => setVerCut(null)} />}
+    </>
   );
 }
