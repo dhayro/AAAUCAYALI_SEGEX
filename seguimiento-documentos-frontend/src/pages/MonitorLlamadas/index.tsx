@@ -303,8 +303,22 @@ export default function MonitorLlamadas() {
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               placeholder="Buscar por CUT o por quien llamó"
-              className="w-full rounded-xl border border-gray-300 bg-white py-3 pl-10 pr-3 text-base shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              className="w-full rounded-xl border border-gray-300 bg-white py-3 pl-10 pr-10 text-base shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
             />
+            {busqueda !== "" && (
+              <button
+                type="button"
+                onClick={() => {
+                  setBusqueda("");
+                  setBusquedaAplicada("");
+                }}
+                aria-label="Limpiar búsqueda"
+                title="Limpiar búsqueda"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full px-2 py-1 text-lg leading-none text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+              >
+                ×
+              </button>
+            )}
           </div>
           <div className="flex items-center gap-2 md:w-96">
             <div className="flex-1">
