@@ -7,7 +7,14 @@ import { CalendarPlusIcon, CallIcon, ClipboardCheckIcon, HistoryIcon } from "@/i
 import api from "@/utils/api";
 import { puedeGestionarAsignaciones } from "@/utils/sesion";
 
-type Motivo = "OBSERVADA" | "VENCIDA" | "POR_VENCER" | "POR_EVALUAR" | "RESPONDIDA";
+type Motivo =
+  | "OBSERVADA"
+  | "VENCIDA"
+  | "POR_VENCER"
+  | "POR_EVALUAR"
+  | "RESPONDIDA"
+  | "LLAMADA_VENCIDA"
+  | "LLAMADA_POR_VENCER";
 
 interface ResumenDashboard {
   alcance: "TODOS" | "PERSONAL";
@@ -26,8 +33,8 @@ interface ResumenDashboard {
     observadas: number;
     cerradas: number;
   };
-  llamadas: { total: number; sin_respuesta: number; acciones_pendientes: number };
-  atencion: { id: number; cut: string; asignado: string | null; vence: string; dias: number; motivo: Motivo }[];
+  llamadas: { total: number; sin_respuesta: number; vencidas: number; por_vencer: number; acciones_pendientes: number };
+  atencion: { id: number | string; cut: string; asignado: string | null; vence: string; dias: number; motivo: Motivo }[];
 }
 
 const MOTIVO: Record<Motivo, { texto: string; clases: string }> = {
@@ -36,6 +43,11 @@ const MOTIVO: Record<Motivo, { texto: string; clases: string }> = {
   POR_VENCER: { texto: "Por vencer", clases: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100" },
   POR_EVALUAR: { texto: "Por evaluar", clases: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100" },
   RESPONDIDA: { texto: "Respondida", clases: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-100" },
+  LLAMADA_VENCIDA: { texto: "Llamada vencida", clases: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100" },
+  LLAMADA_POR_VENCER: {
+    texto: "Llamada por vencer",
+    clases: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100",
+  },
 };
 
 const formatoTiempo = (horas: number | null) => {
@@ -158,11 +170,25 @@ export default function Inicio() {
                   />
                 </>
               )}
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <Tarjeta
+                titulo="Llamadas vencidas"
+                valor={resumen.llamadas.vencidas}
+                ayuda="Sin respuesta y con el plazo pasado"
+                tono={resumen.llamadas.vencidas > 0 ? "peligro" : "neutro"}
+              />
+              <Tarjeta
+                titulo="Llamadas por vencer (2 días)"
+                valor={resumen.llamadas.por_vencer}
+                ayuda="Sin respuesta, el plazo vence pronto"
+                tono={resumen.llamadas.por_vencer > 0 ? "alerta" : "neutro"}
+              />
               <Tarjeta
                 titulo="Llamadas sin respuesta"
                 valor={resumen.llamadas.sin_respuesta}
                 ayuda={`De ${resumen.llamadas.total} registradas`}
-                tono={resumen.llamadas.sin_respuesta > 0 ? "alerta" : "neutro"}
               />
               <Tarjeta
                 titulo="Acciones de llamada pendientes"

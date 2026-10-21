@@ -3,13 +3,23 @@ const AsignacionExpediente = require('../models/AsignacionExpediente');
 const LlamadaAdministrado = require('../models/LlamadaAdministrado');
 const AccionLlamada = require('../models/AccionLlamada');
 const { resumenPorAsignacion, tiempoRespuestaHoras, ESTADOS } = require('../services/estadoRespuestaService');
-const { hoyLima } = require('../utils/fechas');
+const { hoyLima, sumarDiasCalendario } = require('../utils/fechas');
+const Usuario = require('../models/Usuario');
 
 const PERFILES_GESTION = ['admin', 'jefe', 'secretaria'];
 const esGestor = (usuario) => PERFILES_GESTION.includes(usuario.perfil);
 
 const DIAS_POR_VENCER = 5;
-const PRIORIDAD_MOTIVO = { OBSERVADA: 0, VENCIDA: 1, POR_VENCER: 2, POR_EVALUAR: 3, RESPONDIDA: 4 };
+const DIAS_POR_VENCER_LLAMADA = 2;
+const PRIORIDAD_MOTIVO = {
+  OBSERVADA: 0,
+  VENCIDA: 1,
+  LLAMADA_VENCIDA: 1,
+  POR_VENCER: 2,
+  LLAMADA_POR_VENCER: 2,
+  POR_EVALUAR: 3,
+  RESPONDIDA: 4,
+};
 
 const diasEntre = (fecha, hoy) =>
   Math.round((Date.parse(`${String(fecha).slice(0, 10)}T00:00:00Z`) - Date.parse(`${hoy}T00:00:00Z`)) / 86400000);
@@ -67,16 +77,40 @@ exports.resumen = async (req, res) => {
     const whereLlamadas = gestor
       ? {}
       : { [Op.or]: [{ id_responsable: req.user.id }, { id_usuario_creador: req.user.id }] };
-    const llamadas = await LlamadaAdministrado.findAll({ where: whereLlamadas, attributes: ['id', 'respondido'] });
+    const llamadas = await LlamadaAdministrado.findAll({
+      where: whereLlamadas,
+      attributes: ['id', 'cut', 'respondido', 'fecha_respuesta'],
+      include: [{ model: Usuario, as: 'responsable', attributes: ['nombre', 'apellido'], required: false }],
+    });
     const idsLlamadas = llamadas.map((l) => l.id);
+
+    // Llamadas sin respuesta cuyo plazo ya venció, o que vencen en los próximos días.
+    const limiteLlamada = sumarDiasCalendario(hoy, DIAS_POR_VENCER_LLAMADA);
+    const sinResponder = llamadas.filter((l) => !l.respondido && l.fecha_respuesta);
+    const llamadasVencidas = sinResponder.filter((l) => l.fecha_respuesta < hoy);
+    const llamadasPorVencer = sinResponder.filter((l) => l.fecha_respuesta >= hoy && l.fecha_respuesta <= limiteLlamada);
+    const itemLlamada = (l, motivo) => {
+      const plain = l.get({ plain: true });
+      return {
+        id: `llamada-${l.id}`,
+        cut: l.cut,
+        asignado: plain.responsable ? `${plain.responsable.nombre} ${plain.responsable.apellido}` : null,
+        vence: l.fecha_respuesta,
+        dias: diasEntre(l.fecha_respuesta, hoy),
+        motivo,
+      };
+    };
     const accionesPendientes = idsLlamadas.length
       ? await AccionLlamada.count({ where: { estado: 'PENDIENTE', id_llamada: { [Op.in]: idsLlamadas } } })
       : 0;
 
-    const atencion = filas
-      .filter((f) => f.motivo)
+    const itemsLlamadas = [
+      ...llamadasVencidas.map((l) => itemLlamada(l, 'LLAMADA_VENCIDA')),
+      ...llamadasPorVencer.map((l) => itemLlamada(l, 'LLAMADA_POR_VENCER')),
+    ];
+    const atencion = [...filas.filter((f) => f.motivo), ...itemsLlamadas]
       .sort((a, b) => PRIORIDAD_MOTIVO[a.motivo] - PRIORIDAD_MOTIVO[b.motivo] || a.dias - b.dias)
-      .slice(0, 10)
+      .slice(0, 15)
       .map(({ id, cut, asignado, vence, dias, motivo }) => ({ id, cut, asignado, vence, dias, motivo }));
 
     res.json({
@@ -100,7 +134,9 @@ exports.resumen = async (req, res) => {
       },
       llamadas: {
         total: llamadas.length,
-        sin_respuesta: llamadas.filter((l) => !l.respondido).length,
+        sin_respuesta: sinResponder.length,
+        vencidas: llamadasVencidas.length,
+        por_vencer: llamadasPorVencer.length,
         acciones_pendientes: accionesPendientes,
       },
       atencion,
