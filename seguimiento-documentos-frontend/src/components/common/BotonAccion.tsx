@@ -3,11 +3,11 @@ import type { ReactNode } from "react";
 type Tono = "neutro" | "primario" | "alerta" | "exito" | "peligro";
 
 const TONOS: Record<Tono, string> = {
-  neutro: "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700",
-  primario: "text-brand-600 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-gray-700",
-  alerta: "text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-gray-700",
-  exito: "text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-gray-700",
-  peligro: "text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-gray-700",
+  neutro: "border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700",
+  primario: "border-brand-600 text-brand-600 hover:bg-brand-50 dark:border-brand-400 dark:text-brand-400 dark:hover:bg-gray-700",
+  alerta: "border-amber-500 text-amber-700 hover:bg-amber-50 dark:border-amber-400 dark:text-amber-300 dark:hover:bg-gray-700",
+  exito: "border-green-600 text-green-700 hover:bg-green-50 dark:border-green-400 dark:text-green-300 dark:hover:bg-gray-700",
+  peligro: "border-red-500 text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-gray-700",
 };
 
 type Props = {
@@ -25,10 +25,10 @@ export default function BotonAccion({ etiqueta, icono, onClick, tono = "neutro",
       onClick={onClick}
       disabled={disabled}
       title={etiqueta}
-      aria-label={etiqueta}
-      className={`inline-flex h-8 w-8 items-center justify-center rounded-md disabled:opacity-50 ${TONOS[tono]}`}
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border px-2.5 py-1 text-xs font-semibold disabled:opacity-50 [&>svg]:h-4 [&>svg]:w-4 ${TONOS[tono]}`}
     >
       {icono}
+      {etiqueta}
     </button>
   );
 }
