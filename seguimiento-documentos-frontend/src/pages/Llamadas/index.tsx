@@ -57,7 +57,8 @@ export default function Llamadas() {
     try {
       const params: any = { page: pagination.pageIndex + 1, limit: pagination.pageSize };
       if (filters.cut) params.cut = filters.cut;
-      if (filters.respondido) params.respondido = filters.respondido;
+      // Al buscar por CUT se muestran todas las llamadas de ese CUT, respondidas o no.
+      if (filters.respondido && !filters.cut) params.respondido = filters.respondido;
       if (filters.plazo) params.plazo = filters.plazo;
       const response = await api.get("/atenciones/llamadas", { params });
       setLlamadas(response.data.llamadas || []);
@@ -109,7 +110,14 @@ export default function Llamadas() {
           </div>
           <div>
             <Label>Respuesta al administrado</Label>
-            <select name="respondido" value={filters.respondido} onChange={handleFilterChange} className={selectClass}>
+            <select
+              name="respondido"
+              value={filters.respondido}
+              onChange={handleFilterChange}
+              disabled={!!filters.cut}
+              title={filters.cut ? "Al buscar por CUT se muestran todas las llamadas" : undefined}
+              className={`${selectClass} disabled:opacity-60`}
+            >
               <option value="">Todas</option>
               <option value="false">No respondidas</option>
               <option value="true">Respondidas</option>
