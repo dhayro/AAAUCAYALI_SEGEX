@@ -1,4 +1,5 @@
 const SisgedToken = require('../models/SisgedToken');
+const sisgedSyncService = require('../services/sisgedSyncService');
 
 const expiracionDelJwt = (token) => {
   try {
@@ -69,6 +70,7 @@ exports.agregarToken = async (req, res) => {
       notas: notas || 'Token agregado manualmente'
     });
 
+    sisgedSyncService.limpiarCacheToken();
     console.log('[TOKEN] ✅ Token agregado:', nuevoToken.id);
 
     res.status(201).json({
