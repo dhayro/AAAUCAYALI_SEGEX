@@ -11,6 +11,7 @@ import {
   TableIcon,
   UserCircleIcon,
   LogoutIcon,
+  ChatBubbleIcon,
 } from "../icons";
 import { cn } from "../utils";
 import { perfilActual, puedeGestionarAsignaciones } from "../utils/sesion";
@@ -194,6 +195,13 @@ const othersItems: NavItem[] = [
     name: "Mi perfil",
     key: "profile",
     path: "/profile",
+  },
+  {
+    icon: <ChatBubbleIcon fontSize={24} />,
+    name: "Monitor de llamadas",
+    key: "monitor-llamadas",
+    path: "/monitor-llamadas",
+    gestoresOnly: true,
   },
   {
     icon: <TableIcon fontSize={24} />,
