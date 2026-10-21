@@ -25,6 +25,19 @@ interface Llamada {
 
 const nombre = (u?: { nombre: string; apellido: string } | null) => (u ? `${u.nombre} ${u.apellido}` : "—");
 
+const PALETA_USUARIOS = [
+  { borde: "border-blue-500", etiqueta: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100" },
+  { borde: "border-green-500", etiqueta: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100" },
+  { borde: "border-amber-500", etiqueta: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100" },
+  { borde: "border-purple-500", etiqueta: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100" },
+  { borde: "border-pink-500", etiqueta: "bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-100" },
+  { borde: "border-teal-500", etiqueta: "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-100" },
+  { borde: "border-orange-500", etiqueta: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100" },
+  { borde: "border-indigo-500", etiqueta: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-100" },
+];
+
+const colorUsuario = (id?: number | null) => PALETA_USUARIOS[Math.abs(id ?? 0) % PALETA_USUARIOS.length];
+
 export default function Llamadas() {
   const [llamadas, setLlamadas] = useState<Llamada[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,6 +127,7 @@ export default function Llamadas() {
                     <th className="px-6 py-4 text-start text-sm font-semibold">CUT</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Fecha y hora</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">Quien llama</th>
+                    <th className="px-6 py-4 text-start text-sm font-semibold">Registró</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">Motivo</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Fecha respuesta</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Respondido</th>
@@ -123,7 +137,10 @@ export default function Llamadas() {
                 </thead>
                 <tbody>
                   {llamadas.map((l, index) => (
-                    <tr key={l.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <tr
+                      key={l.id}
+                      className={`border-b border-l-4 hover:bg-gray-50 dark:hover:bg-gray-700 ${colorUsuario(l.creador?.id).borde}`}
+                    >
                       <td className="px-6 py-4 text-sm">{pagination.pageIndex * pagination.pageSize + index + 1}</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
@@ -157,6 +174,19 @@ export default function Llamadas() {
                         >
                           {l.respondido ? "SÍ" : "NO"}
                         </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {l.creador ? (
+                          <span
+                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                              colorUsuario(l.creador.id).etiqueta
+                            }`}
+                          >
+                            {nombre(l.creador)}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
                       </td>
                       <td className="px-6 py-4 text-sm">{nombre(l.responsable)}</td>
                       <td className="px-6 py-4 text-center">
