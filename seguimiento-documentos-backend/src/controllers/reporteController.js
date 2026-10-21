@@ -22,6 +22,18 @@ const rangoFechas = (desde, hasta) => {
   return null;
 };
 
+// Rango para columnas con hora: desde 00:00:00 hasta 23:59:59 de los días indicados.
+const rangoFechasHora = (desde, hasta) => {
+  const d = normalizar(desde);
+  const h = normalizar(hasta);
+  const inicio = d ? `${d.slice(0, 10)} 00:00:00` : null;
+  const fin = h ? `${h.slice(0, 10)} 23:59:59` : null;
+  if (inicio && fin) return { [Op.between]: [inicio, fin] };
+  if (inicio) return { [Op.gte]: inicio };
+  if (fin) return { [Op.lte]: fin };
+  return null;
+};
+
 // Reporte de asignaciones de expediente con respuestas y evaluación.
 exports.asignaciones = async (req, res) => {
   try {
@@ -89,7 +101,7 @@ exports.llamadas = async (req, res) => {
   try {
     const { id_responsable, respondido, plazo } = req.query;
     const where = {};
-    const fecha = rangoFechas(req.query.desde, req.query.hasta);
+    const fecha = rangoFechasHora(req.query.desde, req.query.hasta);
     if (fecha) where.fecha_llamada = fecha;
     if (normalizar(respondido)) where.respondido = respondido === 'true';
     if (normalizar(id_responsable)) where.id_responsable = parseInt(id_responsable, 10);
