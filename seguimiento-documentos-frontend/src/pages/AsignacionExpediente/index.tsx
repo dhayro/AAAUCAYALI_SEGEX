@@ -551,6 +551,8 @@ export default function AsignacionExpediente() {
           <RespuestasAsignacionModal
             asignacion={respuestasTarget}
             ultimaEvaluacion={respuestasTarget.respuesta?.evaluacion ?? null}
+            estadoRespuesta={respuestasTarget.respuesta?.estado ?? null}
+            onCambio={fetchAsignaciones}
             onClose={() => setRespuestasTarget(null)}
           />
         )}

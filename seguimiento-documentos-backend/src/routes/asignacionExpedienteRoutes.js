@@ -214,6 +214,7 @@ const subirArchivoRespuesta = (req, res, next) =>
 
 router.get('/:id/respuestas', authenticateToken, respuestaController.listarRespuestas);
 router.post('/:id/respuestas', authenticateToken, respuestaController.crearRespuesta);
+router.post('/:id/respuestas/enviar', authenticateToken, respuestaController.enviarRevision);
 router.post('/respuestas/:id/archivos', authenticateToken, subirArchivoRespuesta, respuestaController.subirArchivo);
 router.get('/archivos-respuesta/:id/descargar', authenticateToken, respuestaController.descargarArchivo);
 router.patch('/archivos-respuesta/:id', authenticateToken, respuestaController.editarArchivo);

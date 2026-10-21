@@ -229,6 +229,8 @@ export default function EvaluacionRespuestas() {
           asignacion={{ id: respuestasDe.id, cut: respuestasDe.cut, id_usuario: respuestasDe.asignado?.id ?? 0 }}
           soloLectura
           ultimaEvaluacion={respuestasDe.ultima_evaluacion}
+          estadoRespuesta={respuestasDe.estado}
+          onCambio={fetchFilas}
           onClose={() => setRespuestasDe(null)}
         />
       )}

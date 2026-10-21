@@ -5,6 +5,7 @@ const RespuestaAsignacion = require('../models/RespuestaAsignacion');
 const ArchivoRespuestaAsignacion = require('../models/ArchivoRespuestaAsignacion');
 const Usuario = require('../models/Usuario');
 const { registrarEvento } = require('../services/historialAsignacionService');
+const { resumenPorAsignacion } = require('../services/estadoRespuestaService');
 
 const CARPETA_ARCHIVOS = path.join(__dirname, '../../uploads/asignaciones');
 fs.mkdirSync(CARPETA_ARCHIVOS, { recursive: true });
@@ -69,6 +70,28 @@ exports.crearRespuesta = async (req, res) => {
     res.status(201).json(await listarRespuestasDe(asignacion.id));
   } catch (error) {
     res.status(error.status || 400).json({ mensaje: error.message });
+  }
+};
+
+exports.enviarRevision = async (req, res) => {
+  try {
+    const asignacion = await AsignacionExpediente.findByPk(req.params.id, { attributes: ['id', 'id_usuario'] });
+    if (!asignacion || !puedeVer(asignacion, req.user)) {
+      return res.status(404).json({ mensaje: 'Asignación no encontrada' });
+    }
+    if (!puedeOperar(asignacion, req.user)) {
+      return res.status(403).json({ mensaje: 'Solo el usuario asignado puede enviar la respuesta a evaluación' });
+    }
+    const actual = await resumenPorAsignacion([asignacion.id]);
+    if (actual.get(asignacion.id).estado !== 'OBSERVADA') {
+      return res.status(400).json({ mensaje: 'La asignación no está observada' });
+    }
+
+    await registrarEvento(asignacion.id, req.user.id, 'RESPUESTA_ENVIADA');
+    const actualizado = await resumenPorAsignacion([asignacion.id]);
+    res.json({ estado: actualizado.get(asignacion.id).estado });
+  } catch (error) {
+    res.status(500).json({ mensaje: error.message });
   }
 };
 

@@ -14,6 +14,7 @@ const ETIQUETA_EVENTO: Record<string, string> = {
   PRORROGA_ACEPTADA: "Prórroga aceptada",
   PRORROGA_RECHAZADA: "Prórroga rechazada",
   RESPUESTA_REGISTRADA: "Respuesta registrada",
+  RESPUESTA_ENVIADA: "Respuesta enviada a evaluación",
   ARCHIVO_SUBIDO: "Archivo subido",
   ARCHIVO_EDITADO: "Archivo editado",
   ARCHIVO_REEMPLAZADO: "Archivo reemplazado",

@@ -2,6 +2,7 @@ const { Op } = require('sequelize');
 const RespuestaAsignacion = require('../models/RespuestaAsignacion');
 const EvaluacionAsignacion = require('../models/EvaluacionAsignacion');
 const Usuario = require('../models/Usuario');
+const HistorialAsignacion = require('../models/HistorialAsignacion');
 
 const ESTADOS = {
   SIN_RESPUESTA: 'SIN_RESPUESTA',
@@ -13,12 +14,12 @@ const ESTADOS = {
 
 const PRIORIDAD_ESTADO = { POR_EVALUAR: 0, RESPONDIDA: 0, OBSERVADA: 1, SIN_RESPUESTA: 2, CERRADA: 3 };
 
-const estadoDe = (total, ultimaRespuesta, evaluacion) => {
+const estadoDe = (total, evaluacion, envio) => {
   if (evaluacion?.resultado === 'APROBADA') return ESTADOS.CERRADA;
   if (!total) return ESTADOS.SIN_RESPUESTA;
   if (evaluacion?.resultado === 'OBSERVADA') {
-    // Observada hasta que sube una respuesta posterior a la observación; después, Respondida.
-    return new Date(evaluacion.fecha_evaluacion) >= ultimaRespuesta ? ESTADOS.OBSERVADA : ESTADOS.RESPONDIDA;
+    // Observada hasta que el usuario pulsa "ya respondí" después de la observación.
+    return envio && envio > new Date(evaluacion.fecha_evaluacion) ? ESTADOS.RESPONDIDA : ESTADOS.OBSERVADA;
   }
   return ESTADOS.POR_EVALUAR;
 };
@@ -53,8 +54,19 @@ const resumenPorAsignacion = async (ids) => {
     resumen.get(e.id_asignacion).evaluacion = e.get({ plain: true });
   });
 
+  const envios = await HistorialAsignacion.findAll({
+    attributes: ['id_asignacion', 'fecha_registro'],
+    where: { id_asignacion: { [Op.in]: ids }, tipo: 'RESPUESTA_ENVIADA' },
+    raw: true,
+  });
+  envios.forEach((e) => {
+    const entrada = resumen.get(e.id_asignacion);
+    const fecha = new Date(e.fecha_registro);
+    if (!entrada.envio || fecha > entrada.envio) entrada.envio = fecha;
+  });
+
   resumen.forEach((entrada) => {
-    entrada.estado = estadoDe(entrada.total, entrada.ultima_respuesta, entrada.evaluacion);
+    entrada.estado = estadoDe(entrada.total, entrada.evaluacion, entrada.envio);
   });
   return resumen;
 };

@@ -22,6 +22,7 @@ type Props = {
   onCambio?: () => void;
   soloLectura?: boolean;
   ultimaEvaluacion?: Evaluacion | null;
+  estadoRespuesta?: string | null;
 };
 
 type Archivo = { id: number; descripcion: string; nombre_original: string; mimetype?: string; fecha_subida: string };
@@ -36,6 +37,7 @@ export default function RespuestasAsignacionModal({
   onCambio,
   soloLectura = false,
   ultimaEvaluacion = null,
+  estadoRespuesta = null,
 }: Props) {
   const gestiona = puedeGestionarAsignaciones();
   const usuarioId = usuarioActualId();
@@ -50,13 +52,30 @@ export default function RespuestasAsignacionModal({
   const [visor, setVisor] = useState<{ titulo: string; url: string | null; cargando: boolean; error: string } | null>(null);
   const [eliminando, setEliminando] = useState<Archivo | null>(null);
   const [procesando, setProcesando] = useState(false);
+  const [estado, setEstado] = useState<string | null>(estadoRespuesta);
+  const [enviandoRevision, setEnviandoRevision] = useState(false);
   const [editando, setEditando] = useState<{ id: number; descripcion: string } | null>(null);
   const [guardandoEdicion, setGuardandoEdicion] = useState(false);
   const [reemplazando, setReemplazando] = useState<number | null>(null);
 
-  const observacionPendiente =
-    ultimaEvaluacion?.resultado === "OBSERVADA" &&
-    !respuestas.some((r) => new Date(r.fecha_creacion) > new Date(ultimaEvaluacion.fecha_evaluacion));
+  const observacionPendiente = ultimaEvaluacion?.resultado === "OBSERVADA" && estado === "OBSERVADA";
+
+  const enviarRevision = async () => {
+    if (!window.confirm("¿Ya terminó de subir su respuesta? Se enviará a evaluación y no podrá volver a marcarla como pendiente.")) {
+      return;
+    }
+    setEnviandoRevision(true);
+    try {
+      const res = await api.post(`/asignaciones-expediente/${asignacion.id}/respuestas/enviar`);
+      setEstado(res.data.estado);
+      toast.success("Respuesta enviada a evaluación");
+      onCambio?.();
+    } catch (error: any) {
+      toast.error(error.response?.data?.mensaje || "No se pudo enviar a evaluación");
+    } finally {
+      setEnviandoRevision(false);
+    }
+  };
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -215,8 +234,19 @@ export default function RespuestasAsignacionModal({
                   {ultimaEvaluacion.observacion || "Sin detalle"}
                 </div>
                 <div className="mt-2 text-xs text-amber-800 dark:text-amber-200">
-                  Responda abajo con lo que falta o corrija lo observado.
+                  Responda abajo y suba los archivos que falten. Cuando termine, pulse el botón para enviarla a evaluación.
                 </div>
+                {puedeEscribir && (
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      onClick={enviarRevision}
+                      disabled={enviandoRevision}
+                      className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
+                    >
+                      {enviandoRevision ? "Enviando..." : "Ya respondí, enviar a evaluación"}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
             {puedeEscribir && (
