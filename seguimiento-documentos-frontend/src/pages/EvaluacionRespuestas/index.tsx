@@ -25,12 +25,13 @@ interface FilaEvaluable {
   total_respuestas: number;
   ultima_respuesta: string | null;
   tiempo_respuesta_horas: number | null;
-  estado: "POR_EVALUAR" | "OBSERVADA" | "SIN_RESPUESTA" | "CERRADA";
+  estado: "POR_EVALUAR" | "RESPONDIDA" | "OBSERVADA" | "SIN_RESPUESTA" | "CERRADA";
   ultima_evaluacion: Evaluacion | null;
 }
 
 const ESTADO: Record<FilaEvaluable["estado"], { texto: string; clases: string }> = {
   POR_EVALUAR: { texto: "Por evaluar", clases: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100" },
+  RESPONDIDA: { texto: "Respondida", clases: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-100" },
   OBSERVADA: { texto: "Observada", clases: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100" },
   SIN_RESPUESTA: { texto: "Sin respuesta", clases: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200" },
   CERRADA: { texto: "Cerrada", clases: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100" },
@@ -48,6 +49,7 @@ const formatoTiempo = (horas: number | null) => {
 const FILTROS_ESTADO = [
   { value: "", texto: "Todos" },
   { value: "POR_EVALUAR", texto: "Por evaluar" },
+  { value: "RESPONDIDA", texto: "Respondidas" },
   { value: "OBSERVADA", texto: "Observadas" },
   { value: "CERRADA", texto: "Cerradas" },
 ];

@@ -7,16 +7,18 @@ const ESTADOS = {
   SIN_RESPUESTA: 'SIN_RESPUESTA',
   POR_EVALUAR: 'POR_EVALUAR',
   OBSERVADA: 'OBSERVADA',
+  RESPONDIDA: 'RESPONDIDA',
   CERRADA: 'CERRADA',
 };
 
-const PRIORIDAD_ESTADO = { POR_EVALUAR: 0, OBSERVADA: 1, SIN_RESPUESTA: 2, CERRADA: 3 };
+const PRIORIDAD_ESTADO = { POR_EVALUAR: 0, RESPONDIDA: 0, OBSERVADA: 1, SIN_RESPUESTA: 2, CERRADA: 3 };
 
 const estadoDe = (total, ultimaRespuesta, evaluacion) => {
   if (evaluacion?.resultado === 'APROBADA') return ESTADOS.CERRADA;
   if (!total) return ESTADOS.SIN_RESPUESTA;
-  if (evaluacion?.resultado === 'OBSERVADA' && new Date(evaluacion.fecha_evaluacion) >= ultimaRespuesta) {
-    return ESTADOS.OBSERVADA;
+  if (evaluacion?.resultado === 'OBSERVADA') {
+    // Observada hasta que sube una respuesta posterior a la observación; después, Respondida.
+    return new Date(evaluacion.fecha_evaluacion) >= ultimaRespuesta ? ESTADOS.OBSERVADA : ESTADOS.RESPONDIDA;
   }
   return ESTADOS.POR_EVALUAR;
 };
