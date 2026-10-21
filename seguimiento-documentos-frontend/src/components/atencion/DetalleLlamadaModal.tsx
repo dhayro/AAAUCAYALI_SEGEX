@@ -151,7 +151,7 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
     setConfirmar({
       titulo: respondido ? "Marcar como respondida" : "Marcar como no respondida",
       mensaje: respondido
-        ? "Confirme que ya se dio respuesta al administrado."
+        ? "Confirme que ya se dio respuesta al administrado. Las acciones pendientes pasarán a ejecutadas."
         : "Confirme que el administrado todavía no ha recibido respuesta.",
       textoConfirmar: "Sí, confirmar",
       peligro: false,

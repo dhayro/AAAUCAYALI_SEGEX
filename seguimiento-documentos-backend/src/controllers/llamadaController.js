@@ -341,12 +341,42 @@ exports.actualizarLlamada = async (req, res) => {
     if (req.body.fecha_respuesta !== undefined) cambios.fecha_respuesta = req.body.fecha_respuesta || null;
     if (req.body.respondido !== undefined) cambios.respondido = parseBoolean(req.body.respondido);
 
+    // Al marcar la llamada como respondida, sus acciones pendientes pasan a ejecutadas.
+    let pendientesAEjecutar = [];
     if (cambios.respondido === true && !respondidoAnterior) {
       const acciones = await AccionLlamada.count({ where: { id_llamada: llamada.id } });
       if (acciones === 0) throw errorConEstado('Registre al menos una acción antes de marcar la llamada como respondida');
+
+      pendientesAEjecutar = await AccionLlamada.findAll({
+        where: { id_llamada: llamada.id, estado: 'PENDIENTE' },
+        include: [{ model: AccionAtencion, as: 'accion', attributes: ['nombre', 'requiere_archivo'] }],
+      });
+      const sinArchivo = [];
+      const sinRespuesta = [];
+      for (const p of pendientesAEjecutar) {
+        const archivos = await ArchivoAccion.count({ where: { id_accion_llamada: p.id } });
+        if (p.accion?.requiere_archivo && archivos === 0) sinArchivo.push(p.accion.nombre);
+        if (!p.accion?.requiere_archivo && !p.observacion) sinRespuesta.push(p.accion?.nombre);
+      }
+      if (sinArchivo.length) {
+        throw errorConEstado(`Estas acciones requieren archivo antes de marcar la llamada como respondida: ${sinArchivo.join(', ')}`);
+      }
+      if (sinRespuesta.length) {
+        throw errorConEstado(`Escriba la respuesta de estas acciones antes de marcar la llamada como respondida: ${sinRespuesta.join(', ')}`);
+      }
     }
 
     await llamada.update(cambios);
+
+    for (const p of pendientesAEjecutar) {
+      await p.update({ estado: 'EJECUTADO', fecha_ejecucion: hoyLima(), id_usuario_modificador: req.user.id });
+      await registrarHistorial(
+        llamada.id,
+        'ACCION_EJECUTADA',
+        `Ejecutada al marcar la llamada como respondida: ${p.accion?.nombre}`,
+        req.user.id
+      );
+    }
 
     if (cambios.respondido !== undefined && cambios.respondido !== respondidoAnterior) {
       await registrarHistorial(
