@@ -372,10 +372,10 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio }: Pr
                         {accion.accion?.requiere_archivo && (
                           <span className="rounded bg-amber-50 px-1.5 text-[10px] font-bold text-amber-800">REQUIERE ARCHIVO</span>
                         )}
-                        {accion.estado === "EJECUTADO" && (
+                        {accion.estado === "EJECUTADO" && !gestiona && (
                           <span className="ml-auto text-xs text-gray-500">Ejecutada · no admite cambios</span>
                         )}
-                        {puedeOperar && accion.estado !== "EJECUTADO" && (
+                        {gestiona && (
                           <button
                             onClick={() => cambiarEstado(accion)}
                             className="ml-auto rounded border border-brand-600 px-2 py-0.5 text-xs font-semibold text-brand-600 hover:bg-brand-50 dark:border-brand-400 dark:text-brand-400"

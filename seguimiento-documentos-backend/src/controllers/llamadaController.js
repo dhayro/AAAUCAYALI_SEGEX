@@ -323,7 +323,14 @@ exports.actualizarAccionLlamada = async (req, res) => {
     if (!puedeOperarLlamada(llamada, req.user)) {
       return res.status(403).json({ mensaje: 'Solo el responsable puede actualizar esta acción' });
     }
-    if (accion.estado === 'EJECUTADO') throw errorConEstado('Esta acción ya está ejecutada y no puede modificarse');
+    const quiereEstado = req.body.estado !== undefined;
+    if (quiereEstado && !esGestor(req.user)) {
+      throw errorConEstado('Solo admin, jefe o secretaria pueden cambiar el estado de la acción');
+    }
+    if (accion.estado === 'EJECUTADO') {
+      const soloRevertir = quiereEstado && String(req.body.estado).toUpperCase() === 'PENDIENTE' && req.body.observacion === undefined;
+      if (!soloRevertir) throw errorConEstado('Esta acción ya está ejecutada y no puede modificarse');
+    }
 
     const catalogo = await AccionAtencion.findByPk(accion.id_accion, { attributes: ['nombre', 'requiere_archivo'] });
     const cambios = { id_usuario_modificador: req.user.id };
