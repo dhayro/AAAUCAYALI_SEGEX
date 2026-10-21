@@ -482,6 +482,16 @@ exports.miDesempeno = async (req, res) => {
       if (a.estado !== 'EJECUTADO') pendientes[a.id_llamada] = (pendientes[a.id_llamada] || 0) + 1;
     });
 
+    const detalleAcciones = idsL.length
+      ? await AccionLlamada.findAll({
+          attributes: ['id', 'id_llamada', 'estado', 'observacion', 'fecha_ejecucion'],
+          where: { id_llamada: { [Op.in]: idsL } },
+          include: [{ model: AccionAtencion, as: 'accion', attributes: ['nombre'], required: false }],
+          order: [['id', 'DESC']],
+        })
+      : [];
+    const cutPorLlamada = Object.fromEntries(llamadas.map((l) => [l.id, l.cut]));
+
     const filasLlamadas = llamadas.map((l) => {
       const dias = l.fecha_respuesta ? diasEntre(l.fecha_respuesta, hoy) : null;
       let situacion = 'SIN_PLAZO';
@@ -518,6 +528,27 @@ exports.miDesempeno = async (req, res) => {
       },
       asignaciones: filasAsignaciones,
       llamadas: filasLlamadas,
+      prorrogas: asignaciones
+        .filter((a) => a.estado_prorroga)
+        .map((a) => ({
+          cut: a.cut,
+          fecha_solicitud: a.fecha_prorroga,
+          plazo_prorroga: a.plazo_prorroga,
+          motivo: a.motivo_prorroga || '',
+          estado: a.estado_prorroga,
+          vence_original: a.fecha_vencimiento,
+          vence_nueva: a.estado_prorroga === 'ACEPTADA' ? a.fecha_vencimiento_prorroga : null,
+        })),
+      acciones: detalleAcciones.map((a) => {
+        const p = a.get({ plain: true });
+        return {
+          cut: cutPorLlamada[a.id_llamada] || '',
+          accion: p.accion?.nombre || 'Sin tipo',
+          estado: a.estado === 'EJECUTADO' ? 'Ejecutada' : 'Pendiente',
+          observacion: a.observacion || '',
+          fecha_ejecucion: a.fecha_ejecucion || null,
+        };
+      }),
     });
   } catch (error) {
     res.status(500).json({ mensaje: error.message });
