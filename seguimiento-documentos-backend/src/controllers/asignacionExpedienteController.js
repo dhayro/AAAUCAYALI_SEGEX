@@ -152,9 +152,26 @@ exports.cargaMasiva = async (req, res) => {
     const usuarios = await Usuario.findAll({ where: { estado: true }, attributes: ['id', 'usuario', 'nombre', 'apellido'] });
     const porLogin = new Map(usuarios.map((u) => [String(u.usuario).trim().toLowerCase(), u]));
 
+    // CUT que ya tienen una asignación activa: se omiten de la carga.
+    const cutsArchivo = [...new Set(filas.map((f) => normalizarTexto(f.cut)).filter(Boolean))];
+    const asignadosPrevios = new Map();
+    if (cutsArchivo.length) {
+      const previas = await AsignacionExpediente.findAll({
+        where: { estado: true, cut: { [Op.in]: cutsArchivo } },
+        attributes: ['cut', 'id_usuario'],
+        order: [['id', 'ASC']],
+      });
+      const nombrePorId = new Map(usuarios.map((u) => [u.id, `${u.nombre} ${u.apellido}`]));
+      previas.forEach((p) => {
+        if (!asignadosPrevios.has(p.cut)) asignadosPrevios.set(p.cut, nombrePorId.get(p.id_usuario) || 'otro usuario');
+      });
+    }
+    const cutsEnArchivo = new Map();
+
     const errores = [];
     const validas = [];
     const vista = [];
+    const omitidas = [];
     filas.forEach((f, i) => {
       const fila = i + 2; // la fila 1 del Excel es el encabezado
       const cut = normalizarTexto(f.cut);
@@ -169,6 +186,8 @@ exports.cargaMasiva = async (req, res) => {
       if (!idUsuario) problemas.push(`usuario "${f.usuario ?? ''}" no existe o está inactivo`);
       if (isNaN(plazo) || plazo < 1) problemas.push('el plazo debe ser un número mayor a 0');
       if (!esFechaValida(fecha)) problemas.push('la fecha debe tener formato AAAA-MM-DD');
+      if (cut && cutsEnArchivo.has(cut)) problemas.push(`CUT repetido (igual que la fila ${cutsEnArchivo.get(cut)})`);
+      else if (cut) cutsEnArchivo.set(cut, fila);
 
       vista.push({
         fila,
@@ -179,11 +198,18 @@ exports.cargaMasiva = async (req, res) => {
         fecha,
         fecha_vencimiento: problemas.length || isNaN(plazo) ? '' : sumarDiasCalendario(fecha, plazo),
         observacion: normalizarTexto(f.observacion) ?? '',
-        problemas: problemas.join('; '),
+        estado: problemas.length ? 'ERROR' : cut && asignadosPrevios.has(cut) ? 'OMITIDA' : 'LISTA',
+        mensaje: problemas.length
+          ? problemas.join('; ')
+          : cut && asignadosPrevios.has(cut)
+          ? `ya asignado a ${asignadosPrevios.get(cut)}`
+          : '',
       });
 
       if (problemas.length) {
         errores.push({ fila, mensaje: problemas.join('; ') });
+      } else if (cut && asignadosPrevios.has(cut)) {
+        omitidas.push(fila);
       } else {
         validas.push({
           cut,
@@ -199,7 +225,14 @@ exports.cargaMasiva = async (req, res) => {
 
     // Vista previa: no crea nada hasta que el usuario confirme.
     if (req.body.confirmar !== true) {
-      return res.json({ vista_previa: true, filas: vista, errores, total: filas.length });
+      return res.json({
+        vista_previa: true,
+        filas: vista,
+        errores,
+        total: filas.length,
+        listas: validas.length,
+        omitidas: omitidas.length,
+      });
     }
 
     if (errores.length) {
@@ -224,7 +257,7 @@ exports.cargaMasiva = async (req, res) => {
       }
     });
 
-    res.status(201).json({ creadas: validas.length });
+    res.status(201).json({ creadas: validas.length, omitidas: omitidas.length });
   } catch (error) {
     res.status(500).json({ mensaje: error.message });
   }
