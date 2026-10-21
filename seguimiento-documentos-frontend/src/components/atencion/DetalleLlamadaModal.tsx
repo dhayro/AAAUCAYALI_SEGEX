@@ -22,6 +22,7 @@ const nombre = (u?: { nombre: string; apellido: string } | null) => (u ? `${u.no
 const TIPO_ANTECEDENTE: Record<string, string> = {
   REGISTRO: "Registro",
   EDICION: "Edición",
+  PLAZO_CAMBIADO: "Plazo de respuesta cambiado",
   RESPONDIDO: "Respondida",
   NO_RESPONDIDO: "No respondida",
   REASIGNACION: "Reasignación",
@@ -336,6 +337,7 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio }: Pr
                     <div className="mt-1">
                       <BadgePlazo respondido={llamada.respondido} fechaLimite={llamada.fecha_respuesta} />
                     </div>
+                    <UltimoCambioPlazo antecedentes={llamada.antecedentes || []} />
                     <EditorPlazo
                       llamadaId={llamadaId}
                       fechaLlamada={llamada.fecha_llamada}
@@ -610,6 +612,18 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio }: Pr
 }
 
 
+function UltimoCambioPlazo({ antecedentes }: { antecedentes: any[] }) {
+  const ultimo = antecedentes
+    .filter((h) => h.tipo === "PLAZO_CAMBIADO")
+    .sort((a, b) => String(b.fecha_registro).localeCompare(String(a.fecha_registro)))[0];
+  if (!ultimo) return null;
+  return (
+    <div className="mt-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
+      Último cambio: {formatFechaHora(ultimo.fecha_registro)} por {nombre(ultimo.usuario)}
+    </div>
+  );
+}
+
 function AntecedentesModal({ cut, antecedentes, onClose }: { cut: string; antecedentes: any[]; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-gray-900/50 p-4">
@@ -630,7 +644,15 @@ function AntecedentesModal({ cut, antecedentes, onClose }: { cut: string; antece
                 <span className={`absolute -left-[7px] top-1 h-3 w-3 rounded-full ${colorUsuario(h.usuario?.id).etiqueta.split(" ")[0]}`} />
                 <div className="text-xs text-gray-500">{formatFechaHora(h.fecha_registro)}</div>
                 <div className="mt-0.5 font-semibold text-gray-900 dark:text-white">{TIPO_ANTECEDENTE[h.tipo] || h.tipo}</div>
-                <div className="mt-0.5 whitespace-pre-wrap break-words text-sm text-gray-700 dark:text-gray-300">{h.detalle}</div>
+                <div
+                  className={`mt-0.5 whitespace-pre-wrap break-words text-sm ${
+                    h.tipo === "PLAZO_CAMBIADO"
+                      ? "rounded-lg bg-amber-50 p-2 font-semibold text-amber-900 dark:bg-amber-900/30 dark:text-amber-100"
+                      : "text-gray-700 dark:text-gray-300"
+                  }`}
+                >
+                  {h.detalle}
+                </div>
                 <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${colorUsuario(h.usuario?.id).etiqueta}`}>
                   {nombre(h.usuario)}
                 </span>

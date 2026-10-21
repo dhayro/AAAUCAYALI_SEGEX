@@ -37,6 +37,20 @@ const puedeOperarLlamada = (llamada, usuario) =>
 const registrarHistorial = (idLlamada, tipo, detalle, idUsuario) =>
   HistorialLlamada.create({ id_llamada: idLlamada, tipo, detalle, id_usuario: idUsuario });
 
+const ymdLegible = (ymd) => (ymd ? `${ymd.slice(8, 10)}/${ymd.slice(5, 7)}/${ymd.slice(0, 4)}` : 'sin fecha');
+const ymdLima = (fecha) => new Date(new Date(fecha).getTime() - 5 * 3600000).toISOString().slice(0, 10);
+const diasEntre = (a, b) => Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86400000);
+
+// Texto del cambio de plazo: valor anterior, valor nuevo y días desde la fecha de la llamada.
+const detallePlazo = (llamada, anterior, nuevo) => {
+  if (!nuevo) return `Plazo quitado (antes ${ymdLegible(anterior)})`;
+  const dias = diasEntre(nuevo, ymdLima(llamada.fecha_llamada));
+  const cuanto = `${dias} día${dias === 1 ? '' : 's'} desde la llamada`;
+  return anterior
+    ? `Plazo: ${ymdLegible(anterior)} → ${ymdLegible(nuevo)} (${cuanto})`
+    : `Plazo establecido: hasta ${ymdLegible(nuevo)} (${cuanto})`;
+};
+
 const includesLlamada = [
   { model: Usuario, as: 'responsable', attributes: ['id', 'nombre', 'apellido', 'usuario'] },
   { model: Usuario, as: 'creador', attributes: ['id', 'nombre', 'apellido', 'usuario'] },
@@ -271,6 +285,7 @@ exports.actualizarLlamada = async (req, res) => {
     }
 
     const respondidoAnterior = llamada.respondido;
+    const fechaRespuestaAnterior = llamada.fecha_respuesta;
     const cambios = { id_usuario_modificador: req.user.id };
     if (req.body.fecha_llamada !== undefined) cambios.fecha_llamada = new Date(req.body.fecha_llamada);
     if (req.body.nombre_llamante !== undefined) cambios.nombre_llamante = textoMayuscula(req.body.nombre_llamante);
@@ -289,7 +304,17 @@ exports.actualizarLlamada = async (req, res) => {
         req.user.id
       );
     }
-    const otrosCambios = Object.keys(cambios).filter((k) => !['respondido', 'id_usuario_modificador'].includes(k));
+    if (cambios.fecha_respuesta !== undefined && cambios.fecha_respuesta !== fechaRespuestaAnterior) {
+      await registrarHistorial(
+        llamada.id,
+        'PLAZO_CAMBIADO',
+        detallePlazo(llamada, fechaRespuestaAnterior, cambios.fecha_respuesta),
+        req.user.id
+      );
+    }
+    const otrosCambios = Object.keys(cambios).filter(
+      (k) => !['respondido', 'fecha_respuesta', 'id_usuario_modificador'].includes(k)
+    );
     if (otrosCambios.length > 0) {
       await registrarHistorial(llamada.id, 'EDICION', `Datos editados: ${otrosCambios.join(', ')}`, req.user.id);
     }
