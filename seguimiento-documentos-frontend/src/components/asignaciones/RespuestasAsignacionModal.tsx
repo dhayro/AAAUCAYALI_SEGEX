@@ -35,6 +35,9 @@ export default function RespuestasAsignacionModal({ asignacion, onClose, onCambi
   const [visor, setVisor] = useState<{ titulo: string; url: string | null; cargando: boolean; error: string } | null>(null);
   const [eliminando, setEliminando] = useState<Archivo | null>(null);
   const [procesando, setProcesando] = useState(false);
+  const [editando, setEditando] = useState<{ id: number; descripcion: string } | null>(null);
+  const [guardandoEdicion, setGuardandoEdicion] = useState(false);
+  const [reemplazando, setReemplazando] = useState<number | null>(null);
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -107,6 +110,40 @@ export default function RespuestasAsignacionModal({ asignacion, onClose, onCambi
       toast.error(error.response?.data?.mensaje || "No se pudo eliminar el archivo");
     } finally {
       setProcesando(false);
+    }
+  };
+
+  const guardarEdicion = async () => {
+    if (!editando) return;
+    if (!editando.descripcion.trim()) return toast.error("La descripción no puede quedar vacía");
+    setGuardandoEdicion(true);
+    try {
+      const res = await api.patch(`/asignaciones-expediente/archivos-respuesta/${editando.id}`, {
+        descripcion: editando.descripcion,
+      });
+      reemplazarEnLista(res.data);
+      setEditando(null);
+      toast.success("Descripción actualizada");
+    } catch (error: any) {
+      toast.error(error.response?.data?.mensaje || "No se pudo actualizar la descripción");
+    } finally {
+      setGuardandoEdicion(false);
+    }
+  };
+
+  const reemplazarArchivo = async (archivo: Archivo, nuevo: File) => {
+    setReemplazando(archivo.id);
+    try {
+      const fd = new FormData();
+      fd.append("archivo", nuevo);
+      const res = await api.put(`/asignaciones-expediente/archivos-respuesta/${archivo.id}/archivo`, fd);
+      reemplazarEnLista(res.data);
+      toast.success("Archivo reemplazado");
+      onCambio?.();
+    } catch (error: any) {
+      toast.error(error.response?.data?.mensaje || "No se pudo reemplazar el archivo");
+    } finally {
+      setReemplazando(null);
     }
   };
 
@@ -195,10 +232,34 @@ export default function RespuestasAsignacionModal({ asignacion, onClose, onCambi
                       {r.archivos.map((a) => (
                         <div key={a.id} className="flex flex-wrap items-center gap-3 rounded-lg bg-gray-50 p-2 dark:bg-gray-700/50">
                           <div className="min-w-0 flex-1">
-                            <div className="truncate text-sm font-semibold">{a.descripcion}</div>
-                            <div className="truncate text-xs text-gray-500">
-                              {a.nombre_original} · Subido {formatFechaHora(a.fecha_subida)}
-                            </div>
+                            {editando?.id === a.id ? (
+                              <div className="flex gap-2">
+                                <Input
+                                  value={editando.descripcion}
+                                  onChange={(e) => setEditando({ id: a.id, descripcion: e.target.value })}
+                                />
+                                <button
+                                  onClick={guardarEdicion}
+                                  disabled={guardandoEdicion}
+                                  className="rounded bg-brand-500 px-3 text-xs font-semibold text-white hover:bg-brand-600 disabled:opacity-50"
+                                >
+                                  Guardar
+                                </button>
+                                <button
+                                  onClick={() => setEditando(null)}
+                                  className="rounded border border-gray-300 px-3 text-xs text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300"
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="truncate text-sm font-semibold">{a.descripcion}</div>
+                                <div className="truncate text-xs text-gray-500">
+                                  {a.nombre_original} · Subido {formatFechaHora(a.fecha_subida)}
+                                </div>
+                              </>
+                            )}
                           </div>
                           <button
                             onClick={() => verArchivo(a)}
@@ -207,12 +268,37 @@ export default function RespuestasAsignacionModal({ asignacion, onClose, onCambi
                             {esPdf(a) ? "Ver" : "Descargar"}
                           </button>
                           {puedeEscribir && (
-                            <button
-                              onClick={() => setEliminando(a)}
-                              className="rounded border border-red-300 px-2 py-0.5 text-xs text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400"
-                            >
-                              Eliminar
-                            </button>
+                            <>
+                              <button
+                                onClick={() => setEditando({ id: a.id, descripcion: a.descripcion })}
+                                className="rounded border border-gray-400 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-100 dark:border-gray-500 dark:text-gray-300 dark:hover:bg-gray-600"
+                              >
+                                Editar
+                              </button>
+                              <label
+                                className={`cursor-pointer rounded border border-gray-400 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-100 dark:border-gray-500 dark:text-gray-300 dark:hover:bg-gray-600 ${
+                                  reemplazando === a.id ? "pointer-events-none opacity-50" : ""
+                                }`}
+                              >
+                                {reemplazando === a.id ? "Reemplazando..." : "Reemplazar"}
+                                <input
+                                  type="file"
+                                  accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const nuevo = e.target.files?.[0];
+                                    if (nuevo) reemplazarArchivo(a, nuevo);
+                                    e.target.value = "";
+                                  }}
+                                />
+                              </label>
+                              <button
+                                onClick={() => setEliminando(a)}
+                                className="rounded border border-red-300 px-2 py-0.5 text-xs text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400"
+                              >
+                                Eliminar
+                              </button>
+                            </>
                           )}
                         </div>
                       ))}

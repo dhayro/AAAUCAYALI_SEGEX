@@ -216,6 +216,8 @@ router.get('/:id/respuestas', authenticateToken, respuestaController.listarRespu
 router.post('/:id/respuestas', authenticateToken, respuestaController.crearRespuesta);
 router.post('/respuestas/:id/archivos', authenticateToken, subirArchivoRespuesta, respuestaController.subirArchivo);
 router.get('/archivos-respuesta/:id/descargar', authenticateToken, respuestaController.descargarArchivo);
+router.patch('/archivos-respuesta/:id', authenticateToken, respuestaController.editarArchivo);
+router.put('/archivos-respuesta/:id/archivo', authenticateToken, subirArchivoRespuesta, respuestaController.reemplazarArchivo);
 router.delete('/archivos-respuesta/:id', authenticateToken, respuestaController.eliminarArchivo);
 
 module.exports = router;

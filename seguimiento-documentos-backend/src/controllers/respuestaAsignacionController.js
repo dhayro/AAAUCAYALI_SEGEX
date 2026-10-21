@@ -131,6 +131,58 @@ exports.eliminarArchivo = async (req, res) => {
   }
 };
 
+exports.editarArchivo = async (req, res) => {
+  try {
+    const archivo = await ArchivoRespuestaAsignacion.findByPk(req.params.id);
+    if (!archivo) return res.status(404).json({ mensaje: 'Archivo no encontrado' });
+    const { respuesta, asignacion } = await respuestaDeArchivo(archivo.id_respuesta);
+    if (!respuesta || !asignacion || !puedeVer(asignacion, req.user)) {
+      return res.status(404).json({ mensaje: 'Archivo no encontrado' });
+    }
+    if (!puedeOperar(asignacion, req.user)) {
+      return res.status(403).json({ mensaje: 'Solo el usuario asignado puede editar archivos' });
+    }
+    const descripcion = textoMayuscula(req.body.descripcion);
+    if (!descripcion) throw errorConEstado('Describa qué contiene el archivo');
+
+    await archivo.update({ descripcion });
+    res.json(await respuestaCompleta(respuesta.id));
+  } catch (error) {
+    res.status(error.status || 500).json({ mensaje: error.message });
+  }
+};
+
+exports.reemplazarArchivo = async (req, res) => {
+  const limpiarTemporal = () => {
+    if (req.file) fs.unlink(req.file.path, () => {});
+  };
+  try {
+    if (!req.file) throw errorConEstado('Seleccione el archivo que reemplazará al actual');
+    const archivo = await ArchivoRespuestaAsignacion.findByPk(req.params.id);
+    if (!archivo) throw errorConEstado('Archivo no encontrado', 404);
+    const { respuesta, asignacion } = await respuestaDeArchivo(archivo.id_respuesta);
+    if (!respuesta || !asignacion || !puedeVer(asignacion, req.user)) {
+      throw errorConEstado('Archivo no encontrado', 404);
+    }
+    if (!puedeOperar(asignacion, req.user)) {
+      throw errorConEstado('Solo el usuario asignado puede reemplazar archivos', 403);
+    }
+
+    const anterior = archivo.nombre_guardado;
+    await archivo.update({
+      nombre_original: req.file.originalname,
+      nombre_guardado: req.file.filename,
+      mimetype: req.file.mimetype,
+      tamano: req.file.size,
+    });
+    fs.unlink(path.join(CARPETA_ARCHIVOS, path.basename(anterior)), () => {});
+    res.json(await respuestaCompleta(respuesta.id));
+  } catch (error) {
+    limpiarTemporal();
+    res.status(error.status || 400).json({ mensaje: error.message });
+  }
+};
+
 exports.descargarArchivo = async (req, res) => {
   try {
     const archivo = await ArchivoRespuestaAsignacion.findByPk(req.params.id);
