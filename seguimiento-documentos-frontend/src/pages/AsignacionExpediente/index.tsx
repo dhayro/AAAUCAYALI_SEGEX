@@ -156,6 +156,7 @@ export default function AsignacionExpediente() {
     omitidas: number;
   } | null>(null);
   const [datosPendientes, setDatosPendientes] = useState<any[]>([]);
+  const [filasQuitadas, setFilasQuitadas] = useState<number[]>([]);
   const [confirmandoCarga, setConfirmandoCarga] = useState(false);
 
   const [cutAbierto, setCutAbierto] = useState<string | null>(null);
@@ -255,8 +256,10 @@ export default function AsignacionExpediente() {
       const hoja = libro.Sheets[libro.SheetNames[0]];
       const filas = XLSX.utils.sheet_to_json<Record<string, any>>(hoja, { defval: "", raw: false });
       const datos = filas
-        .filter((f) => String(f["CUT"] ?? "").trim() !== "")
-        .map((f) => ({
+        .map((f, i) => ({ fila: i + 2, original: f }))
+        .filter((x) => String(x.original["CUT"] ?? "").trim() !== "")
+        .map(({ fila, original: f }) => ({
+          fila,
           cut: f["CUT"],
           usuario: f["USUARIO ASIGNADO"],
           fecha: f["FECHA ASIGNACION (AAAA-MM-DD)"],
@@ -270,6 +273,7 @@ export default function AsignacionExpediente() {
       }
       // Primero se revisa el archivo: la vista previa no crea nada.
       setDatosPendientes(datos);
+      setFilasQuitadas([]);
       const res = await api.post("/asignaciones-expediente/carga-masiva", { filas: datos });
       setVistaPrevia(res.data);
     } catch (error: any) {
@@ -285,14 +289,21 @@ export default function AsignacionExpediente() {
     }
   };
 
+  // Filas que siguen en la vista previa (sin las quitadas con la X).
+  const filasVisibles = vistaPrevia ? vistaPrevia.filas.filter((f) => !filasQuitadas.includes(f.fila)) : [];
+  const listasVisibles = filasVisibles.filter((f) => f.estado === "LISTA").length;
+  const avisosVisibles = filasVisibles.filter((f) => f.estado === "AVISO").length;
+  const erroresVisibles = filasVisibles.filter((f) => f.estado === "ERROR").length;
+  const filasAConfirmar = datosPendientes.filter((d) => filasVisibles.some((f) => f.fila === d.fila));
+
   const confirmarCarga = async () => {
     setConfirmandoCarga(true);
     try {
-      const res = await api.post("/asignaciones-expediente/carga-masiva", { filas: datosPendientes, confirmar: true });
-      const omitidas = res.data.omitidas ? ` · ${res.data.omitidas} omitida(s) por ya estar asignadas` : "";
-      toast.success(`Se crearon ${res.data.creadas} asignaciones${omitidas}`);
+      const res = await api.post("/asignaciones-expediente/carga-masiva", { filas: filasAConfirmar, confirmar: true });
+      toast.success(`Se crearon ${res.data.creadas} asignaciones`);
       setVistaPrevia(null);
       setDatosPendientes([]);
+      setFilasQuitadas([]);
       await fetchAsignaciones();
     } catch (error: any) {
       const errores = error.response?.data?.errores;
@@ -716,8 +727,8 @@ export default function AsignacionExpediente() {
               <div className="border-b p-5 dark:border-gray-700">
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Vista previa de la carga</h2>
                 <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                  {vistaPrevia.listas} lista{vistaPrevia.listas === 1 ? "" : "s"} · {vistaPrevia.omitidas} omitida
-                  {vistaPrevia.omitidas === 1 ? "" : "s"} (ya asignadas) · {vistaPrevia.errores.length} con error
+                  {filasVisibles.length} fila{filasVisibles.length === 1 ? "" : "s"} · {listasVisibles} lista
+                  {listasVisibles === 1 ? "" : "s"} · {avisosVisibles} ya asignada{avisosVisibles === 1 ? "" : "s"} · {erroresVisibles} con error
                   {vistaPrevia.errores.length > 0 && " · corrija el archivo y vuelva a cargarlo para poder confirmar"}
                 </p>
               </div>
@@ -734,16 +745,17 @@ export default function AsignacionExpediente() {
                       <th className="px-3 py-2 text-center">Vence</th>
                       <th className="px-3 py-2 text-start">Observación</th>
                       <th className="px-3 py-2 text-start">Estado</th>
+                      <th className="px-3 py-2 text-center">Quitar</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                    {vistaPrevia.filas.map((f) => (
+                    {filasVisibles.map((f) => (
                       <tr
                         key={f.fila}
                         className={
                           f.estado === "ERROR"
                             ? "bg-red-50 dark:bg-red-900/20"
-                            : f.estado === "OMITIDA"
+                            : f.estado === "AVISO"
                             ? "bg-amber-50 dark:bg-amber-900/20"
                             : ""
                         }
@@ -757,12 +769,22 @@ export default function AsignacionExpediente() {
                         <td className="max-w-xs truncate px-3 py-2">{f.observacion || "—"}</td>
                         <td className="px-3 py-2">
                           {f.estado === "ERROR" && <span className="text-red-700 dark:text-red-300">{f.mensaje}</span>}
-                          {f.estado === "OMITIDA" && (
-                            <span className="font-medium text-amber-800 dark:text-amber-200">Omitida: {f.mensaje}</span>
+                          {f.estado === "AVISO" && (
+                            <span className="font-medium text-amber-800 dark:text-amber-200">Aviso: {f.mensaje}</span>
                           )}
                           {f.estado === "LISTA" && (
                             <span className="font-semibold text-green-700 dark:text-green-300">Lista</span>
                           )}
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <button
+                            onClick={() => setFilasQuitadas((prev) => [...prev, f.fila])}
+                            title="Quitar de la carga"
+                            aria-label="Quitar de la carga"
+                            className="rounded px-2 py-0.5 text-lg leading-none text-gray-500 hover:bg-gray-200 hover:text-red-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                          >
+                            ×
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -770,7 +792,15 @@ export default function AsignacionExpediente() {
                 </table>
               </div>
 
-              <div className="flex flex-col gap-3 border-t p-5 sm:flex-row sm:justify-end dark:border-gray-700">
+              <div className="flex flex-col gap-3 border-t p-5 sm:flex-row sm:items-center sm:justify-end dark:border-gray-700">
+                {filasQuitadas.length > 0 && (
+                  <button
+                    onClick={() => setFilasQuitadas([])}
+                    className="mr-auto text-sm font-semibold text-brand-600 underline dark:text-brand-400"
+                  >
+                    Restaurar {filasQuitadas.length} quitada{filasQuitadas.length === 1 ? "" : "s"}
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     setVistaPrevia(null);
@@ -782,10 +812,10 @@ export default function AsignacionExpediente() {
                 </button>
                 <button
                   onClick={confirmarCarga}
-                  disabled={confirmandoCarga || vistaPrevia.errores.length > 0 || vistaPrevia.listas === 0}
+                  disabled={confirmandoCarga || erroresVisibles > 0 || filasAConfirmar.length === 0}
                   className="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
                 >
-                  {confirmandoCarga ? "Creando..." : `Confirmar y crear ${vistaPrevia.listas} asignaciones`}
+                  {confirmandoCarga ? "Creando..." : `Confirmar y crear ${filasAConfirmar.length} asignaciones`}
                 </button>
               </div>
             </div>
