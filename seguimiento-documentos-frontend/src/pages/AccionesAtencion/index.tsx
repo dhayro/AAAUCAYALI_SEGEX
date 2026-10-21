@@ -133,7 +133,7 @@ export default function AccionesAtencion() {
                     required
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className={editingId ? "grid grid-cols-2 gap-3" : ""}>
                   <div>
                     <Label>Requiere archivo</Label>
                     <select
@@ -145,17 +145,19 @@ export default function AccionesAtencion() {
                       <option value="false">No</option>
                     </select>
                   </div>
-                  <div>
-                    <Label>Estado</Label>
-                    <select
-                      value={formData.activo ? "true" : "false"}
-                      onChange={(e) => setFormData({ ...formData, activo: e.target.value === "true" })}
-                      className={selectClass}
-                    >
-                      <option value="true">Activa</option>
-                      <option value="false">Inactiva</option>
-                    </select>
-                  </div>
+                  {editingId && (
+                    <div>
+                      <Label>Estado</Label>
+                      <select
+                        value={formData.activo ? "true" : "false"}
+                        onChange={(e) => setFormData({ ...formData, activo: e.target.value === "true" })}
+                        className={selectClass}
+                      >
+                        <option value="true">Activa</option>
+                        <option value="false">Inactiva</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex gap-3 border-t pt-4 dark:border-gray-700">
