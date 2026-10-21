@@ -36,7 +36,7 @@ type NavItem = {
 };
 
 // Menús que ve el perfil personal (además de Perfil, para sus propios datos).
-const MENUS_PERSONAL = ["dashboard", "asignacion-expediente", "llamadas", "consultas", "consulta-cut", "consulta-persona", "mi-desempeno", "profile", "logout"];
+const MENUS_PERSONAL = ["dashboard", "asignacion-expediente", "llamadas", "monitor-llamadas", "consultas", "consulta-cut", "consulta-persona", "mi-desempeno", "profile", "logout"];
 
 const visibleParaPerfil = (items: NavItem[]) => {
   if (perfilActual() === "personal") {
@@ -201,7 +201,6 @@ const othersItems: NavItem[] = [
     name: "Monitor de llamadas",
     key: "monitor-llamadas",
     path: "/monitor-llamadas",
-    gestoresOnly: true,
   },
   {
     icon: <TableIcon fontSize={24} />,
