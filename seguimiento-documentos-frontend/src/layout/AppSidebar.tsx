@@ -10,6 +10,7 @@ import {
   PieChartIcon,
   TableIcon,
   UserCircleIcon,
+  LogoutIcon,
 } from "../icons";
 import { cn } from "../utils";
 import { perfilActual, puedeGestionarAsignaciones } from "../utils/sesion";
@@ -21,6 +22,7 @@ type NavItem = {
   path?: string;
   new?: boolean;
   gestoresOnly?: boolean;
+  cerrarSesion?: boolean;
   target?: string;
   subItems?: {
     name: string;
@@ -33,7 +35,7 @@ type NavItem = {
 };
 
 // Menús que ve el perfil personal (además de Perfil, para sus propios datos).
-const MENUS_PERSONAL = ["dashboard", "asignacion-expediente", "llamadas", "profile"];
+const MENUS_PERSONAL = ["dashboard", "asignacion-expediente", "llamadas", "profile", "logout"];
 
 const visibleParaPerfil = (items: NavItem[]) => {
   if (perfilActual() === "personal") return items.filter((item) => MENUS_PERSONAL.includes(item.key ?? ""));
@@ -137,9 +139,16 @@ const navItems: NavItem[] = [
 const othersItems: NavItem[] = [
   {
     icon: <UserCircleIcon fontSize={24} />,
-    name: "Perfil",
+    name: "Mi perfil",
     key: "profile",
     path: "/profile",
+  },
+  {
+    icon: <LogoutIcon fontSize={24} />,
+    name: "Cerrar sesión",
+    key: "logout",
+    path: "/signin",
+    cerrarSesion: true,
   },
   {
     icon: <PieChartIcon fontSize={24} />,
@@ -305,6 +314,7 @@ const AppSidebar: React.FC = () => {
               <Link
                 to={nav.path}
                 target={nav.target}
+                onClick={nav.cerrarSesion ? () => localStorage.removeItem("token") : undefined}
                 className={`group menu-item ${
                   isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
                 }`}
