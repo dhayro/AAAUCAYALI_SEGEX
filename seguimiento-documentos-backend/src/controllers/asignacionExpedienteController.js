@@ -51,12 +51,14 @@ exports.obtenerTodas = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-    const { cut, id_usuario, estado } = req.query;
+    const { cut, id_usuario, estado, con_prorroga, estado_prorroga } = req.query;
 
     const whereClause = {};
     if (cut) whereClause.cut = { [Op.like]: `%${normalizarTexto(cut)}%` };
     if (id_usuario) whereClause.id_usuario = parseInt(id_usuario, 10);
     if (estado !== undefined && estado !== '') whereClause.estado = parseBoolean(estado);
+    if (parseBoolean(con_prorroga)) whereClause.estado_prorroga = { [Op.ne]: null };
+    if (estado_prorroga) whereClause.estado_prorroga = normalizarTexto(estado_prorroga);
 
     const { count, rows } = await AsignacionExpediente.findAndCountAll({
       where: whereClause,
