@@ -13,6 +13,8 @@ const asignacionDocumentoRoutes = require('./routes/asignacionDocumentoRoutes');
 const respuestaDocumentoRoutes = require('./routes/respuestaDocumentoRoutes');
 const antecedenteRoutes = require('./routes/antecedenteRoutes');
 const sisgedRoutes = require('./routes/sisgedRoutes');
+const atencionRoutes = require('./routes/atencionRoutes');
+const initAccionesAtencion = require('./utils/initAccionesAtencion');
 const procedimientoRoutes = require('./routes/procedimientoRoutes');
 const asignacionExpedienteRoutes = require('./routes/asignacionExpedienteRoutes');
 const initAdmin = require('./utils/initAdmin');
@@ -87,6 +89,7 @@ app.use('/api/asignaciones', asignacionDocumentoRoutes);
 app.use('/api/respuestas', respuestaDocumentoRoutes);
 app.use('/api/antecedentes', antecedenteRoutes);
 app.use('/api/sisged', sisgedRoutes);
+app.use('/api/atenciones', atencionRoutes);
 app.use('/api/procedimientos', procedimientoRoutes);
 app.use('/api/asignaciones-expediente', asignacionExpedienteRoutes);
 
@@ -105,6 +108,8 @@ const Procedimiento = require('./models/Procedimiento');
 const AsignacionExpediente = require('./models/AsignacionExpediente');
 const DocumentoSisged = require('./models/DocumentoSisged');
 const HistorialAsignacion = require('./models/HistorialAsignacion');
+const AccionAtencion = require('./models/AccionAtencion');
+require('./models/relacionesAtencion');
 
 // Cargar asociaciones
 require('./models/associations');
@@ -127,6 +132,7 @@ const { initDatabaseFromSQL } = require('./config/database');
     // Inicializar usuario admin y tipos de documentos
     await initAdmin();
     await initTipoDocumentos();
+    await initAccionesAtencion();
 
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
