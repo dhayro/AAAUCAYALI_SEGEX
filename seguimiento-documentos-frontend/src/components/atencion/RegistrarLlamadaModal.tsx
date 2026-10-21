@@ -131,7 +131,7 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
                   disabled={!form.cut.trim()}
                   title="Ver expediente"
                   aria-label="Ver expediente"
-                  className="rounded-md p-2 text-brand-600 hover:bg-brand-50 disabled:opacity-40 dark:text-brand-400 dark:hover:bg-gray-700"
+                  className="rounded-md border border-brand-500 bg-brand-50 p-2 text-brand-600 hover:bg-brand-100 disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 dark:border-brand-400 dark:bg-gray-700 dark:text-brand-300"
                 >
                   <SearchIcon className="h-5 w-5" />
                 </button>
