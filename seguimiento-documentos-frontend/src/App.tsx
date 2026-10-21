@@ -7,7 +7,7 @@ import SignUp from "./pages/AuthPages/SignUp";
 import Calendar from "./pages/Calendar";
 import BarChart from "./pages/Charts/BarChart";
 import LineChart from "./pages/Charts/LineChart";
-import Home from "./pages/Dashboard/Ecommerce";
+import Home from "./pages/Inicio";
 import FormElements from "./pages/Forms/FormElements";
 import Blank from "./pages/OtherPage/Blank";
 import NotFound from "./pages/OtherPage/NotFound";
