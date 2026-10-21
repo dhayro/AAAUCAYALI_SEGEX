@@ -22,5 +22,16 @@ export const usuarioActualId = (): number | null => {
   }
 };
 
+export const nombreActual = (): string => {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return "";
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return [payload.nombre, payload.apellido].filter(Boolean).join(" ");
+  } catch {
+    return "";
+  }
+};
+
 export const puedeGestionarAsignaciones = (): boolean =>
   PERFILES_GESTION.includes(perfilActual() ?? "");
