@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import PageMeta from "@/components/common/PageMeta";
@@ -27,7 +27,8 @@ interface ResumenMonitor {
   sin_plazo: number;
 }
 
-const INTERVALO_MS = 60000;
+const INTERVALO_MS = 10000;
+const DURACION_NUEVA_MS = 120000;
 
 const bordeDe = (dias: number | null) => {
   if (dias === null) return "border-gray-400";
@@ -40,6 +41,23 @@ const iniciales = (u: { nombre: string; apellido: string }) => `${u.nombre.charA
 
 const horaLima = (fecha: Date) =>
   fecha.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "America/Lima" });
+
+// Dos tonos ascendentes generados en el navegador (no requiere archivo de audio).
+const sonarAviso = (ctx: AudioContext) => {
+  [880, 1175].forEach((frecuencia, i) => {
+    const oscilador = ctx.createOscillator();
+    const ganancia = ctx.createGain();
+    const inicio = ctx.currentTime + i * 0.25;
+    oscilador.type = "sine";
+    oscilador.frequency.value = frecuencia;
+    ganancia.gain.setValueAtTime(0.0001, inicio);
+    ganancia.gain.exponentialRampToValueAtTime(0.3, inicio + 0.02);
+    ganancia.gain.exponentialRampToValueAtTime(0.0001, inicio + 0.4);
+    oscilador.connect(ganancia).connect(ctx.destination);
+    oscilador.start(inicio);
+    oscilador.stop(inicio + 0.45);
+  });
+};
 
 const TONOS = {
   rojo: "text-red-600 dark:text-red-400",
@@ -57,19 +75,26 @@ function Indicador({ titulo, valor, tono }: { titulo: string; valor: number; ton
   );
 }
 
-function TarjetaLlamada({ llamada: l }: { llamada: LlamadaMonitor }) {
+function TarjetaLlamada({ llamada: l, nueva }: { llamada: LlamadaMonitor; nueva: boolean }) {
   const estado = estadoPlazo(false, l.fecha_respuesta);
   const color = colorUsuario(l.responsable?.id);
   return (
     <article
-      className={`rounded-2xl border-l-8 bg-white p-5 shadow ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 ${bordeDe(l.dias)}`}
+      className={`rounded-2xl border-l-8 bg-white p-5 shadow ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 ${bordeDe(l.dias)} ${
+        nueva ? "animate-pulse ring-4 ring-brand-500" : ""
+      }`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">CUT</div>
           <div className="truncate text-2xl font-bold text-gray-900 dark:text-white">{l.cut}</div>
         </div>
-        <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${estado.clases}`}>{estado.texto}</span>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          {nueva && (
+            <span className="rounded-full bg-brand-600 px-3 py-1 text-xs font-bold text-white">Nueva</span>
+          )}
+          <span className={`rounded-full px-3 py-1 text-xs font-bold ${estado.clases}`}>{estado.texto}</span>
+        </div>
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
@@ -115,11 +140,32 @@ export default function MonitorLlamadas() {
   const [resumen, setResumen] = useState<ResumenMonitor | null>(null);
   const [cargando, setCargando] = useState(true);
   const [actualizado, setActualizado] = useState<Date | null>(null);
+  const [sonidoActivo, setSonidoActivo] = useState(false);
+  // id de llamada -> momento en que apareció (para marcarla como nueva un rato)
+  const [nuevas, setNuevas] = useState<Record<number, number>>({});
+
+  const ctxRef = useRef<AudioContext | null>(null);
+  const idsConocidos = useRef<Set<number> | null>(null);
 
   const cargar = useCallback(async () => {
     try {
       const res = await api.get("/dashboard/monitor-llamadas");
-      setLlamadas(res.data.llamadas || []);
+      const lista: LlamadaMonitor[] = res.data.llamadas || [];
+      const ids = new Set(lista.map((l) => l.id));
+
+      // La primera carga no avisa; después, solo lo que no estaba antes.
+      if (idsConocidos.current) {
+        const entrantes = lista.filter((l) => !idsConocidos.current!.has(l.id));
+        if (entrantes.length > 0) {
+          const ahora = Date.now();
+          setNuevas((prev) => ({ ...prev, ...Object.fromEntries(entrantes.map((l) => [l.id, ahora])) }));
+          toast(`Entraron ${entrantes.length} llamada${entrantes.length === 1 ? "" : "s"} nueva${entrantes.length === 1 ? "" : "s"}`);
+          if (ctxRef.current) sonarAviso(ctxRef.current);
+        }
+      }
+      idsConocidos.current = ids;
+
+      setLlamadas(lista);
       setResumen(res.data.resumen);
       setActualizado(new Date());
     } catch {
@@ -135,6 +181,28 @@ export default function MonitorLlamadas() {
     return () => clearInterval(intervalo);
   }, [cargar]);
 
+  useEffect(() => {
+    return () => {
+      ctxRef.current?.close();
+    };
+  }, []);
+
+  const alternarSonido = () => {
+    if (ctxRef.current) {
+      ctxRef.current.close();
+      ctxRef.current = null;
+      setSonidoActivo(false);
+      return;
+    }
+    // El navegador exige un clic del usuario para permitir sonido.
+    const ctx = new AudioContext();
+    ctxRef.current = ctx;
+    ctx.resume().then(() => sonarAviso(ctx));
+    setSonidoActivo(true);
+  };
+
+  const ahora = Date.now();
+
   return (
     <>
       <PageMeta title="Monitor de llamadas | Sistema de Seguimiento" description="Llamadas sin respuesta por fecha límite" />
@@ -143,11 +211,21 @@ export default function MonitorLlamadas() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white md:text-3xl">Monitor de llamadas sin respuesta</h1>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Ordenadas por fecha límite · se actualiza cada minuto
+              Ordenadas por fecha límite · se actualiza cada 10 segundos
               {actualizado && ` · última actualización ${horaLima(actualizado)}`}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <button
+              onClick={alternarSonido}
+              className={`rounded-lg px-4 py-2 text-sm font-semibold ${
+                sonidoActivo
+                  ? "bg-green-600 text-white hover:bg-green-700"
+                  : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+              }`}
+            >
+              {sonidoActivo ? "Sonido activado" : "Activar sonido"}
+            </button>
             <button
               onClick={cargar}
               className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
@@ -180,7 +258,7 @@ export default function MonitorLlamadas() {
 
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
           {llamadas.map((l) => (
-            <TarjetaLlamada key={l.id} llamada={l} />
+            <TarjetaLlamada key={l.id} llamada={l} nueva={nuevas[l.id] !== undefined && ahora - nuevas[l.id] < DURACION_NUEVA_MS} />
           ))}
         </section>
       </div>
