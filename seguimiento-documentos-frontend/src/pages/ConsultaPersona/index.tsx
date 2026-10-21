@@ -129,7 +129,11 @@ export default function ConsultaPersona() {
   const etiqueta = (u: UsuarioOpcion) => (u.cargo ? `${u.nombre} (${u.cargo})` : u.nombre);
   const seleccionada = usuarios.find((u) => u.id === persona);
 
-  const paramsAsignaciones = useMemo<Record<string, string>>(() => (persona === "" ? {} : { id_usuario: String(persona) }), [persona]);
+  const paramsAsignaciones = useMemo(() => {
+    const params: Record<string, string> = {};
+    if (persona !== "") params.id_usuario = String(persona);
+    return params;
+  }, [persona]);
   const paramsLlamadas = useMemo(() => {
     const params: Record<string, string> = {};
     if (persona !== "") params.id_responsable = String(persona);
