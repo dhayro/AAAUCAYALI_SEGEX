@@ -159,7 +159,7 @@ export default function MonitorLlamadas() {
   const [resumen, setResumen] = useState<ResumenMonitor | null>(null);
   const [cargando, setCargando] = useState(true);
   const [actualizado, setActualizado] = useState<Date | null>(null);
-  const [sonidoActivo, setSonidoActivo] = useState(false);
+  const [sonidoListo, setSonidoListo] = useState(false);
   // id de llamada -> momento en que apareció (para marcarla como nueva un rato)
   const [nuevas, setNuevas] = useState<Record<number, number>>({});
 
@@ -201,25 +201,21 @@ export default function MonitorLlamadas() {
     return () => clearInterval(intervalo);
   }, [cargar]);
 
+  // El navegador solo deja sonar después de un gesto del usuario: el primer clic o tecla en la página lo activa.
   useEffect(() => {
+    const desbloquear = () => {
+      if (!ctxRef.current || ctxRef.current.state === "closed") ctxRef.current = new AudioContext();
+      ctxRef.current.resume().then(() => setSonidoListo(true));
+    };
+    window.addEventListener("pointerdown", desbloquear, { once: true });
+    window.addEventListener("keydown", desbloquear, { once: true });
     return () => {
+      window.removeEventListener("pointerdown", desbloquear);
+      window.removeEventListener("keydown", desbloquear);
       ctxRef.current?.close();
+      ctxRef.current = null;
     };
   }, []);
-
-  const alternarSonido = () => {
-    if (ctxRef.current) {
-      ctxRef.current.close();
-      ctxRef.current = null;
-      setSonidoActivo(false);
-      return;
-    }
-    // El navegador exige un clic del usuario para permitir sonido.
-    const ctx = new AudioContext();
-    ctxRef.current = ctx;
-    ctx.resume().then(() => sonarAviso(ctx));
-    setSonidoActivo(true);
-  };
 
   const ahora = Date.now();
 
@@ -232,20 +228,11 @@ export default function MonitorLlamadas() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white md:text-3xl">Monitor de llamadas sin respuesta</h1>
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Ordenadas por fecha límite · se actualiza cada 10 segundos
+              {!sonidoListo && " · haz clic en la pantalla para activar el aviso sonoro"}
               {actualizado && ` · última actualización ${horaLima(actualizado)}`}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button
-              onClick={alternarSonido}
-              className={`rounded-lg px-4 py-2 text-sm font-semibold ${
-                sonidoActivo
-                  ? "bg-green-600 text-white hover:bg-green-700"
-                  : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
-              }`}
-            >
-              {sonidoActivo ? "Sonido activado" : "Activar sonido"}
-            </button>
             <button
               onClick={cargar}
               className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
