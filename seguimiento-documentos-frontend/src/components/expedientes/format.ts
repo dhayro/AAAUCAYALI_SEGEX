@@ -1,6 +1,9 @@
 export const formatFecha = (fecha?: string | null) => {
   if (!fecha) return "—";
-  const [y, m, d] = String(fecha).slice(0, 10).split("-");
+  const texto = String(fecha).slice(0, 10);
+  // Si no es una fecha AAAA-MM-DD, se muestra tal cual en lugar de romper el formato.
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(texto)) return String(fecha);
+  const [y, m, d] = texto.split("-");
   return `${d}/${m}/${y}`;
 };
 
