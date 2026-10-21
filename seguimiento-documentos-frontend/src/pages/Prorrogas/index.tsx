@@ -181,6 +181,7 @@ export default function Prorrogas() {
                     <th className="px-6 py-4 text-start text-sm font-semibold">Asignado a</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Solicitud</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Días solicitados</th>
+                    <th className="px-6 py-4 text-start text-sm font-semibold">Motivo</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Vencimiento original</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Estado</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Vence prórroga</th>
@@ -213,6 +214,11 @@ export default function Prorrogas() {
                       <td className="px-6 py-4 text-sm">{nombreUsuario(p.asignado)}</td>
                       <td className="px-6 py-4 text-center text-sm">{formatFecha(p.fecha_prorroga)}</td>
                       <td className="px-6 py-4 text-center text-sm">{p.plazo_prorroga ?? "—"}</td>
+                      <td className="max-w-xs px-6 py-4 text-sm">
+                        <div className="line-clamp-2 whitespace-pre-wrap break-words" title={p.motivo_prorroga || ""}>
+                          {p.motivo_prorroga || "—"}
+                        </div>
+                      </td>
                       <td className="px-6 py-4 text-center text-sm">{formatFecha(p.fecha_vencimiento)}</td>
                       <td className="px-6 py-4 text-center">
                         {p.estado_prorroga && ESTADO_PRORROGA[p.estado_prorroga] && (
