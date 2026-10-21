@@ -149,7 +149,8 @@ exports.resumen = async (req, res) => {
 // Llamadas sin respuesta, ordenadas por fecha límite (las vencidas primero). Mismo alcance por perfil.
 exports.monitorLlamadas = async (req, res) => {
   try {
-    const gestor = esGestor(req.user);
+    // Monitor general: muestra todas las llamadas pendientes a cualquier usuario con sesión.
+    const gestor = true;
     const hoy = hoyLima();
     const { q, responsable } = req.query;
     const condiciones = [];
