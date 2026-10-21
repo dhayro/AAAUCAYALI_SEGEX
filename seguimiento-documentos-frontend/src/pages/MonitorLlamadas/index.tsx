@@ -270,7 +270,8 @@ export default function MonitorLlamadas() {
     <>
       <PageMeta title="Monitor de llamadas | Sistema de Seguimiento" description="Llamadas sin respuesta por fecha límite" />
       <div className="min-h-screen bg-gray-100 p-4 dark:bg-gray-900 md:p-6">
-        <header className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="sticky top-0 z-30 -mx-4 mb-4 bg-gray-100/95 px-4 pb-3 pt-1 shadow-sm backdrop-blur dark:bg-gray-900/95 md:-mx-6 md:px-6">
+        <header className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white md:text-3xl">Monitor de llamadas sin respuesta</h1>
             <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -295,7 +296,7 @@ export default function MonitorLlamadas() {
           </div>
         </header>
 
-        <section className="mb-6 flex flex-col gap-3 md:flex-row">
+        <section className="mb-3 flex flex-col gap-3 md:flex-row">
           <div className="relative flex-1">
             <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
             <input
@@ -335,12 +336,13 @@ export default function MonitorLlamadas() {
           </div>
         </section>
 
-        <section className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <Indicador titulo="Vencidas" valor={resumen?.vencidas ?? 0} tono="rojo" />
           <Indicador titulo="Por vencer (5 días)" valor={resumen?.por_vencer ?? 0} tono="ambar" />
           <Indicador titulo="Sin plazo" valor={resumen?.sin_plazo ?? 0} tono="gris" />
           <Indicador titulo="Total sin respuesta" valor={resumen?.total ?? 0} tono="neutro" />
         </section>
+        </div>
 
         {cargando && <p className="p-10 text-center text-gray-500">Cargando llamadas...</p>}
 
