@@ -8,6 +8,7 @@ import SearchableSelect from "@/components/form/SearchableSelect";
 import ExpedienteDetalleModal from "@/components/expedientes/ExpedienteDetalleModal";
 import HistorialAsignacionModal from "@/components/asignaciones/HistorialAsignacionModal";
 import ProrrogaMasivaModal from "@/components/asignaciones/ProrrogaMasivaModal";
+import RespuestasAsignacionModal from "@/components/asignaciones/RespuestasAsignacionModal";
 import { formatFecha } from "@/components/expedientes/format";
 import api from "@/utils/api";
 import { puedeGestionarAsignaciones } from "@/utils/sesion";
@@ -117,6 +118,7 @@ export default function AsignacionExpediente() {
   const [prorrogaTarget, setProrrogaTarget] = useState<Asignacion | null>(null);
   const [prorrogaData, setProrrogaData] = useState({ plazo: "", motivo: "" });
   const [historialTarget, setHistorialTarget] = useState<Asignacion | null>(null);
+  const [respuestasTarget, setRespuestasTarget] = useState<Asignacion | null>(null);
   const [seleccion, setSeleccion] = useState<number[]>([]);
   const [prorrogaMasiva, setProrrogaMasiva] = useState(false);
 
@@ -522,6 +524,13 @@ export default function AsignacionExpediente() {
           />
         )}
 
+        {respuestasTarget && (
+          <RespuestasAsignacionModal
+            asignacion={respuestasTarget}
+            onClose={() => setRespuestasTarget(null)}
+          />
+        )}
+
         {cutAbierto && (
           <ExpedienteDetalleModal cut={cutAbierto} onClose={() => setCutAbierto(null)} />
         )}
@@ -656,6 +665,12 @@ export default function AsignacionExpediente() {
                               Prórroga
                             </button>
                           )}
+                          <button
+                            onClick={() => setRespuestasTarget(a)}
+                            className="rounded border border-brand-600 px-2 py-1 text-xs font-semibold text-brand-600 hover:bg-brand-50 dark:border-brand-400 dark:text-brand-400 dark:hover:bg-gray-700"
+                          >
+                            Respuestas
+                          </button>
                           <button
                             onClick={() => handleOpenHistorial(a)}
                             className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
