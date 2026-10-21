@@ -149,16 +149,18 @@ exports.cargaMasiva = async (req, res) => {
       return res.status(400).json({ mensaje: `Máximo ${MAX_CARGA_MASIVA} filas por carga` });
     }
 
-    const usuarios = await Usuario.findAll({ where: { estado: true }, attributes: ['id', 'usuario'] });
-    const idPorLogin = new Map(usuarios.map((u) => [String(u.usuario).trim().toLowerCase(), u.id]));
+    const usuarios = await Usuario.findAll({ where: { estado: true }, attributes: ['id', 'usuario', 'nombre', 'apellido'] });
+    const porLogin = new Map(usuarios.map((u) => [String(u.usuario).trim().toLowerCase(), u]));
 
     const errores = [];
     const validas = [];
+    const vista = [];
     filas.forEach((f, i) => {
       const fila = i + 2; // la fila 1 del Excel es el encabezado
       const cut = normalizarTexto(f.cut);
       const login = String(f.usuario ?? '').trim().toLowerCase();
-      const idUsuario = idPorLogin.get(login);
+      const usuario = porLogin.get(login);
+      const idUsuario = usuario?.id;
       const plazo = parseInt(f.plazo, 10);
       const fecha = f.fecha ? String(f.fecha).trim().slice(0, 10) : hoyLima();
 
@@ -167,6 +169,18 @@ exports.cargaMasiva = async (req, res) => {
       if (!idUsuario) problemas.push(`usuario "${f.usuario ?? ''}" no existe o está inactivo`);
       if (isNaN(plazo) || plazo < 1) problemas.push('el plazo debe ser un número mayor a 0');
       if (!esFechaValida(fecha)) problemas.push('la fecha debe tener formato AAAA-MM-DD');
+
+      vista.push({
+        fila,
+        cut: cut ?? '',
+        usuario: String(f.usuario ?? '').trim(),
+        nombre: usuario ? `${usuario.nombre} ${usuario.apellido}` : '',
+        plazo: isNaN(plazo) ? '' : plazo,
+        fecha,
+        fecha_vencimiento: problemas.length || isNaN(plazo) ? '' : sumarDiasCalendario(fecha, plazo),
+        observacion: normalizarTexto(f.observacion) ?? '',
+        problemas: problemas.join('; '),
+      });
 
       if (problemas.length) {
         errores.push({ fila, mensaje: problemas.join('; ') });
@@ -182,6 +196,11 @@ exports.cargaMasiva = async (req, res) => {
         });
       }
     });
+
+    // Vista previa: no crea nada hasta que el usuario confirme.
+    if (req.body.confirmar !== true) {
+      return res.json({ vista_previa: true, filas: vista, errores, total: filas.length });
+    }
 
     if (errores.length) {
       return res.status(400).json({
