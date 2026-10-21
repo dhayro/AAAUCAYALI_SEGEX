@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import PageMeta from "@/components/common/PageMeta";
 import { estadoPlazo, fechaLegible } from "@/components/atencion/plazo";
 import DetalleLlamadaModal from "@/components/atencion/DetalleLlamadaModal";
+import SearchableSelect from "@/components/form/SearchableSelect";
 import { formatFechaHora } from "@/components/expedientes/format";
 import { SearchIcon } from "@/icons";
 import api from "@/utils/api";
@@ -170,19 +171,28 @@ export default function MonitorLlamadas() {
   const [detalleId, setDetalleId] = useState<number | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [busquedaAplicada, setBusquedaAplicada] = useState("");
-  const [responsable, setResponsable] = useState("");
+  const [responsable, setResponsable] = useState<number | "">("");
+  const [responsableNombre, setResponsableNombre] = useState("");
   const [usuarios, setUsuarios] = useState<UsuarioOpcion[]>([]);
 
   const ctxRef = useRef<AudioContext | null>(null);
   const idsConocidos = useRef<Set<number> | null>(null);
   const filtroActual = useRef("");
 
-  useEffect(() => {
-    api
-      .get("/usuarios/select", { params: { limit: 200 } })
-      .then((res) => setUsuarios(Array.isArray(res.data) ? res.data : []))
-      .catch(() => setUsuarios([]));
+  const fetchUsuarios = useCallback(async (filtro = "") => {
+    try {
+      const params: Record<string, string | number> = { limit: 10 };
+      if (filtro) params.filtro = filtro;
+      const res = await api.get("/usuarios/select", { params });
+      setUsuarios(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      setUsuarios([]);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchUsuarios();
+  }, [fetchUsuarios]);
 
   // Espera a que el usuario deje de escribir antes de consultar.
   useEffect(() => {
@@ -201,7 +211,7 @@ export default function MonitorLlamadas() {
 
       const params: Record<string, string> = {};
       if (busquedaAplicada) params.q = busquedaAplicada;
-      if (responsable) params.responsable = responsable;
+      if (responsable !== "") params.responsable = String(responsable);
       const res = await api.get("/dashboard/monitor-llamadas", { params });
       const lista: LlamadaMonitor[] = res.data.llamadas || [];
       const ids = new Set(lista.map((l) => l.id));
@@ -292,18 +302,34 @@ export default function MonitorLlamadas() {
               className="w-full rounded-xl border border-gray-300 bg-white py-3 pl-10 pr-3 text-base shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
             />
           </div>
-          <select
-            value={responsable}
-            onChange={(e) => setResponsable(e.target.value)}
-            className="rounded-xl border border-gray-300 bg-white px-3 py-3 text-base shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:border-gray-600 dark:bg-gray-800 dark:text-white md:w-72"
-          >
-            <option value="">Atiende: todos</option>
-            {usuarios.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.nombre} ({u.usuario})
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2 md:w-96">
+            <div className="flex-1">
+              <SearchableSelect
+                value={responsable}
+                onChange={(valor) => {
+                  const id = Number(valor);
+                  const u = usuarios.find((x) => x.id === id);
+                  setResponsable(id);
+                  setResponsableNombre(u ? `${u.nombre} (${u.usuario})` : "");
+                }}
+                options={usuarios.map((u) => ({ id: u.id, nombre: `${u.nombre} (${u.usuario})` }))}
+                onSearch={(termino) => fetchUsuarios(termino)}
+                placeholder="Atiende: todos · buscar persona"
+                selectedLabel={responsableNombre}
+              />
+            </div>
+            {responsable !== "" && (
+              <button
+                onClick={() => {
+                  setResponsable("");
+                  setResponsableNombre("");
+                }}
+                className="shrink-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+              >
+                Quitar
+              </button>
+            )}
+          </div>
         </section>
 
         <section className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
