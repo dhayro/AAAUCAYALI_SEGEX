@@ -289,6 +289,7 @@ export default function AsignacionExpediente() {
       // Primero se revisa el archivo: la vista previa no crea nada.
       setDatosPendientes(datos);
       setFilasQuitadas([]);
+      fetchUsuarios();
       const res = await api.post("/asignaciones-expediente/carga-masiva", { filas: datos });
       setVistaPrevia(res.data);
     } catch (error: any) {
@@ -310,6 +311,20 @@ export default function AsignacionExpediente() {
   const avisosVisibles = filasVisibles.filter((f) => f.estado === "AVISO").length;
   const erroresVisibles = filasVisibles.filter((f) => f.estado === "ERROR").length;
   const filasAConfirmar = datosPendientes.filter((d) => filasVisibles.some((f) => f.fila === d.fila));
+
+  // Cambia la persona asignada de una fila y vuelve a revisar el archivo con ese cambio.
+  const cambiarUsuarioFila = async (fila: number, idUsuario: number) => {
+    const elegido = usuarios.find((u) => u.id === idUsuario);
+    if (!elegido) return;
+    const nuevos = datosPendientes.map((d) => (d.fila === fila ? { ...d, usuario: elegido.usuario } : d));
+    setDatosPendientes(nuevos);
+    try {
+      const res = await api.post("/asignaciones-expediente/carga-masiva", { filas: nuevos });
+      setVistaPrevia(res.data);
+    } catch {
+      toast.error("No se pudo revisar el archivo con el cambio");
+    }
+  };
 
   const confirmarCarga = async () => {
     setConfirmandoCarga(true);
@@ -777,7 +792,16 @@ export default function AsignacionExpediente() {
                       >
                         <td className="px-3 py-2">{f.fila}</td>
                         <td className="px-3 py-2 font-medium">{f.cut || "—"}</td>
-                        <td className="px-3 py-2">{f.nombre || f.usuario || "—"}</td>
+                        <td className="min-w-[240px] px-3 py-2">
+                          <SearchableSelect
+                            value={f.id_usuario ?? ""}
+                            onChange={(valor) => cambiarUsuarioFila(f.fila, Number(valor))}
+                            options={usuarios.map((u) => ({ id: u.id, nombre: etiquetaUsuario(u.nombre, u.cargo) }))}
+                            onSearch={(termino) => fetchUsuarios(termino)}
+                            placeholder="Buscar persona..."
+                            selectedLabel={f.nombre || f.usuario}
+                          />
+                        </td>
                         <td className="px-3 py-2 text-center">{f.plazo || "—"}</td>
                         <td className="px-3 py-2 text-center">{formatFecha(f.fecha)}</td>
                         <td className="px-3 py-2 text-center">{formatFecha(f.fecha_vencimiento)}</td>
