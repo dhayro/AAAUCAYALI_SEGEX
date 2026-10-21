@@ -40,6 +40,14 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio }: Pr
   const [llamada, setLlamada] = useState<any>(null);
   const [cargando, setCargando] = useState(true);
   const [catalogo, setCatalogo] = useState<any[]>([]);
+  const [opcionesAcciones, setOpcionesAcciones] = useState<{ id: number; nombre: string }[]>([]);
+
+  const buscarAcciones = async (termino: string) => {
+    const texto = termino.trim().toUpperCase();
+    setOpcionesAcciones(
+      catalogo.filter((c) => c.nombre.includes(texto)).slice(0, 10).map((c) => ({ id: c.id, nombre: c.nombre }))
+    );
+  };
   const [nuevaAccion, setNuevaAccion] = useState({ id_accion: "", observacion: "" });
   const [usuarios, setUsuarios] = useState<any[]>([]);
   const [nuevoResponsable, setNuevoResponsable] = useState("");
@@ -81,7 +89,10 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio }: Pr
 
   useEffect(() => {
     cargar();
-    api.get("/atenciones/acciones", { params: { solo_activas: "true" } }).then((r) => setCatalogo(r.data));
+    api.get("/atenciones/acciones", { params: { solo_activas: "true" } }).then((r) => {
+      setCatalogo(r.data);
+      setOpcionesAcciones(r.data.slice(0, 10));
+    });
     if (gestiona) buscarUsuarios();
   }, [cargar, gestiona]);
 
@@ -494,18 +505,15 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio }: Pr
 
                   {puedeOperar && (
                     <form onSubmit={agregarAccion} className="flex flex-wrap items-center gap-2 rounded-xl bg-white p-3 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700">
-                      <select
-                        value={nuevaAccion.id_accion}
-                        onChange={(e) => setNuevaAccion({ ...nuevaAccion, id_accion: e.target.value })}
-                        className="rounded border border-gray-300 bg-white px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700"
-                      >
-                        <option value="">Agregar acción...</option>
-                        {catalogo.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.nombre}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="min-w-[16rem] flex-1">
+                        <SearchableSelect
+                          value={nuevaAccion.id_accion ? Number(nuevaAccion.id_accion) : ""}
+                          onChange={(value) => setNuevaAccion({ ...nuevaAccion, id_accion: String(value) })}
+                          options={opcionesAcciones}
+                          onSearch={buscarAcciones}
+                          placeholder="Buscar acción..."
+                        />
+                      </div>
                       <input
                         value={nuevaAccion.observacion}
                         onChange={(e) => setNuevaAccion({ ...nuevaAccion, observacion: e.target.value })}
