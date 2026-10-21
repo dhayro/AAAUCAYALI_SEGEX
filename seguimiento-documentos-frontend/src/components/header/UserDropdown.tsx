@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { Link } from "react-router";
 import { useClickOutside } from "@/hooks/useClickOutside";
-import { LogoutIcon, SettingsAltIcon, UserCircleIcon } from "@/icons";
+import { LogoutIcon, UserCircleIcon } from "@/icons";
 import { nombreActual, perfilActual } from "@/utils/sesion";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 
@@ -65,12 +65,6 @@ export default function UserDropdown() {
             <Link to="/profile" onClick={() => setIsOpen(false)} className={ITEM}>
               <UserCircleIcon className="h-5 w-5" />
               Mi perfil
-            </Link>
-          </li>
-          <li>
-            <Link to="/profile" onClick={() => setIsOpen(false)} className={ITEM}>
-              <SettingsAltIcon className="h-5 w-5" />
-              Configuración de cuenta
             </Link>
           </li>
           <li>
