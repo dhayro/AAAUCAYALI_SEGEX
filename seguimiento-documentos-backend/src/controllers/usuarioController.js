@@ -164,11 +164,15 @@ exports.obtenerUsuarioPorId = async (req, res) => {
     }
 
     const usuario = await Usuario.findByPk(usuarioId, {
-      include: [{ model: Cargo, attributes: ['id', 'nombre'], required: false }],
+      include: [
+        { model: Cargo, attributes: ['id', 'nombre'], required: false },
+        { model: Area, attributes: ['id', 'nombre'], required: false },
+      ],
     });
     if (usuario) {
       const datos = formatUsuarioResponse(usuario);
       datos.cargo = usuario.Cargo ? usuario.Cargo.nombre : null;
+      datos.area = usuario.Area ? usuario.Area.nombre : null;
       res.json(datos);
     } else {
       res.status(404).json({ mensaje: 'Usuario no encontrado' });
