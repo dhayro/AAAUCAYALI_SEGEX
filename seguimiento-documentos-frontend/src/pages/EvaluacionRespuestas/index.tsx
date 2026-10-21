@@ -5,7 +5,8 @@ import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import RespuestasAsignacionModal from "@/components/asignaciones/RespuestasAsignacionModal";
 import { formatFecha, formatFechaHora } from "@/components/expedientes/format";
-import { CloseIcon } from "@/icons";
+import { CloseIcon, FileIcon, TaskIcon } from "@/icons";
+import BotonAccion from "@/components/common/BotonAccion";
 import api from "@/utils/api";
 
 interface Evaluacion {
@@ -197,19 +198,19 @@ export default function EvaluacionRespuestas() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-2">
-                          <button
+                          <BotonAccion
+                            etiqueta="Respuestas"
+                            icono={<FileIcon className="h-5 w-5" />}
+                            tono="primario"
                             onClick={() => setRespuestasDe(f)}
-                            className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-                          >
-                            Ver respuestas
-                          </button>
+                          />
                           {f.estado !== "CERRADA" && (
-                            <button
+                            <BotonAccion
+                              etiqueta="Evaluar"
+                              icono={<TaskIcon className="h-5 w-5" />}
+                              tono="alerta"
                               onClick={() => abrirEvaluacion(f)}
-                              className="rounded border border-brand-600 px-2 py-1 text-xs font-semibold text-brand-600 hover:bg-brand-50 dark:border-brand-400 dark:text-brand-400"
-                            >
-                              Evaluar
-                            </button>
+                            />
                           )}
                         </div>
                       </td>

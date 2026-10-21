@@ -12,7 +12,8 @@ import RespuestasAsignacionModal from "@/components/asignaciones/RespuestasAsign
 import { formatFecha, formatFechaHora } from "@/components/expedientes/format";
 import api from "@/utils/api";
 import { puedeGestionarAsignaciones } from "@/utils/sesion";
-import { PencilIcon, TrashBinIcon, PlusIcon, CloseIcon } from "@/icons";
+import { PencilIcon, TrashBinIcon, PlusIcon, CloseIcon, CalendarAltIcon, FileIcon, TimeIcon } from "@/icons";
+import BotonAccion from "@/components/common/BotonAccion";
 
 interface UsuarioResumen {
   id: number;
@@ -701,39 +702,38 @@ export default function AsignacionExpediente() {
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-3">
                           {gestiona && puedeProrrogar(a) && (
-                            <button
+                            <BotonAccion
+                              etiqueta="Solicitar prórroga"
+                              icono={<CalendarAltIcon className="h-5 w-5" />}
+                              tono="alerta"
                               onClick={() => handleOpenProrroga(a)}
-                              className="rounded border border-blue-600 px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-400"
-                            >
-                              Prórroga
-                            </button>
+                            />
                           )}
-                          <button
+                          <BotonAccion
+                            etiqueta="Respuestas"
+                            icono={<FileIcon className="h-5 w-5" />}
+                            tono="primario"
                             onClick={() => setRespuestasTarget(a)}
-                            className="rounded border border-brand-600 px-2 py-1 text-xs font-semibold text-brand-600 hover:bg-brand-50 dark:border-brand-400 dark:text-brand-400 dark:hover:bg-gray-700"
-                          >
-                            Respuestas
-                          </button>
-                          <button
+                          />
+                          <BotonAccion
+                            etiqueta="Historial"
+                            icono={<TimeIcon className="h-5 w-5" />}
                             onClick={() => handleOpenHistorial(a)}
-                            className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-                          >
-                            Historial
-                          </button>
+                          />
                           {gestiona && (
                             <>
-                              <button
+                              <BotonAccion
+                                etiqueta="Editar"
+                                icono={<PencilIcon className="h-5 w-5" />}
+                                tono="exito"
                                 onClick={() => handleEdit(a)}
-                                className="text-green-600 hover:text-green-800 dark:text-green-400"
-                              >
-                                <PencilIcon className="h-5 w-5" />
-                              </button>
-                              <button
+                              />
+                              <BotonAccion
+                                etiqueta="Desactivar"
+                                icono={<TrashBinIcon className="h-5 w-5" />}
+                                tono="peligro"
                                 onClick={() => handleDelete(a.id)}
-                                className="text-red-600 hover:text-red-800 dark:text-red-400"
-                              >
-                                <TrashBinIcon className="h-5 w-5" />
-                              </button>
+                              />
                             </>
                           )}
                         </div>

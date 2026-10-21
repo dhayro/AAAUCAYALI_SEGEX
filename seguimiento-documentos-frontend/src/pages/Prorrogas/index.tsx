@@ -10,6 +10,8 @@ import ProrrogaMasivaModal, { type ModoMasivo } from "@/components/asignaciones/
 import { formatFecha } from "@/components/expedientes/format";
 import api from "@/utils/api";
 import { puedeGestionarAsignaciones } from "@/utils/sesion";
+import BotonAccion from "@/components/common/BotonAccion";
+import { TaskIcon, TimeIcon } from "@/icons";
 
 interface UsuarioResumen {
   id: number;
@@ -235,19 +237,18 @@ export default function Prorrogas() {
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-2">
                           {gestiona && p.estado_prorroga === "PENDIENTE" && (
-                            <button
+                            <BotonAccion
+                              etiqueta="Revisar prórroga"
+                              icono={<TaskIcon className="h-5 w-5" />}
+                              tono="alerta"
                               onClick={() => setRevision(p)}
-                              className="rounded bg-amber-500 px-2 py-1 text-xs font-semibold text-white hover:bg-amber-600"
-                            >
-                              Revisar
-                            </button>
+                            />
                           )}
-                          <button
+                          <BotonAccion
+                            etiqueta="Historial"
+                            icono={<TimeIcon className="h-5 w-5" />}
                             onClick={() => setHistorial(p)}
-                            className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-                          >
-                            Historial
-                          </button>
+                          />
                         </div>
                       </td>
                     </tr>
