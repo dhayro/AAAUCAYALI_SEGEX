@@ -157,6 +157,9 @@ router.put('/:id', authenticateToken, isSecretariaOrAbove, controller.actualizar
  *         description: No encontrada
  */
 router.patch('/:id/prorroga', authenticateToken, isSecretariaOrAbove, controller.prorrogar);
+router.patch('/:id/prorroga/aceptar', authenticateToken, isSecretariaOrAbove, controller.aceptarProrroga);
+router.patch('/:id/prorroga/rechazar', authenticateToken, isSecretariaOrAbove, controller.rechazarProrroga);
+router.get('/:id/historial', authenticateToken, controller.obtenerHistorial);
 
 /**
  * @swagger

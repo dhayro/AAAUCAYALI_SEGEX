@@ -104,6 +104,7 @@ const SisgedToken = require('./models/SisgedToken');
 const Procedimiento = require('./models/Procedimiento');
 const AsignacionExpediente = require('./models/AsignacionExpediente');
 const DocumentoSisged = require('./models/DocumentoSisged');
+const HistorialAsignacion = require('./models/HistorialAsignacion');
 
 // Cargar asociaciones
 require('./models/associations');

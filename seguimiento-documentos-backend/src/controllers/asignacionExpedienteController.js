@@ -1,5 +1,6 @@
 const { Op } = require('sequelize');
 const AsignacionExpediente = require('../models/AsignacionExpediente');
+const HistorialAsignacion = require('../models/HistorialAsignacion');
 const Usuario = require('../models/Usuario');
 const Cargo = require('../models/Cargo');
 const { hoyLima, esFechaValida, sumarDiasCalendario } = require('../utils/fechas');
@@ -141,7 +142,7 @@ exports.actualizar = async (req, res) => {
     cambios.fecha_asignacion = fechaAsignacion;
     cambios.plazo_atencion = plazo;
     cambios.fecha_vencimiento = sumarDiasCalendario(fechaAsignacion, plazo);
-    if (actual.plazo_prorroga) {
+    if (actual.estado_prorroga === 'ACEPTADA') {
       cambios.fecha_vencimiento_prorroga = sumarDiasCalendario(cambios.fecha_vencimiento, actual.plazo_prorroga);
     }
 
@@ -159,19 +160,113 @@ exports.prorrogar = async (req, res) => {
       return res.status(404).json({ mensaje: 'Asignación no encontrada' });
     }
 
-    const plazoProrroga = parsePlazo(req.body.plazo_prorroga);
-    const fechaProrroga = req.body.fecha_prorroga ? parseFecha(req.body.fecha_prorroga) : hoyLima();
+    if (actual.estado_prorroga === 'PENDIENTE') {
+      return res.status(400).json({ mensaje: 'Ya hay una prórroga pendiente de aceptación' });
+    }
+    if (actual.estado_prorroga === 'ACEPTADA') {
+      return res.status(400).json({ mensaje: 'La asignación ya tiene una prórroga aceptada' });
+    }
+
+    const plazo = parsePlazo(req.body.plazo_prorroga);
+    const hoy = hoyLima();
 
     await actual.update({
-      fecha_prorroga: fechaProrroga,
-      plazo_prorroga: plazoProrroga,
-      fecha_vencimiento_prorroga: sumarDiasCalendario(actual.fecha_vencimiento, plazoProrroga),
+      fecha_prorroga: hoy,
+      plazo_prorroga: plazo,
+      estado_prorroga: 'PENDIENTE',
+      fecha_vencimiento_prorroga: null,
       id_usuario_modificador: req.user.id,
+    });
+    await HistorialAsignacion.create({
+      id_asignacion: actual.id,
+      tipo: 'SOLICITUD_PRORROGA',
+      plazo,
+      fecha_evento: hoy,
+      id_usuario: req.user.id,
     });
 
     res.json(await obtenerConRelaciones(actual.id));
   } catch (error) {
     res.status(400).json({ mensaje: error.message });
+  }
+};
+
+exports.aceptarProrroga = async (req, res) => {
+  try {
+    const actual = await AsignacionExpediente.findByPk(req.params.id);
+    if (!actual) {
+      return res.status(404).json({ mensaje: 'Asignación no encontrada' });
+    }
+    if (actual.estado_prorroga !== 'PENDIENTE') {
+      return res.status(400).json({ mensaje: 'No hay una prórroga pendiente para aceptar' });
+    }
+
+    const plazo = req.body.plazo_prorroga !== undefined
+      ? parsePlazo(req.body.plazo_prorroga)
+      : actual.plazo_prorroga;
+    const hoy = hoyLima();
+
+    await actual.update({
+      plazo_prorroga: plazo,
+      estado_prorroga: 'ACEPTADA',
+      fecha_vencimiento_prorroga: sumarDiasCalendario(actual.fecha_vencimiento, plazo),
+      id_usuario_modificador: req.user.id,
+    });
+    await HistorialAsignacion.create({
+      id_asignacion: actual.id,
+      tipo: 'PRORROGA_ACEPTADA',
+      plazo,
+      fecha_evento: hoy,
+      observacion: normalizarTexto(req.body.observacion),
+      id_usuario: req.user.id,
+    });
+
+    res.json(await obtenerConRelaciones(actual.id));
+  } catch (error) {
+    res.status(400).json({ mensaje: error.message });
+  }
+};
+
+exports.rechazarProrroga = async (req, res) => {
+  try {
+    const actual = await AsignacionExpediente.findByPk(req.params.id);
+    if (!actual) {
+      return res.status(404).json({ mensaje: 'Asignación no encontrada' });
+    }
+    if (actual.estado_prorroga !== 'PENDIENTE') {
+      return res.status(400).json({ mensaje: 'No hay una prórroga pendiente para rechazar' });
+    }
+
+    await actual.update({
+      estado_prorroga: 'RECHAZADA',
+      fecha_vencimiento_prorroga: null,
+      id_usuario_modificador: req.user.id,
+    });
+    await HistorialAsignacion.create({
+      id_asignacion: actual.id,
+      tipo: 'PRORROGA_RECHAZADA',
+      plazo: actual.plazo_prorroga,
+      fecha_evento: hoyLima(),
+      observacion: normalizarTexto(req.body.observacion),
+      id_usuario: req.user.id,
+    });
+
+    res.json(await obtenerConRelaciones(actual.id));
+  } catch (error) {
+    res.status(400).json({ mensaje: error.message });
+  }
+};
+
+exports.obtenerHistorial = async (req, res) => {
+  try {
+    const historial = await HistorialAsignacion.findAll({
+      where: { id_asignacion: req.params.id },
+      include: [{ model: Usuario, as: 'usuario', attributes: ['id', 'nombre', 'apellido', 'usuario'] }],
+      order: [['id', 'ASC']],
+    });
+    res.json(historial);
+  } catch (error) {
+    res.status(500).json({ mensaje: error.message });
   }
 };
 
