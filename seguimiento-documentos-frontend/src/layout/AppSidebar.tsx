@@ -35,10 +35,14 @@ type NavItem = {
 };
 
 // Menús que ve el perfil personal (además de Perfil, para sus propios datos).
-const MENUS_PERSONAL = ["dashboard", "asignacion-expediente", "llamadas", "mi-desempeno", "profile", "logout"];
+const MENUS_PERSONAL = ["dashboard", "asignacion-expediente", "llamadas", "consultas", "consulta-cut", "consulta-persona", "mi-desempeno", "profile", "logout"];
 
 const visibleParaPerfil = (items: NavItem[]) => {
-  if (perfilActual() === "personal") return items.filter((item) => MENUS_PERSONAL.includes(item.key ?? ""));
+  if (perfilActual() === "personal") {
+    return items
+      .filter((item) => MENUS_PERSONAL.includes(item.key ?? ""))
+      .map((item) => (item.subItems ? { ...item, subItems: item.subItems.filter((sub) => MENUS_PERSONAL.includes(sub.key ?? "")) } : item));
+  }
   return items.filter((item) => !item.gestoresOnly || puedeGestionarAsignaciones());
 };
 

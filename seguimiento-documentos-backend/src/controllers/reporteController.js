@@ -37,7 +37,9 @@ const rangoFechasHora = (desde, hasta) => {
 // Reporte de asignaciones de expediente con respuestas y evaluación.
 exports.asignaciones = async (req, res) => {
   try {
-    const { cut, id_usuario, estado_respuesta } = req.query;
+    const { cut, estado_respuesta } = req.query;
+    // El perfil personal solo ve sus propias asignaciones.
+    const id_usuario = req.user.perfil === 'personal' ? req.user.id : req.query.id_usuario;
     const where = { estado: true };
     const fecha = rangoFechas(req.query.desde, req.query.hasta);
     if (fecha) where.fecha_asignacion = fecha;
@@ -99,7 +101,9 @@ exports.asignaciones = async (req, res) => {
 // Reporte de llamadas con plazo, responsable y acciones.
 exports.llamadas = async (req, res) => {
   try {
-    const { id_responsable, respondido, plazo } = req.query;
+    const { respondido, plazo } = req.query;
+    // El perfil personal solo ve las llamadas a su cargo.
+    const id_responsable = req.user.perfil === 'personal' ? req.user.id : req.query.id_responsable;
     const where = {};
     const fecha = rangoFechasHora(req.query.desde, req.query.hasta);
     if (fecha) where.fecha_llamada = fecha;

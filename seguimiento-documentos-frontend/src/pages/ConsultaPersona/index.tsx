@@ -4,6 +4,7 @@ import Input from "@/components/form/input/InputField";
 import ReporteTabla, { type Columna } from "@/components/reportes/ReporteTabla";
 import { formatFecha, formatFechaHora } from "@/components/expedientes/format";
 import api from "@/utils/api";
+import { perfilActual } from "@/utils/sesion";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 interface UsuarioOpcion {
@@ -109,6 +110,8 @@ export default function ConsultaPersona() {
   const [persona, setPersona] = useState<number | "">("");
   const [tab, setTab] = useState<"asignaciones" | "llamadas">("asignaciones");
   const [quienLlamo, setQuienLlamo] = useState("");
+  // El perfil personal solo ve sus propios datos; el backend limita las consultas a su usuario.
+  const esPersonal = perfilActual() === "personal";
 
   const fetchUsuarios = useCallback(async (filtro = "") => {
     try {
@@ -126,7 +129,7 @@ export default function ConsultaPersona() {
   const etiqueta = (u: UsuarioOpcion) => (u.cargo ? `${u.nombre} (${u.cargo})` : u.nombre);
   const seleccionada = usuarios.find((u) => u.id === persona);
 
-  const paramsAsignaciones = useMemo(() => ({ id_usuario: String(persona) }), [persona]);
+  const paramsAsignaciones = useMemo<Record<string, string>>(() => (persona === "" ? {} : { id_usuario: String(persona) }), [persona]);
   const paramsLlamadas = useMemo(() => {
     const params: Record<string, string> = {};
     if (persona !== "") params.id_responsable = String(persona);
@@ -145,7 +148,7 @@ export default function ConsultaPersona() {
     </button>
   );
 
-  const sinPersonaEnAsignaciones = tab === "asignaciones" && persona === "";
+  const sinPersonaEnAsignaciones = !esPersonal && tab === "asignaciones" && persona === "";
 
   return (
     <div className="space-y-6">
@@ -156,6 +159,7 @@ export default function ConsultaPersona() {
         </p>
       </div>
 
+      {!esPersonal && (
       <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
         <Label>{tab === "llamadas" ? "Responsable (opcional)" : "Persona"}</Label>
         <div className="flex items-center gap-2">
@@ -179,6 +183,7 @@ export default function ConsultaPersona() {
           )}
         </div>
       </div>
+      )}
 
       <div className="flex gap-2">
         {pestana("asignaciones", "Asignaciones")}
@@ -192,7 +197,7 @@ export default function ConsultaPersona() {
       ) : tab === "asignaciones" ? (
         <ReporteTabla
           key={`asig-${persona}`}
-          titulo={`Asignaciones de ${seleccionada ? etiqueta(seleccionada) : ""}`}
+          titulo={esPersonal ? "Mis asignaciones" : `Asignaciones de ${seleccionada ? etiqueta(seleccionada) : ""}`}
           descripcion="Expedientes asignados a esta persona, con su respuesta y tiempo de atención"
           endpoint="/reportes/asignaciones"
           nombreArchivo="Consulta-Asignaciones"
