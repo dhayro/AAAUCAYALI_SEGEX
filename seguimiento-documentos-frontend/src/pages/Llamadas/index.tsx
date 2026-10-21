@@ -39,6 +39,17 @@ export default function Llamadas() {
   const [cutAbierto, setCutAbierto] = useState<string | null>(null);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [filters, setFilters] = useState({ cut: "", respondido: "false", plazo: "" });
+  const [cutTexto, setCutTexto] = useState("");
+
+  // Consulta al API cuando el usuario deja de escribir el CUT, no en cada tecla.
+  useEffect(() => {
+    const espera = setTimeout(() => {
+      const cut = cutTexto.trim();
+      setFilters((prev) => (prev.cut === cut ? prev : { ...prev, cut }));
+      setPagination((p) => (p.pageIndex === 0 ? p : { ...p, pageIndex: 0 }));
+    }, 400);
+    return () => clearTimeout(espera);
+  }, [cutTexto]);
   const [totalCount, setTotalCount] = useState(0);
 
   const fetchLlamadas = useCallback(async () => {
@@ -94,7 +105,7 @@ export default function Llamadas() {
         <div className="grid grid-cols-1 gap-4 rounded-lg bg-gray-50 p-4 dark:bg-gray-800 md:grid-cols-3">
           <div>
             <Label>Buscar por CUT</Label>
-            <Input name="cut" value={filters.cut} onChange={handleFilterChange} placeholder="Ej: 163943-2026" />
+            <Input value={cutTexto} onChange={(e) => setCutTexto(e.target.value)} placeholder="Ej: 163943-2026" />
           </div>
           <div>
             <Label>Respuesta al administrado</Label>
