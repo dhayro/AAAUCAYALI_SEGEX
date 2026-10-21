@@ -193,6 +193,7 @@ exports.cargaMasiva = async (req, res) => {
       vista.push({
         fila,
         cut: cut ?? '',
+        id_usuario: idUsuario ?? null,
         usuario: String(f.usuario ?? '').trim(),
         nombre: usuario ? `${usuario.nombre} ${usuario.apellido}` : '',
         plazo: isNaN(plazo) ? '' : plazo,
