@@ -11,6 +11,7 @@ import ProrrogaMasivaModal from "@/components/asignaciones/ProrrogaMasivaModal";
 import RespuestasAsignacionModal from "@/components/asignaciones/RespuestasAsignacionModal";
 import { formatFecha, formatFechaHora } from "@/components/expedientes/format";
 import api from "@/utils/api";
+import * as XLSX from "xlsx";
 import { puedeGestionarAsignaciones } from "@/utils/sesion";
 import { PencilIcon, TrashBinIcon, PlusIcon, CloseIcon, CalendarPlusIcon, ChatBubbleIcon, HistoryIcon } from "@/icons";
 import BotonAccion from "@/components/common/BotonAccion";
@@ -145,6 +146,8 @@ export default function AsignacionExpediente() {
   const [respuestasTarget, setRespuestasTarget] = useState<Asignacion | null>(null);
   const [seleccion, setSeleccion] = useState<number[]>([]);
   const [prorrogaMasiva, setProrrogaMasiva] = useState(false);
+  const [erroresCarga, setErroresCarga] = useState<{ fila: number; mensaje: string }[]>([]);
+  const [cargandoExcel, setCargandoExcel] = useState(false);
 
   const [cutAbierto, setCutAbierto] = useState<string | null>(null);
 
@@ -202,6 +205,75 @@ export default function AsignacionExpediente() {
     id: u.id,
     nombre: etiquetaUsuario(u.nombre, u.cargo),
   }));
+
+  // Plantilla con las columnas de la carga y una hoja con los usuarios para copiar el usuario asignado.
+  const descargarPlantilla = async () => {
+    try {
+      const res = await api.get("/usuarios/select", { params: { limit: 500 } });
+      const usuarios: { nombre: string; usuario: string; cargo?: string | null }[] = Array.isArray(res.data) ? res.data : [];
+
+      const cabecera = [
+        "CUT",
+        "USUARIO ASIGNADO",
+        "FECHA ASIGNACION (AAAA-MM-DD)",
+        "PLAZO (DIAS)",
+        "NUMERO DE ORDEN",
+        "OBSERVACION",
+      ];
+      const hoja = XLSX.utils.aoa_to_sheet([cabecera, ["101183-2025", usuarios[0]?.usuario ?? "", hoyLima(), 15, "", "EJEMPLO"]]);
+      hoja["!cols"] = [{ wch: 16 }, { wch: 22 }, { wch: 30 }, { wch: 14 }, { wch: 18 }, { wch: 40 }];
+
+      const referencia = XLSX.utils.aoa_to_sheet([
+        ["NOMBRE", "USUARIO (copiar en la columna USUARIO ASIGNADO)", "CARGO"],
+        ...usuarios.map((u) => [u.nombre, u.usuario, u.cargo ?? ""]),
+      ]);
+      referencia["!cols"] = [{ wch: 40 }, { wch: 40 }, { wch: 24 }];
+
+      const libro = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(libro, hoja, "Asignaciones");
+      XLSX.utils.book_append_sheet(libro, referencia, "Usuarios");
+      XLSX.writeFile(libro, "plantilla_asignaciones.xlsx");
+    } catch {
+      toast.error("No se pudo generar la plantilla");
+    }
+  };
+
+  const cargarExcel = async (archivo: File) => {
+    setCargandoExcel(true);
+    setErroresCarga([]);
+    try {
+      const libro = XLSX.read(await archivo.arrayBuffer(), { type: "array" });
+      const hoja = libro.Sheets[libro.SheetNames[0]];
+      const filas = XLSX.utils.sheet_to_json<Record<string, any>>(hoja, { defval: "", raw: false });
+      const datos = filas
+        .filter((f) => String(f["CUT"] ?? "").trim() !== "")
+        .map((f) => ({
+          cut: f["CUT"],
+          usuario: f["USUARIO ASIGNADO"],
+          fecha: f["FECHA ASIGNACION (AAAA-MM-DD)"],
+          plazo: f["PLAZO (DIAS)"],
+          numero_orden: f["NUMERO DE ORDEN"],
+          observacion: f["OBSERVACION"],
+        }));
+      if (datos.length === 0) {
+        toast.error("El archivo no tiene filas con CUT");
+        return;
+      }
+      const res = await api.post("/asignaciones-expediente/carga-masiva", { filas: datos });
+      toast.success(`Se crearon ${res.data.creadas} asignaciones`);
+      await fetchAsignaciones();
+    } catch (error: any) {
+      const errores = error.response?.data?.errores;
+      if (errores) {
+        setErroresCarga(errores);
+        toast.error("Hay filas con errores. No se creó ninguna asignación.");
+      } else {
+        toast.error(error.response?.data?.mensaje || "No se pudo leer el archivo");
+      }
+    } finally {
+      setCargandoExcel(false);
+    }
+  };
 
   const handleOpenModal = () => {
     setFormData(getEmptyForm());
@@ -349,13 +421,38 @@ export default function AsignacionExpediente() {
             </p>
           </div>
           {gestiona && (
-            <button
-              onClick={handleOpenModal}
-              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
-            >
-              <PlusIcon className="h-5 w-5" />
-              Nueva Asignación
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={descargarPlantilla}
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+              >
+                Plantilla Excel
+              </button>
+              <label
+                className={`cursor-pointer rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 ${
+                  cargandoExcel ? "pointer-events-none opacity-50" : ""
+                }`}
+              >
+                {cargandoExcel ? "Cargando..." : "Cargar Excel"}
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  className="hidden"
+                  onChange={(e) => {
+                    const archivo = e.target.files?.[0];
+                    if (archivo) cargarExcel(archivo);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+              <button
+                onClick={handleOpenModal}
+                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+              >
+                <PlusIcon className="h-5 w-5" />
+                Nueva Asignación
+              </button>
+            </div>
           )}
         </div>
 
@@ -579,6 +676,26 @@ export default function AsignacionExpediente() {
             >
               Limpiar selección
             </button>
+          </div>
+        )}
+
+        {erroresCarga.length > 0 && (
+          <div className="rounded-lg border border-red-300 bg-red-50 p-4 text-sm dark:border-red-800 dark:bg-red-900/30">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="font-semibold text-red-800 dark:text-red-200">
+                El archivo tiene {erroresCarga.length} fila{erroresCarga.length === 1 ? "" : "s"} con errores. Corríjalas y vuelva a cargarlo; no se creó ninguna asignación.
+              </span>
+              <button onClick={() => setErroresCarga([])} className="text-xs font-semibold text-red-700 underline dark:text-red-300">
+                Cerrar
+              </button>
+            </div>
+            <ul className="max-h-48 list-disc space-y-1 overflow-y-auto pl-5 text-red-800 dark:text-red-200">
+              {erroresCarga.map((e) => (
+                <li key={e.fila}>
+                  Fila {e.fila}: {e.mensaje}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
