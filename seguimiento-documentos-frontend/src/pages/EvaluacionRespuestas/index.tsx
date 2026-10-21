@@ -55,11 +55,17 @@ const FILTROS_ESTADO = [
   { value: "CERRADA", texto: "Cerradas" },
 ];
 
+const CONTADORES: { value: FilaEvaluable["estado"]; texto: string }[] = [
+  { value: "POR_EVALUAR", texto: "Por evaluar" },
+  { value: "RESPONDIDA", texto: "Respondidas" },
+  { value: "OBSERVADA", texto: "Observadas" },
+];
+
 export default function EvaluacionRespuestas() {
   const [filas, setFilas] = useState<FilaEvaluable[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroCut, setFiltroCut] = useState("");
-  const [filtroEstado, setFiltroEstado] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState("POR_EVALUAR");
   const [respuestasDe, setRespuestasDe] = useState<FilaEvaluable | null>(null);
   const [evaluando, setEvaluando] = useState<FilaEvaluable | null>(null);
   const [formEvaluacion, setFormEvaluacion] = useState<{ resultado: "APROBADA" | "OBSERVADA"; observacion: string }>({
@@ -131,6 +137,26 @@ export default function EvaluacionRespuestas() {
           <p className="mt-2 text-gray-600 dark:text-gray-400">
             Revisa las respuestas subidas por cada usuario, aprueba para cerrar la asignación u observa para que responda de nuevo
           </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {CONTADORES.map((c) => {
+            const activo = filtroEstado === c.value;
+            const cantidad = filas.filter((f) => f.estado === c.value).length;
+            return (
+              <button
+                key={c.value}
+                onClick={() => setFiltroEstado(c.value)}
+                className={`rounded-full px-4 py-1.5 text-sm font-semibold ${
+                  activo
+                    ? "bg-brand-600 text-white"
+                    : "bg-white text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:ring-gray-600 dark:hover:bg-gray-700"
+                }`}
+              >
+                {c.texto} · {cantidad}
+              </button>
+            );
+          })}
         </div>
 
         <div className="grid grid-cols-1 gap-4 rounded-lg bg-gray-50 p-4 dark:bg-gray-800 md:grid-cols-2">
