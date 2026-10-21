@@ -1,6 +1,10 @@
 const express = require('express');
+const crypto = require('crypto');
+const path = require('path');
+const multer = require('multer');
 const router = express.Router();
 const controller = require('../controllers/asignacionExpedienteController');
+const respuestaController = require('../controllers/respuestaAsignacionController');
 const { authenticateToken, isSecretariaOrAbove } = require('../middleware/auth');
 
 /**
@@ -185,5 +189,33 @@ router.post('/prorroga-masiva/rechazar', authenticateToken, isSecretariaOrAbove,
  *         description: No encontrada
  */
 router.delete('/:id', authenticateToken, isSecretariaOrAbove, controller.eliminar);
+
+const CARPETA_RESPUESTAS = path.join(__dirname, '../../uploads/asignaciones');
+const EXTENSIONES_RESPUESTA = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.jpg', '.jpeg', '.png'];
+
+const uploadRespuesta = multer({
+  storage: multer.diskStorage({
+    destination: CARPETA_RESPUESTAS,
+    filename: (req, file, cb) =>
+      cb(null, `${Date.now()}-${crypto.randomBytes(8).toString('hex')}${path.extname(file.originalname).toLowerCase()}`),
+  }),
+  limits: { fileSize: 25 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (EXTENSIONES_RESPUESTA.includes(path.extname(file.originalname).toLowerCase())) cb(null, true);
+    else cb(new Error('Tipo de archivo no permitido (PDF, Word, Excel o imagen)'));
+  },
+});
+
+const subirArchivoRespuesta = (req, res, next) =>
+  uploadRespuesta.single('archivo')(req, res, (error) => {
+    if (error) return res.status(400).json({ mensaje: error.message });
+    next();
+  });
+
+router.get('/:id/respuestas', authenticateToken, respuestaController.listarRespuestas);
+router.post('/:id/respuestas', authenticateToken, respuestaController.crearRespuesta);
+router.post('/respuestas/:id/archivos', authenticateToken, subirArchivoRespuesta, respuestaController.subirArchivo);
+router.get('/archivos-respuesta/:id/descargar', authenticateToken, respuestaController.descargarArchivo);
+router.delete('/archivos-respuesta/:id', authenticateToken, respuestaController.eliminarArchivo);
 
 module.exports = router;

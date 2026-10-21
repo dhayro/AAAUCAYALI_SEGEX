@@ -108,6 +108,7 @@ const Procedimiento = require('./models/Procedimiento');
 const AsignacionExpediente = require('./models/AsignacionExpediente');
 const DocumentoSisged = require('./models/DocumentoSisged');
 const HistorialAsignacion = require('./models/HistorialAsignacion');
+require('./models/RespuestaAsignacion');
 const AccionAtencion = require('./models/AccionAtencion');
 require('./models/relacionesAtencion');
 
