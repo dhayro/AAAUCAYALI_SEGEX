@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import { fechaLegible, limiteDesde } from "@/components/atencion/plazo";
+import DatePickerLima from "@/components/form/DatePickerLima";
 import SearchableSelect from "@/components/form/SearchableSelect";
 import api from "@/utils/api";
 import { puedeGestionarAsignaciones } from "@/utils/sesion";
@@ -33,6 +34,7 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
   const [verCut, setVerCut] = useState<string | null>(null);
   const [seleccionadas, setSeleccionadas] = useState<Record<number, string>>({});
   const [previas, setPrevias] = useState<any[]>([]);
+  const [modoPlazo, setModoPlazo] = useState<"dias" | "fecha">("dias");
   const [form, setForm] = useState({
     cut: "",
     fecha_llamada: ahoraLocal(),
@@ -40,6 +42,7 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
     telefono: "",
     motivo: "",
     plazo_dias: "",
+    fecha_limite: "",
     respondido: false,
     id_responsable: "",
   });
@@ -85,6 +88,9 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
   const enviar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.cut.trim()) return toast.error("El CUT es obligatorio");
+    if (modoPlazo === "fecha" && form.fecha_limite && form.fecha_limite < form.fecha_llamada.slice(0, 10)) {
+      return toast.error("La fecha límite no puede ser anterior a la llamada");
+    }
     if (!form.nombre_llamante.trim()) return toast.error("Escribe el nombre de quien llama");
     if (!form.motivo.trim()) return toast.error("Escribe el motivo de la llamada");
 
@@ -99,7 +105,8 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
       nombre_llamante: form.nombre_llamante,
       telefono: form.telefono,
       motivo: form.motivo,
-      fecha_respuesta: limiteDesde(form.fecha_llamada, form.plazo_dias),
+      fecha_respuesta:
+        modoPlazo === "fecha" ? form.fecha_limite || null : limiteDesde(form.fecha_llamada, form.plazo_dias),
       respondido: form.respondido && acciones.length > 0,
       acciones,
     };
@@ -202,18 +209,45 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
-              <Label>Plazo para responder al administrado (días)</Label>
-              <Input
-                type="number"
-                min={0}
-                value={form.plazo_dias}
-                onChange={(e) => setForm({ ...form, plazo_dias: e.target.value })}
-                placeholder="Ej: 5"
-              />
-              {limiteDesde(form.fecha_llamada, form.plazo_dias) && (
-                <p className="mt-1 text-xs text-gray-500">
-                  Límite: {fechaLegible(limiteDesde(form.fecha_llamada, form.plazo_dias))}
-                </p>
+              <Label>Plazo para responder al administrado</Label>
+              <div className="mb-2 inline-flex rounded-lg bg-gray-100 p-1 text-xs font-semibold dark:bg-gray-700">
+                {(["dias", "fecha"] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setModoPlazo(m)}
+                    className={`rounded-md px-3 py-1 ${
+                      modoPlazo === m
+                        ? "bg-white text-brand-600 shadow dark:bg-gray-800 dark:text-brand-300"
+                        : "text-gray-600 dark:text-gray-300"
+                    }`}
+                  >
+                    {m === "dias" ? "Por días" : "Fecha exacta"}
+                  </button>
+                ))}
+              </div>
+              {modoPlazo === "dias" ? (
+                <>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={form.plazo_dias}
+                    onChange={(e) => setForm({ ...form, plazo_dias: e.target.value })}
+                    placeholder="Ej: 5"
+                  />
+                  {limiteDesde(form.fecha_llamada, form.plazo_dias) && (
+                    <p className="mt-1 text-xs text-gray-500">
+                      Límite: {fechaLegible(limiteDesde(form.fecha_llamada, form.plazo_dias))}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <DatePickerLima
+                  label="Fecha límite de respuesta"
+                  value={form.fecha_limite}
+                  onChange={(date) => setForm({ ...form, fecha_limite: date })}
+                  placeholder="DD/MM/YYYY"
+                />
               )}
             </div>
             <div className="flex flex-col justify-end gap-1 pb-2 text-sm">
