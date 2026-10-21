@@ -4,6 +4,7 @@ const HistorialAsignacion = require('../models/HistorialAsignacion');
 const Usuario = require('../models/Usuario');
 const Cargo = require('../models/Cargo');
 const { hoyLima, esFechaValida, sumarDiasCalendario } = require('../utils/fechas');
+const { resumenPorAsignacion, aLima } = require('../services/estadoRespuestaService');
 
 const parseBoolean = (value) => value === true || value === 'true' || value === 1 || value === '1';
 
@@ -74,8 +75,12 @@ exports.obtenerTodas = async (req, res) => {
       order: [['id', 'ASC']],
     });
 
+    const resumen = await resumenPorAsignacion(rows.map((a) => a.id));
     res.json({
-      asignaciones: rows,
+      asignaciones: rows.map((a) => {
+        const r = resumen.get(a.id);
+        return { ...a.get({ plain: true }), respuesta: { ...r, ultima_respuesta: aLima(r.ultima_respuesta) } };
+      }),
       totalAsignaciones: count,
       totalPaginas: Math.ceil(count / limit),
       paginaActual: page,

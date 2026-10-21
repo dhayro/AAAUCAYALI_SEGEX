@@ -13,6 +13,7 @@ type Props = {
   asignacion: { id: number; cut: string; id_usuario: number };
   onClose: () => void;
   onCambio?: () => void;
+  soloLectura?: boolean;
 };
 
 type Archivo = { id: number; descripcion: string; nombre_original: string; mimetype?: string; fecha_subida: string };
@@ -21,10 +22,10 @@ type Respuesta = { id: number; texto: string; fecha_creacion: string; id_usuario
 const nombre = (u?: { nombre: string; apellido: string } | null) => (u ? `${u.nombre} ${u.apellido}` : "—");
 const esPdf = (a: Archivo) => (a.mimetype || "").includes("pdf") || a.nombre_original.toLowerCase().endsWith(".pdf");
 
-export default function RespuestasAsignacionModal({ asignacion, onClose, onCambio }: Props) {
+export default function RespuestasAsignacionModal({ asignacion, onClose, onCambio, soloLectura = false }: Props) {
   const gestiona = puedeGestionarAsignaciones();
   const usuarioId = usuarioActualId();
-  const puedeEscribir = gestiona || asignacion.id_usuario === usuarioId;
+  const puedeEscribir = !soloLectura && (gestiona || asignacion.id_usuario === usuarioId);
 
   const [respuestas, setRespuestas] = useState<Respuesta[]>([]);
   const [cargando, setCargando] = useState(true);

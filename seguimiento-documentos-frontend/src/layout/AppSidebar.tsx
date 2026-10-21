@@ -12,6 +12,7 @@ import {
   UserCircleIcon,
 } from "../icons";
 import { cn } from "../utils";
+import { puedeGestionarAsignaciones } from "../utils/sesion";
 import SidebarWidget from "./SidebarWidget";
 
 type NavItem = {
@@ -20,6 +21,7 @@ type NavItem = {
   icon: React.ReactNode;
   path?: string;
   new?: boolean;
+  gestoresOnly?: boolean;
   target?: string;
   subItems?: {
     name: string;
@@ -72,6 +74,13 @@ const navItems: NavItem[] = [
     name: "Prórrogas",
     key: "prorrogas",
     path: "/prorrogas",
+  },
+  {
+    icon: <TableIcon fontSize={24} />,
+    name: "Evaluación de Respuestas",
+    key: "evaluacion-respuestas",
+    path: "/evaluacion-respuestas",
+    gestoresOnly: true,
   },
   {
     icon: <TableIcon fontSize={24} />,
@@ -435,7 +444,10 @@ const AppSidebar: React.FC = () => {
                   <HorizontaLDots className="size-6" />
                 )}
               </h2>
-              {renderMenuItems(navItems, "main")}
+              {renderMenuItems(
+                navItems.filter((item) => !item.gestoresOnly || puedeGestionarAsignaciones()),
+                "main"
+              )}
             </div>
 
             <div>

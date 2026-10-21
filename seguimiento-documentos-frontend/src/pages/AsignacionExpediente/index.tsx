@@ -9,7 +9,7 @@ import ExpedienteDetalleModal from "@/components/expedientes/ExpedienteDetalleMo
 import HistorialAsignacionModal from "@/components/asignaciones/HistorialAsignacionModal";
 import ProrrogaMasivaModal from "@/components/asignaciones/ProrrogaMasivaModal";
 import RespuestasAsignacionModal from "@/components/asignaciones/RespuestasAsignacionModal";
-import { formatFecha } from "@/components/expedientes/format";
+import { formatFecha, formatFechaHora } from "@/components/expedientes/format";
 import api from "@/utils/api";
 import { puedeGestionarAsignaciones } from "@/utils/sesion";
 import { PencilIcon, TrashBinIcon, PlusIcon, CloseIcon } from "@/icons";
@@ -43,6 +43,7 @@ interface Asignacion {
   observacion?: string | null;
   numero_orden?: string | null;
   asignado?: (UsuarioResumen & { Cargo?: { nombre: string } | null }) | null;
+  respuesta?: { total: number; ultima_respuesta: string | null; estado: string } | null;
 }
 
 const etiquetaUsuario = (nombre: string, cargo?: string | null) =>
@@ -77,6 +78,7 @@ const vencimientoVigente = (a: Asignacion) =>
 
 const puedeProrrogar = (a: Asignacion) => {
   if (a.estado_prorroga === "PENDIENTE" || a.estado_prorroga === "ACEPTADA") return false;
+  if (a.respuesta?.estado === "CERRADA") return false;
   return diasEntre(a.fecha_vencimiento, hoyLima()) <= DIAS_PARA_PRORROGA;
 };
 
@@ -87,7 +89,17 @@ const ESTADO_PRORROGA: Record<string, { texto: string; clases: string }> = {
 };
 
 
+const ESTADO_RESPUESTA: Record<string, { texto: string; clases: string }> = {
+  SIN_RESPUESTA: { texto: "Sin respuesta", clases: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200" },
+  POR_EVALUAR: { texto: "Por evaluar", clases: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100" },
+  OBSERVADA: { texto: "Observada", clases: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100" },
+  CERRADA: { texto: "Cerrada", clases: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100" },
+};
+
 const DiasRestantes = ({ a }: { a: Asignacion }) => {
+  if (a.respuesta?.estado === "CERRADA") {
+    return <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${ESTADO_RESPUESTA.CERRADA.clases}`}>Cerrada</span>;
+  }
   const vence = vencimientoVigente(a);
   if (!vence) return <span className="text-gray-400">—</span>;
   const dias = diasEntre(vence, hoyLima());
@@ -594,6 +606,7 @@ export default function AsignacionExpediente() {
                     <th className="px-6 py-4 text-center text-sm font-semibold">Vence prórroga</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Días restantes</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">Observación</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold">Respuesta</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Acciones</th>
                   </tr>
                 </thead>
@@ -655,6 +668,22 @@ export default function AsignacionExpediente() {
                         <DiasRestantes a={a} />
                       </td>
                       <td className="max-w-xs px-6 py-4 text-sm">{a.observacion || "—"}</td>
+                      <td className="px-6 py-4 text-center text-sm">
+                        {a.respuesta && a.respuesta.total > 0 ? (
+                          <>
+                            <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${ESTADO_RESPUESTA[a.respuesta.estado].clases}`}>
+                              {ESTADO_RESPUESTA[a.respuesta.estado].texto}
+                            </span>
+                            <div className="mt-1 text-xs text-gray-500">
+                              {a.respuesta.total} · última {formatFechaHora(a.respuesta.ultima_respuesta)}
+                            </div>
+                          </>
+                        ) : (
+                          <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${ESTADO_RESPUESTA.SIN_RESPUESTA.clases}`}>
+                            Sin respuesta
+                          </span>
+                        )}
+                      </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-3">
                           {gestiona && puedeProrrogar(a) && (
