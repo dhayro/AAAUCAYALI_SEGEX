@@ -12,5 +12,7 @@ router.get('/expedientes-sin-asignar', authenticateToken, isSecretariaOrAbove, a
 router.get('/acciones', authenticateToken, isSecretariaOrAbove, avanzado.acciones);
 router.get('/historial-cut', authenticateToken, isSecretariaOrAbove, avanzado.historialCut);
 router.get('/resumen', authenticateToken, isSecretariaOrAbove, avanzado.resumen);
+// Cualquier usuario con sesión: solo devuelve sus propios datos.
+router.get('/mi-desempeno', authenticateToken, avanzado.miDesempeno);
 
 module.exports = router;

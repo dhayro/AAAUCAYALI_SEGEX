@@ -429,3 +429,97 @@ exports.resumen = async (req, res) => {
     res.status(500).json({ mensaje: error.message });
   }
 };
+
+// Desempeño propio de quien inicia sesión: solo sus asignaciones y llamadas.
+exports.miDesempeno = async (req, res) => {
+  try {
+    const yo = req.user.id;
+    const hoy = hoyLima();
+
+    const whereA = { estado: true, id_usuario: yo };
+    const rf = rangoFecha(req.query.desde, req.query.hasta);
+    if (rf) whereA.fecha_asignacion = rf;
+    const asignaciones = await AsignacionExpediente.findAll({ where: whereA, order: [['fecha_asignacion', 'DESC'], ['id', 'DESC']] });
+    const resumen = await resumenPorAsignacion(asignaciones.map((a) => a.id));
+    const filasAsignaciones = asignaciones.map((a) => {
+      const r = resumen.get(a.id);
+      const cerrada = r.estado === ESTADOS.CERRADA;
+      const vence = vencimientoVigente(a);
+      return {
+        cut: a.cut,
+        fecha_asignacion: a.fecha_asignacion,
+        vence,
+        estado: r.estado,
+        total_respuestas: r.total,
+        tiempo_respuesta_horas: r.ultima_respuesta ? tiempoRespuestaHoras(a.fecha_asignacion, r.ultima_respuesta) : null,
+        dias_restantes: cerrada ? null : diasEntre(vence, hoy),
+        cerrada,
+      };
+    });
+
+    const whereL = { id_responsable: yo };
+    const rfh = rangoFechaHora(req.query.desde, req.query.hasta);
+    if (rfh) whereL.fecha_llamada = rfh;
+    const llamadas = await LlamadaAdministrado.findAll({
+      where: whereL,
+      attributes: ['id', 'cut', 'nombre_llamante', 'motivo', 'fecha_llamada', 'fecha_respuesta', 'respondido'],
+      order: [['fecha_llamada', 'DESC'], ['id', 'DESC']],
+    });
+    const idsL = llamadas.map((l) => l.id);
+    const historialResp = idsL.length
+      ? await HistorialLlamada.findAll({ attributes: ['id_llamada', 'fecha_registro'], where: { id_llamada: { [Op.in]: idsL }, tipo: 'RESPONDIDO' }, raw: true })
+      : [];
+    const respondidoEn = {};
+    historialResp.forEach((h) => {
+      const f = new Date(h.fecha_registro);
+      if (!respondidoEn[h.id_llamada] || f > respondidoEn[h.id_llamada]) respondidoEn[h.id_llamada] = f;
+    });
+    const acciones = idsL.length
+      ? await AccionLlamada.findAll({ attributes: ['id_llamada', 'estado'], where: { id_llamada: { [Op.in]: idsL } }, raw: true })
+      : [];
+    const pendientes = {};
+    acciones.forEach((a) => {
+      if (a.estado !== 'EJECUTADO') pendientes[a.id_llamada] = (pendientes[a.id_llamada] || 0) + 1;
+    });
+
+    const filasLlamadas = llamadas.map((l) => {
+      const dias = l.fecha_respuesta ? diasEntre(l.fecha_respuesta, hoy) : null;
+      let situacion = 'SIN_PLAZO';
+      if (l.respondido) situacion = 'RESPONDIDA';
+      else if (dias !== null && dias < 0) situacion = 'VENCIDA';
+      else if (dias !== null && dias <= 5) situacion = 'POR_VENCER';
+      else if (dias !== null) situacion = 'EN_PLAZO';
+      return {
+        fecha_llamada: aLima(l.fecha_llamada),
+        cut: l.cut,
+        nombre_llamante: l.nombre_llamante,
+        motivo: l.motivo,
+        fecha_limite: l.fecha_respuesta,
+        dias_restantes: l.respondido ? null : dias,
+        situacion,
+        respondido: l.respondido,
+        tiempo_respuesta_horas: respondidoEn[l.id] ? Math.round(((respondidoEn[l.id] - new Date(l.fecha_llamada)) / 3600000) * 10) / 10 : null,
+        acciones_pendientes: pendientes[l.id] || 0,
+      };
+    });
+
+    const tiempos = filasAsignaciones.map((f) => f.tiempo_respuesta_horas).filter((h) => h !== null);
+    res.json({
+      resumen: {
+        asignaciones: filasAsignaciones.length,
+        cerradas: filasAsignaciones.filter((f) => f.cerrada).length,
+        observadas: filasAsignaciones.filter((f) => f.estado === ESTADOS.OBSERVADA).length,
+        vencidas: filasAsignaciones.filter((f) => !f.cerrada && f.dias_restantes < 0).length,
+        tiempo_promedio_horas: tiempos.length ? Math.round((tiempos.reduce((s, h) => s + h, 0) / tiempos.length) * 10) / 10 : null,
+        llamadas: filasLlamadas.length,
+        llamadas_respondidas: filasLlamadas.filter((f) => f.respondido).length,
+        llamadas_vencidas: filasLlamadas.filter((f) => f.situacion === 'VENCIDA').length,
+        acciones_pendientes: filasLlamadas.reduce((s, f) => s + f.acciones_pendientes, 0),
+      },
+      asignaciones: filasAsignaciones,
+      llamadas: filasLlamadas,
+    });
+  } catch (error) {
+    res.status(500).json({ mensaje: error.message });
+  }
+};
