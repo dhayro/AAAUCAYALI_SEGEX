@@ -12,7 +12,7 @@ import {
   UserCircleIcon,
 } from "../icons";
 import { cn } from "../utils";
-import { puedeGestionarAsignaciones } from "../utils/sesion";
+import { perfilActual, puedeGestionarAsignaciones } from "../utils/sesion";
 import SidebarWidget from "./SidebarWidget";
 
 type NavItem = {
@@ -31,6 +31,14 @@ type NavItem = {
     new?: boolean;
     target?: string;
   }[];
+};
+
+// Menús que ve el perfil personal (además de Perfil, para sus propios datos).
+const MENUS_PERSONAL = ["dashboard", "expedientes", "asignacion-expediente", "llamadas", "profile"];
+
+const visibleParaPerfil = (items: NavItem[]) => {
+  if (perfilActual() === "personal") return items.filter((item) => MENUS_PERSONAL.includes(item.key ?? ""));
+  return items.filter((item) => !item.gestoresOnly || puedeGestionarAsignaciones());
 };
 
 const navItems: NavItem[] = [
@@ -444,10 +452,7 @@ const AppSidebar: React.FC = () => {
                   <HorizontaLDots className="size-6" />
                 )}
               </h2>
-              {renderMenuItems(
-                navItems.filter((item) => !item.gestoresOnly || puedeGestionarAsignaciones()),
-                "main"
-              )}
+              {renderMenuItems(visibleParaPerfil(navItems), "main")}
             </div>
 
             <div>
@@ -464,7 +469,7 @@ const AppSidebar: React.FC = () => {
                   <HorizontaLDots className="size-6" />
                 )}
               </h2>
-              {renderMenuItems(othersItems, "others")}
+              {renderMenuItems(visibleParaPerfil(othersItems), "others")}
             </div>
           </div>
         </nav>
