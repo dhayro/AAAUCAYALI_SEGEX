@@ -15,6 +15,7 @@ type Props = {
   llamadaId: number;
   onClose: () => void;
   onCambio: () => void;
+  soloLectura?: boolean;
 };
 
 const nombre = (u?: { nombre: string; apellido: string } | null) => (u ? `${u.nombre} ${u.apellido}` : "—");
@@ -37,8 +38,9 @@ const TIPO_ANTECEDENTE: Record<string, string> = {
 
 const esPdf = (archivo: any) => (archivo.mimetype || "").includes("pdf") || archivo.nombre_original?.toLowerCase().endsWith(".pdf");
 
-export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio }: Props) {
-  const gestiona = puedeGestionarAsignaciones();
+export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, soloLectura = false }: Props) {
+  // En solo lectura no se muestra ningún control que cambie la llamada.
+  const gestiona = !soloLectura && puedeGestionarAsignaciones();
   const usuarioId = usuarioActualId();
   const [llamada, setLlamada] = useState<any>(null);
   const [cargando, setCargando] = useState(true);
@@ -107,7 +109,7 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio }: Pr
     setUsuarios(res.data || []);
   };
 
-  const puedeOperar = llamada && (gestiona || llamada.id_responsable === usuarioId);
+  const puedeOperar = !soloLectura && llamada && (gestiona || llamada.id_responsable === usuarioId);
 
   const notificar = async (fn: () => Promise<any>, ok: string): Promise<boolean> => {
     try {
@@ -338,12 +340,14 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio }: Pr
                       <BadgePlazo respondido={llamada.respondido} fechaLimite={llamada.fecha_respuesta} />
                     </div>
                     <UltimoCambioPlazo antecedentes={llamada.antecedentes || []} />
-                    <EditorPlazo
-                      llamadaId={llamadaId}
-                      fechaLlamada={llamada.fecha_llamada}
-                      respondido={llamada.respondido}
-                      onGuardado={cargar}
-                    />
+                    {!soloLectura && (
+                      <EditorPlazo
+                        llamadaId={llamadaId}
+                        fechaLlamada={llamada.fecha_llamada}
+                        respondido={llamada.respondido}
+                        onGuardado={cargar}
+                      />
+                    )}
                   </div>
                   <div className="md:col-span-2">
                     <div className="text-xs text-gray-500">Motivo</div>

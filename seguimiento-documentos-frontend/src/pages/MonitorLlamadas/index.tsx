@@ -6,6 +6,7 @@ import { estadoPlazo, fechaLegible } from "@/components/atencion/plazo";
 import { formatFechaHora } from "@/components/expedientes/format";
 import api from "@/utils/api";
 import { colorUsuario } from "@/utils/colorUsuario";
+import DetalleLlamadaModal from "@/components/atencion/DetalleLlamadaModal";
 
 interface LlamadaMonitor {
   id: number;
@@ -75,12 +76,24 @@ function Indicador({ titulo, valor, tono }: { titulo: string; valor: number; ton
   );
 }
 
-function TarjetaLlamada({ llamada: l, nueva }: { llamada: LlamadaMonitor; nueva: boolean }) {
+function TarjetaLlamada({
+  llamada: l,
+  nueva,
+  onAbrir,
+}: {
+  llamada: LlamadaMonitor;
+  nueva: boolean;
+  onAbrir: () => void;
+}) {
   const estado = estadoPlazo(false, l.fecha_respuesta);
   const color = colorUsuario(l.responsable?.id);
   return (
     <article
-      className={`rounded-2xl border-l-8 bg-white p-5 shadow ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 ${bordeDe(l.dias)} ${
+      role="button"
+      tabIndex={0}
+      onClick={onAbrir}
+      onKeyDown={(e) => e.key === "Enter" && onAbrir()}
+      className={`cursor-pointer rounded-2xl border-l-8 bg-white p-5 shadow transition hover:shadow-lg ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 ${bordeDe(l.dias)} ${
         nueva ? "animate-pulse ring-4 ring-brand-500" : ""
       }`}
     >
@@ -144,6 +157,7 @@ export default function MonitorLlamadas() {
   // id de llamada -> momento en que apareció (para marcarla como nueva un rato)
   const [nuevas, setNuevas] = useState<Record<number, number>>({});
 
+  const [detalleId, setDetalleId] = useState<number | null>(null);
   const ctxRef = useRef<AudioContext | null>(null);
   const idsConocidos = useRef<Set<number> | null>(null);
 
@@ -258,9 +272,20 @@ export default function MonitorLlamadas() {
 
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
           {llamadas.map((l) => (
-            <TarjetaLlamada key={l.id} llamada={l} nueva={nuevas[l.id] !== undefined && ahora - nuevas[l.id] < DURACION_NUEVA_MS} />
+            <TarjetaLlamada key={l.id} llamada={l} nueva={nuevas[l.id] !== undefined && ahora - nuevas[l.id] < DURACION_NUEVA_MS}
+              onAbrir={() => setDetalleId(l.id)}
+            />
           ))}
         </section>
+
+        {detalleId !== null && (
+          <DetalleLlamadaModal
+            llamadaId={detalleId}
+            soloLectura
+            onClose={() => setDetalleId(null)}
+            onCambio={cargar}
+          />
+        )}
       </div>
     </>
   );
