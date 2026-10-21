@@ -12,7 +12,7 @@ import RespuestasAsignacionModal from "@/components/asignaciones/RespuestasAsign
 import { formatFecha, formatFechaHora } from "@/components/expedientes/format";
 import api from "@/utils/api";
 import { puedeGestionarAsignaciones } from "@/utils/sesion";
-import { PencilIcon, TrashBinIcon, PlusIcon, CloseIcon, CalendarAltIcon, FileIcon, TimeIcon } from "@/icons";
+import { PencilIcon, TrashBinIcon, PlusIcon, CloseIcon, CalendarPlusIcon, ChatBubbleIcon, HistoryIcon } from "@/icons";
 import BotonAccion from "@/components/common/BotonAccion";
 
 interface UsuarioResumen {
@@ -704,20 +704,20 @@ export default function AsignacionExpediente() {
                           {gestiona && puedeProrrogar(a) && (
                             <BotonAccion
                               etiqueta="Solicitar prórroga"
-                              icono={<CalendarAltIcon className="h-5 w-5" />}
+                              icono={<CalendarPlusIcon />}
                               tono="alerta"
                               onClick={() => handleOpenProrroga(a)}
                             />
                           )}
                           <BotonAccion
                             etiqueta="Respuestas"
-                            icono={<FileIcon className="h-5 w-5" />}
+                            icono={<ChatBubbleIcon />}
                             tono="primario"
                             onClick={() => setRespuestasTarget(a)}
                           />
                           <BotonAccion
                             etiqueta="Historial"
-                            icono={<TimeIcon className="h-5 w-5" />}
+                            icono={<HistoryIcon />}
                             onClick={() => handleOpenHistorial(a)}
                           />
                           {gestiona && (

@@ -5,7 +5,7 @@ import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import RespuestasAsignacionModal from "@/components/asignaciones/RespuestasAsignacionModal";
 import { formatFecha, formatFechaHora } from "@/components/expedientes/format";
-import { CloseIcon, FileIcon, TaskIcon } from "@/icons";
+import { CloseIcon, ChatBubbleIcon, ClipboardCheckIcon } from "@/icons";
 import BotonAccion from "@/components/common/BotonAccion";
 import api from "@/utils/api";
 
@@ -200,14 +200,14 @@ export default function EvaluacionRespuestas() {
                         <div className="flex items-center justify-center gap-2">
                           <BotonAccion
                             etiqueta="Respuestas"
-                            icono={<FileIcon className="h-5 w-5" />}
+                            icono={<ChatBubbleIcon />}
                             tono="primario"
                             onClick={() => setRespuestasDe(f)}
                           />
                           {f.estado !== "CERRADA" && (
                             <BotonAccion
                               etiqueta="Evaluar"
-                              icono={<TaskIcon className="h-5 w-5" />}
+                              icono={<ClipboardCheckIcon />}
                               tono="alerta"
                               onClick={() => abrirEvaluacion(f)}
                             />

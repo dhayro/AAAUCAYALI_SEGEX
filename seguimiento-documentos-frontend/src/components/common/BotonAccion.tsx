@@ -25,10 +25,10 @@ export default function BotonAccion({ etiqueta, icono, onClick, tono = "neutro",
       onClick={onClick}
       disabled={disabled}
       title={etiqueta}
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border px-2.5 py-1 text-xs font-semibold disabled:opacity-50 [&>svg]:h-4 [&>svg]:w-4 ${TONOS[tono]}`}
+      aria-label={etiqueta}
+      className={`inline-flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-50 [&>svg]:h-4 [&>svg]:w-4 ${TONOS[tono]}`}
     >
       {icono}
-      {etiqueta}
     </button>
   );
 }

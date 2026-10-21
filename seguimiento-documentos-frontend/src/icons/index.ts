@@ -119,6 +119,10 @@ import { ReactComponent as DeFlagIcon } from "./flag-de.svg?react";
 import { ReactComponent as EsFlagIcon } from "./flag-es.svg?react";
 import { ReactComponent as SaFlagIcon } from "./flag-sa.svg?react";
 import { ReactComponent as UsFlagIcon } from "./flag-us.svg?react";
+import { ReactComponent as ChatBubbleIcon } from "./chat-bubble.svg?react";
+import { ReactComponent as HistoryIcon } from "./history.svg?react";
+import { ReactComponent as CalendarPlusIcon } from "./calendar-plus.svg?react";
+import { ReactComponent as ClipboardCheckIcon } from "./clipboard-check.svg?react";
 
 export {
   DeFlagIcon,
@@ -242,4 +246,8 @@ export {
   SystemIcon,
   TextIcon,
   UserAltIcon,
+  ChatBubbleIcon,
+  HistoryIcon,
+  CalendarPlusIcon,
+  ClipboardCheckIcon,
 };

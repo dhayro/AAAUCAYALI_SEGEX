@@ -11,7 +11,7 @@ import { formatFecha } from "@/components/expedientes/format";
 import api from "@/utils/api";
 import { puedeGestionarAsignaciones } from "@/utils/sesion";
 import BotonAccion from "@/components/common/BotonAccion";
-import { TaskIcon, TimeIcon } from "@/icons";
+import { ClipboardCheckIcon, HistoryIcon } from "@/icons";
 
 interface UsuarioResumen {
   id: number;
@@ -239,14 +239,14 @@ export default function Prorrogas() {
                           {gestiona && p.estado_prorroga === "PENDIENTE" && (
                             <BotonAccion
                               etiqueta="Revisar prórroga"
-                              icono={<TaskIcon className="h-5 w-5" />}
+                              icono={<ClipboardCheckIcon />}
                               tono="alerta"
                               onClick={() => setRevision(p)}
                             />
                           )}
                           <BotonAccion
                             etiqueta="Historial"
-                            icono={<TimeIcon className="h-5 w-5" />}
+                            icono={<HistoryIcon />}
                             onClick={() => setHistorial(p)}
                           />
                         </div>
