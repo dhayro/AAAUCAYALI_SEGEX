@@ -468,6 +468,10 @@ exports.actualizarAccionLlamada = async (req, res) => {
               throw errorConEstado('Esta acción requiere al menos un archivo de avance antes de marcarla como ejecutada');
             }
           }
+          if (!catalogo.requiere_archivo) {
+            const respuesta = req.body.observacion !== undefined ? textoMayuscula(req.body.observacion) : accion.observacion;
+            if (!respuesta) throw errorConEstado('Escriba la respuesta antes de marcar la acción como ejecutada');
+          }
           cambios.fecha_ejecucion = req.body.fecha_ejecucion || new Date().toISOString().slice(0, 10);
           historial.push(['ACCION_EJECUTADA', `Ejecutada: ${catalogo.nombre}`]);
         } else {

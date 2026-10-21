@@ -438,10 +438,19 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
                           </button>
                         )}
                       </div>
-                      {accion.observacion && <div className="text-sm text-gray-600 dark:text-gray-300">{accion.observacion}</div>}
+                      {accion.observacion && accion.accion?.requiere_archivo && (
+                        <div className="text-sm text-gray-600 dark:text-gray-300">{accion.observacion}</div>
+                      )}
+                      {!accion.accion?.requiere_archivo && (
+                        <RespuestaAccion
+                          accion={accion}
+                          puedeEditar={!!puedeOperar && accion.estado !== "EJECUTADO"}
+                          onGuardado={cargar}
+                        />
+                      )}
 
                       <div className="space-y-2">
-                        {(accion.archivos || []).length === 0 && (
+                        {accion.accion?.requiere_archivo && (accion.archivos || []).length === 0 && (
                           <div className="text-xs text-gray-500">Sin archivos de avance.</div>
                         )}
                         {(accion.archivos || []).map((archivo: any) => (
@@ -640,6 +649,90 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
   );
 }
 
+
+// Respuesta escrita para acciones que no piden archivo.
+function RespuestaAccion({ accion, puedeEditar, onGuardado }: { accion: any; puedeEditar: boolean; onGuardado: () => Promise<void> | void }) {
+  const [editando, setEditando] = useState(false);
+  const [texto, setTexto] = useState("");
+  const [guardando, setGuardando] = useState(false);
+
+  const guardar = async () => {
+    if (!texto.trim()) return toast.error("Escriba la respuesta");
+    setGuardando(true);
+    try {
+      await api.patch(`/atenciones/acciones-llamada/${accion.id}`, { observacion: texto });
+      toast.success("Respuesta guardada");
+      setEditando(false);
+      await onGuardado();
+    } catch (error: any) {
+      toast.error(error.response?.data?.mensaje || "No se pudo guardar la respuesta");
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  if (editando) {
+    return (
+      <div className="space-y-2">
+        <textarea
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          rows={3}
+          placeholder="Escriba la respuesta"
+          className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700"
+        />
+        <div className="flex gap-2">
+          <button
+            onClick={guardar}
+            disabled={guardando}
+            className="rounded bg-brand-500 px-3 py-1 text-xs font-semibold text-white hover:bg-brand-600 disabled:opacity-50"
+          >
+            Guardar respuesta
+          </button>
+          <button
+            onClick={() => setEditando(false)}
+            className="rounded border border-gray-300 px-3 py-1 text-xs text-gray-600 dark:border-gray-600 dark:text-gray-300"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (accion.observacion) {
+    return (
+      <div className="flex items-start justify-between gap-3 rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-700/50">
+        <span className="whitespace-pre-wrap break-words text-gray-800 dark:text-gray-100">{accion.observacion}</span>
+        {puedeEditar && (
+          <button
+            onClick={() => {
+              setTexto(accion.observacion);
+              setEditando(true);
+            }}
+            className="shrink-0 text-xs font-semibold text-brand-600 hover:underline dark:text-brand-400"
+          >
+            Editar
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  if (!puedeEditar) return <div className="text-xs text-gray-500">Sin respuesta escrita.</div>;
+
+  return (
+    <button
+      onClick={() => {
+        setTexto("");
+        setEditando(true);
+      }}
+      className="rounded border border-dashed border-gray-400 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-500 dark:text-gray-300 dark:hover:bg-gray-700"
+    >
+      + Escribir respuesta
+    </button>
+  );
+}
 
 function UltimoCambioPlazo({ antecedentes }: { antecedentes: any[] }) {
   const ultimo = antecedentes
