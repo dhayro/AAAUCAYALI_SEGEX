@@ -141,10 +141,10 @@ exports.obtenerUsuarioPorId = async (req, res) => {
 
 exports.crearUsuario = async (req, res) => {
   try {
-    const { password, ...otrosDatos } = req.body;
+    // La contraseña inicial siempre es la predeterminada del sistema; no se toma del formulario.
+    const { password: _ignorada, ...otrosDatos } = req.body;
     const normalizedData = normalizeUsuarioData(otrosDatos);
-    // Si no se indica contraseña, se usa la predeterminada del sistema.
-    const hashedPassword = await bcrypt.hash(password || 'Autoridad1', 10);
+    const hashedPassword = await bcrypt.hash('Autoridad1', 10);
 
     const nuevoUsuario = await Usuario.create({
       ...normalizedData,
