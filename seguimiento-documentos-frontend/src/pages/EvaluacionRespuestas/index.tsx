@@ -55,6 +55,14 @@ const FILTROS_ESTADO = [
   { value: "CERRADA", texto: "Cerradas" },
 ];
 
+const CONTADORES_VACIOS: Record<FilaEvaluable["estado"], number> = {
+  POR_EVALUAR: 0,
+  RESPONDIDA: 0,
+  OBSERVADA: 0,
+  CERRADA: 0,
+  SIN_RESPUESTA: 0,
+};
+
 const CONTADORES: { value: FilaEvaluable["estado"]; texto: string }[] = [
   { value: "POR_EVALUAR", texto: "Por evaluar" },
   { value: "RESPONDIDA", texto: "Respondidas" },
@@ -73,28 +81,30 @@ export default function EvaluacionRespuestas() {
     observacion: "",
   });
   const [enviando, setEnviando] = useState(false);
+  const [contadores, setContadores] = useState<Record<FilaEvaluable["estado"], number>>(CONTADORES_VACIOS);
 
   const fetchFilas = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get("/evaluaciones-asignacion");
-      setFilas(Array.isArray(res.data) ? res.data : []);
+      const res = await api.get("/evaluaciones-asignacion", {
+        params: { estado: filtroEstado || undefined, cut: filtroCut.trim() || undefined },
+      });
+      setFilas(res.data.filas || []);
+      setContadores(res.data.contadores || CONTADORES_VACIOS);
     } catch {
       toast.error("No se pudieron cargar las respuestas para evaluar");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filtroEstado, filtroCut]);
 
+  // Espera un momento al escribir el CUT para no pedir al servidor en cada tecla.
   useEffect(() => {
-    fetchFilas();
+    const espera = setTimeout(fetchFilas, 300);
+    return () => clearTimeout(espera);
   }, [fetchFilas]);
 
-  const filasVisibles = filas.filter(
-    (f) =>
-      (!filtroCut || f.cut.toUpperCase().includes(filtroCut.trim().toUpperCase())) &&
-      (!filtroEstado || f.estado === filtroEstado)
-  );
+  const filasVisibles = filas;
 
   const abrirEvaluacion = (fila: FilaEvaluable) => {
     setFormEvaluacion({ resultado: "APROBADA", observacion: "" });
@@ -110,8 +120,8 @@ export default function EvaluacionRespuestas() {
     }
     setEnviando(true);
     try {
-      const res = await api.post(`/evaluaciones-asignacion/${evaluando.id}`, formEvaluacion);
-      setFilas((prev) => prev.map((f) => (f.id === res.data.id ? res.data : f)));
+      await api.post(`/evaluaciones-asignacion/${evaluando.id}`, formEvaluacion);
+      await fetchFilas();
       toast.success(
         formEvaluacion.resultado === "APROBADA"
           ? "Asignación cerrada"
@@ -142,7 +152,7 @@ export default function EvaluacionRespuestas() {
         <div className="flex flex-wrap gap-2">
           {CONTADORES.map((c) => {
             const activo = filtroEstado === c.value;
-            const cantidad = filas.filter((f) => f.estado === c.value).length;
+            const cantidad = contadores[c.value];
             return (
               <button
                 key={c.value}

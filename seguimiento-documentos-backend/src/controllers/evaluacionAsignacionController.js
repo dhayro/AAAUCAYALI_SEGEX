@@ -49,20 +49,34 @@ const filaEvaluable = (asignacion, resumen) => {
   };
 };
 
+const ESTADOS_LISTADO = ['POR_EVALUAR', 'RESPONDIDA', 'OBSERVADA', 'CERRADA', 'SIN_RESPUESTA'];
+
+// Query: estado (opcional) filtra las filas; cut (opcional) busca por CUT.
+// Devuelve las filas pedidas y el conteo de cada estado (con el mismo CUT).
 exports.listar = async (req, res) => {
   try {
+    const estado = String(req.query.estado || '').trim().toUpperCase();
+    const cut = textoMayuscula(req.query.cut);
+    const contadores = Object.fromEntries(ESTADOS_LISTADO.map((e) => [e, 0]));
+
     const conRespuesta = await RespuestaAsignacion.findAll({ attributes: ['id_asignacion'], raw: true });
     const ids = [...new Set(conRespuesta.map((r) => r.id_asignacion))];
-    if (!ids.length) return res.json([]);
+    if (!ids.length) return res.json({ contadores, filas: [] });
 
+    const where = { id: { [Op.in]: ids }, estado: true };
+    if (cut) where.cut = { [Op.like]: `%${cut}%` };
     const asignaciones = await AsignacionExpediente.findAll({
-      where: { id: { [Op.in]: ids }, estado: true },
+      where,
       include: includeAsignado,
       order: [['id', 'ASC']],
     });
     const resumen = await resumenPorAsignacion(asignaciones.map((a) => a.id));
-    const filas = asignaciones.map((a) => filaEvaluable(a, resumen)).sort(compararFilas);
-    res.json(filas);
+    const todas = asignaciones.map((a) => filaEvaluable(a, resumen));
+    todas.forEach((f) => {
+      contadores[f.estado] += 1;
+    });
+    const filas = (estado ? todas.filter((f) => f.estado === estado) : todas).sort(compararFilas);
+    res.json({ contadores, filas });
   } catch (error) {
     res.status(500).json({ mensaje: error.message });
   }
