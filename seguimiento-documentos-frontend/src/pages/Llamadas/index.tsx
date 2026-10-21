@@ -38,7 +38,7 @@ export default function Llamadas() {
   const [detalleId, setDetalleId] = useState<number | null>(null);
   const [cutAbierto, setCutAbierto] = useState<string | null>(null);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
-  const [filters, setFilters] = useState({ cut: "", respondido: "", plazo: "" });
+  const [filters, setFilters] = useState({ cut: "", respondido: "false", plazo: "" });
   const [totalCount, setTotalCount] = useState(0);
 
   const fetchLlamadas = useCallback(async () => {
