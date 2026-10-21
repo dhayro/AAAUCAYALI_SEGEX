@@ -33,7 +33,7 @@ type NavItem = {
 };
 
 // Menús que ve el perfil personal (además de Perfil, para sus propios datos).
-const MENUS_PERSONAL = ["dashboard", "expedientes", "asignacion-expediente", "llamadas", "profile"];
+const MENUS_PERSONAL = ["dashboard", "asignacion-expediente", "llamadas", "profile"];
 
 const visibleParaPerfil = (items: NavItem[]) => {
   if (perfilActual() === "personal") return items.filter((item) => MENUS_PERSONAL.includes(item.key ?? ""));
