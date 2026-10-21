@@ -1,4 +1,5 @@
 import PageMeta from "@/components/common/PageMeta";
+import ExpedienteDetalleModal from "@/components/expedientes/ExpedienteDetalleModal";
 import { formatFecha, formatFechaHora } from "@/components/expedientes/format";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
@@ -33,6 +34,7 @@ export default function ReporteHistorialCut() {
   const [cut, setCut] = useState("");
   const [cargando, setCargando] = useState(false);
   const [datos, setDatos] = useState<{ cut: string; asignaciones: Asignacion[]; llamadas: number; eventos: Evento[] } | null>(null);
+  const [verExpediente, setVerExpediente] = useState(false);
 
   const consultar = async () => {
     if (!cut.trim()) return toast.error("Escriba el CUT");
@@ -69,6 +71,14 @@ export default function ReporteHistorialCut() {
               placeholder="Ej: 105162-2025"
             />
           </div>
+          {datos && (
+            <button
+              onClick={() => setVerExpediente(true)}
+              className="rounded-lg border border-brand-600 px-4 py-2 font-semibold text-brand-600 hover:bg-brand-50 dark:border-brand-400 dark:text-brand-400"
+            >
+              Ver expediente
+            </button>
+          )}
           <button
             onClick={consultar}
             disabled={cargando}
@@ -147,6 +157,8 @@ export default function ReporteHistorialCut() {
           </>
         )}
       </div>
+
+      {verExpediente && datos && <ExpedienteDetalleModal cut={datos.cut} onClose={() => setVerExpediente(false)} />}
     </>
   );
 }

@@ -44,6 +44,7 @@ import ReporteAcciones from "./pages/ReporteAcciones";
 import ReporteHistorialCut from "./pages/ReporteHistorialCut";
 import ReporteResumen from "./pages/ReporteResumen";
 import MiDesempenoPagina from "./pages/MiDesempeno";
+import ConsultaPersona from "./pages/ConsultaPersona";
 import SISGED from "./pages/SISGED";
 import ImportarSISGED from "./pages/ImportarSISGED";
 import SincronizarDatos from "./pages/SISGED/SincronizarDatos";
@@ -102,6 +103,7 @@ export default function App() {
             <Route path="/reporte-historial" element={<ReporteHistorialCut />} />
             <Route path="/reporte-resumen" element={<ReporteResumen />} />
             <Route path="/mi-desempeno" element={<MiDesempenoPagina />} />
+            <Route path="/consulta-persona" element={<ConsultaPersona />} />
             <Route path="/expedientes" element={<Expedientes />} />
             <Route path="/usuarios" element={<Usuarios />} />
             <Route path="/areas" element={<Areas />} />

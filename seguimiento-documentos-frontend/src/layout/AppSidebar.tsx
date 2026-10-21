@@ -87,12 +87,6 @@ const navItems: NavItem[] = [
     path: "/",
   },
   {
-    icon: <PageIcon fontSize={24} />,
-    name: "Expedientes",
-    key: "expedientes",
-    path: "/expedientes",
-  },
-  {
     icon: <TableIcon fontSize={24} />,
     name: "Asignación de Expediente",
     key: "asignacion-expediente",
@@ -116,6 +110,29 @@ const navItems: NavItem[] = [
     name: "Control de Llamadas",
     key: "llamadas",
     path: "/llamadas",
+  },
+  {
+    icon: <PageIcon fontSize={24} />,
+    name: "Consultas",
+    key: "consultas",
+    gestoresOnly: true,
+    subItems: [
+      {
+        name: "Expedientes",
+        key: "expedientes",
+        path: "/expedientes",
+      },
+      {
+        name: "Buscar por CUT",
+        key: "consulta-cut",
+        path: "/reporte-historial",
+      },
+      {
+        name: "Consulta por persona",
+        key: "consulta-persona",
+        path: "/consulta-persona",
+      },
+    ],
   },
   {
     icon: <PieChartIcon fontSize={24} />,
@@ -156,11 +173,6 @@ const navItems: NavItem[] = [
         name: "Acciones de llamada",
         key: "reporte-acciones",
         path: "/reporte-acciones",
-      },
-      {
-        name: "Historial por CUT",
-        key: "reporte-historial",
-        path: "/reporte-historial",
       },
     ],
   },
