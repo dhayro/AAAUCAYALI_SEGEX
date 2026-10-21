@@ -75,9 +75,28 @@ const idsAccionesValidas = async (acciones) => {
 
 // ---------- Catálogo de acciones ----------
 
+const MENSAJE_NOMBRE_REPETIDO = 'Ya existe una acción con ese nombre';
+
+const esNombreRepetido = (error) => error.name === 'SequelizeUniqueConstraintError';
+
 exports.listarAcciones = async (req, res) => {
   try {
-    const where = parseBoolean(req.query.solo_activas) ? { activo: true } : {};
+    const where = {};
+    if (parseBoolean(req.query.solo_activas)) where.activo = true;
+    if (req.query.filtro) where.nombre = { [Op.like]: `%${textoMayuscula(req.query.filtro)}%` };
+
+    if (req.query.page) {
+      const pagina = parseInt(req.query.page, 10) || 1;
+      const limite = parseInt(req.query.limit, 10) || 10;
+      const { count, rows } = await AccionAtencion.findAndCountAll({
+        where,
+        order: [['nombre', 'ASC']],
+        limit: limite,
+        offset: (pagina - 1) * limite,
+      });
+      return res.json({ acciones: rows, totalAcciones: count, totalPaginas: Math.ceil(count / limite), paginaActual: pagina });
+    }
+
     const acciones = await AccionAtencion.findAll({ where, order: [['nombre', 'ASC']] });
     res.json(acciones);
   } catch (error) {
@@ -96,7 +115,8 @@ exports.crearAccion = async (req, res) => {
     });
     res.status(201).json(nueva);
   } catch (error) {
-    res.status(error.status || 400).json({ mensaje: error.message });
+    const mensaje = esNombreRepetido(error) ? MENSAJE_NOMBRE_REPETIDO : error.message;
+    res.status(error.status || 400).json({ mensaje });
   }
 };
 
@@ -110,7 +130,7 @@ exports.actualizarAccion = async (req, res) => {
     if (!actualizado) return res.status(404).json({ mensaje: 'Acción no encontrada' });
     res.json(await AccionAtencion.findByPk(req.params.id));
   } catch (error) {
-    res.status(400).json({ mensaje: error.message });
+    res.status(400).json({ mensaje: esNombreRepetido(error) ? MENSAJE_NOMBRE_REPETIDO : error.message });
   }
 };
 
