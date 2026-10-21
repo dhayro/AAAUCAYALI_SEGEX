@@ -144,17 +144,17 @@ const othersItems: NavItem[] = [
     path: "/profile",
   },
   {
+    icon: <TableIcon fontSize={24} />,
+    name: "Admin Tokens SISGED",
+    key: "admin-tokens-sisged",
+    path: "/admin-sisged-tokens",
+  },
+  {
     icon: <LogoutIcon fontSize={24} />,
     name: "Cerrar sesión",
     key: "logout",
     path: "/signin",
     cerrarSesion: true,
-  },
-  {
-    icon: <TableIcon fontSize={24} />,
-    name: "Admin Tokens SISGED",
-    key: "admin-tokens-sisged",
-    path: "/admin-sisged-tokens",
   },
 ];
 
@@ -298,7 +298,11 @@ const AppSidebar: React.FC = () => {
                 target={nav.target}
                 onClick={nav.cerrarSesion ? () => localStorage.removeItem("token") : undefined}
                 className={`group menu-item ${
-                  isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
+                  nav.cerrarSesion
+                    ? "font-semibold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                    : isActive(nav.path)
+                    ? "menu-item-active"
+                    : "menu-item-inactive"
                 }`}
               >
                 <span
