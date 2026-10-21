@@ -365,9 +365,18 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio }: Pr
                       {llamada.respondido ? "RESPONDIDO" : "NO RESPONDIDO"}
                     </span>
                     {puedeOperar && (
-                      <button onClick={cambiarRespondido} className="text-xs text-brand-600 underline dark:text-brand-400">
-                        {llamada.respondido ? "Marcar como no respondida" : "Marcar como respondida"}
-                      </button>
+                      <div className="flex flex-col">
+                        <button
+                          onClick={cambiarRespondido}
+                          disabled={!llamada.respondido && (llamada.acciones || []).length === 0}
+                          className="text-xs text-brand-600 underline disabled:text-gray-400 disabled:no-underline dark:text-brand-400"
+                        >
+                          {llamada.respondido ? "Marcar como no respondida" : "Marcar como respondida"}
+                        </button>
+                        {!llamada.respondido && (llamada.acciones || []).length === 0 && (
+                          <span className="text-xs text-gray-500">Registre al menos una acción para poder marcarla</span>
+                        )}
+                      </div>
                     )}
                   </div>
                 </section>

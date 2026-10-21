@@ -238,6 +238,9 @@ exports.crearLlamada = async (req, res) => {
 
     const acciones = Array.isArray(req.body.acciones) ? req.body.acciones : [];
     const idsAcciones = acciones.length ? await idsAccionesValidas(acciones) : [];
+    if (parseBoolean(req.body.respondido) && idsAcciones.length === 0) {
+      throw errorConEstado('Registre al menos una acción antes de marcar la llamada como respondida');
+    }
 
     const expediente = await Expediente.findOne({ where: { cut }, attributes: ['id'] });
 
@@ -293,6 +296,11 @@ exports.actualizarLlamada = async (req, res) => {
     if (req.body.motivo !== undefined) cambios.motivo = textoMayuscula(req.body.motivo);
     if (req.body.fecha_respuesta !== undefined) cambios.fecha_respuesta = req.body.fecha_respuesta || null;
     if (req.body.respondido !== undefined) cambios.respondido = parseBoolean(req.body.respondido);
+
+    if (cambios.respondido === true && !respondidoAnterior) {
+      const acciones = await AccionLlamada.count({ where: { id_llamada: llamada.id } });
+      if (acciones === 0) throw errorConEstado('Registre al menos una acción antes de marcar la llamada como respondida');
+    }
 
     await llamada.update(cambios);
 

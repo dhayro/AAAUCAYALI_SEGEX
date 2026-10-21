@@ -82,7 +82,7 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
       telefono: form.telefono,
       motivo: form.motivo,
       fecha_respuesta: limiteDesde(form.fecha_llamada, form.plazo_dias),
-      respondido: form.respondido,
+      respondido: form.respondido && acciones.length > 0,
       acciones,
     };
     if (gestiona && form.id_responsable) payload.id_responsable = Number(form.id_responsable);
@@ -182,14 +182,20 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
                 </p>
               )}
             </div>
-            <label className="flex items-end gap-2 pb-2 text-sm">
-              <input
-                type="checkbox"
-                checked={form.respondido}
-                onChange={(e) => setForm({ ...form, respondido: e.target.checked })}
-              />
-              Ya se respondió al administrado
-            </label>
+            <div className="flex flex-col justify-end gap-1 pb-2 text-sm">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={form.respondido}
+                  disabled={Object.keys(seleccionadas).length === 0}
+                  onChange={(e) => setForm({ ...form, respondido: e.target.checked })}
+                />
+                Ya se respondió al administrado
+              </label>
+              {Object.keys(seleccionadas).length === 0 && (
+                <span className="text-xs text-gray-500">Seleccione al menos una acción para poder marcarla</span>
+              )}
+            </div>
           </div>
 
           {gestiona && (
