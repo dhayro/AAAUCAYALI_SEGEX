@@ -173,6 +173,7 @@ export default function AsignacionExpediente() {
   const [datosPendientes, setDatosPendientes] = useState<any[]>([]);
   const [filasQuitadas, setFilasQuitadas] = useState<number[]>([]);
   const [confirmandoCarga, setConfirmandoCarga] = useState(false);
+  const [asignadosCut, setAsignadosCut] = useState<Asignacion[]>([]);
 
   const [cutAbierto, setCutAbierto] = useState<string | null>(null);
 
@@ -225,6 +226,22 @@ export default function AsignacionExpediente() {
   useEffect(() => {
     if (showModal) fetchUsuarios();
   }, [showModal, fetchUsuarios]);
+
+  // Mientras se escribe el CUT, muestra si ya está asignado a alguien.
+  useEffect(() => {
+    const cut = formData.cut.trim();
+    if (!showModal || editingId || cut.length < 5) {
+      setAsignadosCut([]);
+      return;
+    }
+    const espera = setTimeout(() => {
+      api
+        .get(`/asignaciones-expediente/por-cut/${encodeURIComponent(cut)}`)
+        .then((res) => setAsignadosCut(Array.isArray(res.data) ? res.data : []))
+        .catch(() => setAsignadosCut([]));
+    }, 400);
+    return () => clearTimeout(espera);
+  }, [formData.cut, showModal, editingId]);
 
   const opcionesUsuarios = usuarios.map((u) => ({
     id: u.id,
@@ -563,6 +580,21 @@ export default function AsignacionExpediente() {
                     placeholder="Ej: 101183-2025"
                     disabled={!!editingId}
                   />
+                  {asignadosCut.length > 0 && (
+                    <div className="mt-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs dark:border-amber-700 dark:bg-amber-900/30">
+                      <div className="font-semibold text-amber-900 dark:text-amber-100">
+                        Este CUT ya está asignado a {asignadosCut.length} persona{asignadosCut.length === 1 ? "" : "s"}:
+                      </div>
+                      <ul className="mt-1 space-y-1 text-amber-900 dark:text-amber-100">
+                        {asignadosCut.map((a) => (
+                          <li key={a.id}>
+                            {nombreUsuario(a.asignado)} · desde {formatFecha(a.fecha_asignacion)} · vence{" "}
+                            {formatFecha(a.fecha_vencimiento)}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <Label>Usuario asignado *</Label>
