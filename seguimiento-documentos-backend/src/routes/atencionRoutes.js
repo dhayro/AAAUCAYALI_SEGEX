@@ -48,6 +48,7 @@ router.post('/llamadas/:id/acciones', authenticateToken, controller.agregarAccio
 router.patch('/acciones-llamada/:id', authenticateToken, controller.actualizarAccionLlamada);
 router.post('/acciones-llamada/:id/archivos', authenticateToken, subirArchivo, controller.subirArchivo);
 router.get('/archivos/:id/descargar', authenticateToken, controller.descargarArchivo);
+router.patch('/archivos/:id', authenticateToken, controller.editarArchivo);
 router.delete('/archivos/:id', authenticateToken, controller.eliminarArchivo);
 
 module.exports = router;

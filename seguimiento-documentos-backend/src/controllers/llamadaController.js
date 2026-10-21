@@ -438,6 +438,31 @@ exports.eliminarArchivo = async (req, res) => {
   }
 };
 
+exports.editarArchivo = async (req, res) => {
+  try {
+    const archivo = await ArchivoAccion.findByPk(req.params.id);
+    if (!archivo) return res.status(404).json({ mensaje: 'Archivo no encontrado' });
+    const { accion, llamada } = await llamadaDeAccion(archivo.id_accion_llamada);
+    if (!accion || !llamada || !puedeVerLlamada(llamada, req.user)) {
+      return res.status(404).json({ mensaje: 'Archivo no encontrado' });
+    }
+    if (!puedeOperarLlamada(llamada, req.user)) {
+      return res.status(403).json({ mensaje: 'Solo el responsable puede editar archivos' });
+    }
+
+    const descripcion = textoMayuscula(req.body.descripcion);
+    if (!descripcion) throw errorConEstado('La descripción no puede quedar vacía');
+    if (descripcion !== archivo.descripcion) {
+      const anterior = archivo.descripcion || '(sin descripción)';
+      await archivo.update({ descripcion });
+      await registrarHistorial(llamada.id, 'ARCHIVO_EDITADO', `${anterior} → ${descripcion}`, req.user.id);
+    }
+    res.json(await obtenerLlamada(llamada.id));
+  } catch (error) {
+    res.status(error.status || 400).json({ mensaje: error.message });
+  }
+};
+
 exports.descargarArchivo = async (req, res) => {
   try {
     const archivo = await ArchivoAccion.findByPk(req.params.id);
