@@ -13,7 +13,6 @@ import {
 } from "../icons";
 import { cn } from "../utils";
 import { perfilActual, puedeGestionarAsignaciones } from "../utils/sesion";
-import SidebarWidget from "./SidebarWidget";
 
 type NavItem = {
   name: string;
@@ -474,7 +473,6 @@ const AppSidebar: React.FC = () => {
           </div>
         </nav>
 
-        {isExpanded || isHovered || isMobileOpen ? <SidebarWidget /> : null}
       </div>
     </aside>
   );
