@@ -1,5 +1,6 @@
 import PageMeta from "@/components/common/PageMeta";
 import DatePickerLima from "@/components/form/DatePickerLima";
+import SearchableSelect from "@/components/form/SearchableSelect";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import { formatFecha, formatFechaHora } from "@/components/expedientes/format";
@@ -91,6 +92,8 @@ export default function ReporteLlamadas() {
   const [cargando, setCargando] = useState(false);
   const [generado, setGenerado] = useState(false);
   const [pagina, setPagina] = useState({ pageIndex: 0, pageSize: 10 });
+  const [usuarios, setUsuarios] = useState<{ id: number; nombre: string; apellido: string; usuario: string; cargo?: string | null }[]>([]);
+  const [atiende, setAtiende] = useState<number | "">("");
   const [filtros, setFiltros] = useState(() => {
     const hoy = hoyYMD();
     return { desde: `${hoy.slice(0, 8)}01`, hasta: hoy, cut: "", plazo: "" };
@@ -104,6 +107,7 @@ export default function ReporteLlamadas() {
       const params: Record<string, string> = { desde: filtros.desde, hasta: filtros.hasta };
       if (filtros.cut.trim()) params.cut = filtros.cut.trim();
       if (filtros.plazo) params.plazo = filtros.plazo;
+      if (atiende !== "") params.id_responsable = String(atiende);
       const res = await api.get("/reportes/llamadas", { params });
       setFilas(res.data.filas || []);
       setTotales(res.data.totales || TOTALES_VACIOS);
@@ -117,7 +121,19 @@ export default function ReporteLlamadas() {
   }, [filtros]);
 
   // Carga inicial con el mes actual; luego el reporte se genera con el botón o al cambiar CUT o situación.
+  const fetchUsuarios = useCallback(async (filtro = "") => {
+    try {
+      const params: Record<string, string | number> = { limit: 10 };
+      if (filtro) params.filtro = filtro;
+      const res = await api.get("/usuarios/select", { params });
+      setUsuarios(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      setUsuarios([]);
+    }
+  }, []);
+
   useEffect(() => {
+    fetchUsuarios();
     generar();
   }, []);
 
@@ -195,7 +211,7 @@ export default function ReporteLlamadas() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 rounded-lg bg-gray-50 p-4 dark:bg-gray-800 md:grid-cols-5">
+        <div className="grid grid-cols-1 gap-4 rounded-lg bg-gray-50 p-4 dark:bg-gray-800 md:grid-cols-6">
           <DatePickerLima label="Desde" value={filtros.desde} onChange={(d) => setFiltros({ ...filtros, desde: d })} placeholder="DD/MM/YYYY" />
           <DatePickerLima label="Hasta" value={filtros.hasta} onChange={(d) => setFiltros({ ...filtros, hasta: d })} placeholder="DD/MM/YYYY" />
           <div>
@@ -215,6 +231,35 @@ export default function ReporteLlamadas() {
                 </option>
               ))}
             </select>
+          </div>
+          <div>
+            <Label>Atiende</Label>
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <SearchableSelect
+                  value={atiende}
+                  onChange={(valor) => setAtiende(Number(valor))}
+                  options={usuarios.map((u) => ({
+                    id: u.id,
+                    nombre: u.cargo ? `${u.nombre} ${u.apellido ?? ""} (${u.cargo})` : `${u.nombre} ${u.apellido ?? ""}`,
+                  }))}
+                  onSearch={(termino) => fetchUsuarios(termino)}
+                  placeholder="Todos · buscar persona"
+                  selectedLabel={(() => {
+                    const u = usuarios.find((x) => x.id === atiende);
+                    return u ? `${u.nombre} ${u.apellido ?? ""}` : "";
+                  })()}
+                />
+              </div>
+              {atiende !== "" && (
+                <button
+                  onClick={() => setAtiende("")}
+                  className="shrink-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+                >
+                  Quitar
+                </button>
+              )}
+            </div>
           </div>
           <div className="flex items-end">
             <button
