@@ -54,6 +54,7 @@ export default function RespuestasAsignacionModal({
   const [procesando, setProcesando] = useState(false);
   const [estado, setEstado] = useState<string | null>(estadoRespuesta);
   const [enviandoRevision, setEnviandoRevision] = useState(false);
+  const [confirmandoEnvio, setConfirmandoEnvio] = useState(false);
   const [editando, setEditando] = useState<{ id: number; descripcion: string } | null>(null);
   const [guardandoEdicion, setGuardandoEdicion] = useState(false);
   const [reemplazando, setReemplazando] = useState<number | null>(null);
@@ -61,9 +62,6 @@ export default function RespuestasAsignacionModal({
   const observacionPendiente = ultimaEvaluacion?.resultado === "OBSERVADA" && estado === "OBSERVADA";
 
   const enviarRevision = async () => {
-    if (!window.confirm("¿Ya terminó de subir su respuesta? Se enviará a evaluación y no podrá volver a marcarla como pendiente.")) {
-      return;
-    }
     setEnviandoRevision(true);
     try {
       const res = await api.post(`/asignaciones-expediente/${asignacion.id}/respuestas/enviar`);
@@ -74,6 +72,7 @@ export default function RespuestasAsignacionModal({
       toast.error(error.response?.data?.mensaje || "No se pudo enviar a evaluación");
     } finally {
       setEnviandoRevision(false);
+      setConfirmandoEnvio(false);
     }
   };
 
@@ -239,7 +238,7 @@ export default function RespuestasAsignacionModal({
                 {puedeEscribir && (
                   <div className="mt-3 flex justify-end">
                     <button
-                      onClick={enviarRevision}
+                      onClick={() => setConfirmandoEnvio(true)}
                       disabled={enviandoRevision}
                       className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
                     >
@@ -429,6 +428,15 @@ export default function RespuestasAsignacionModal({
           }}
         />
       )}
+      <ConfirmDialog
+        abierto={confirmandoEnvio}
+        titulo="Enviar respuesta a evaluación"
+        mensaje="¿Ya terminó de subir su respuesta? Una vez enviada, el gestor la revisará para volver a evaluarla."
+        textoConfirmar="Sí, enviar"
+        procesando={enviandoRevision}
+        onConfirmar={enviarRevision}
+        onCancelar={() => setConfirmandoEnvio(false)}
+      />
     </>
   );
 }
