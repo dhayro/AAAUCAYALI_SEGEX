@@ -163,7 +163,9 @@ exports.cargaMasiva = async (req, res) => {
       });
       const nombrePorId = new Map(usuarios.map((u) => [u.id, `${u.nombre} ${u.apellido}`]));
       previas.forEach((p) => {
-        if (!asignadosPrevios.has(p.cut)) asignadosPrevios.set(p.cut, nombrePorId.get(p.id_usuario) || 'otro usuario');
+        const nombres = asignadosPrevios.get(p.cut) || [];
+        nombres.push(nombrePorId.get(p.id_usuario) || 'otro usuario');
+        asignadosPrevios.set(p.cut, nombres);
       });
     }
     const cutsEnArchivo = new Map();
@@ -201,7 +203,7 @@ exports.cargaMasiva = async (req, res) => {
         mensaje: problemas.length
           ? problemas.join('; ')
           : cut && asignadosPrevios.has(cut)
-          ? `ya asignado a ${asignadosPrevios.get(cut)}`
+          ? `ya asignado a ${[...new Set(asignadosPrevios.get(cut))].join(', ')}`
           : '',
       });
 
