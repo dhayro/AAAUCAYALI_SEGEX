@@ -143,7 +143,8 @@ exports.crearUsuario = async (req, res) => {
   try {
     const { password, ...otrosDatos } = req.body;
     const normalizedData = normalizeUsuarioData(otrosDatos);
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Si no se indica contraseña, se usa la predeterminada del sistema.
+    const hashedPassword = await bcrypt.hash(password || 'Autoridad1', 10);
 
     const nuevoUsuario = await Usuario.create({
       ...normalizedData,

@@ -575,16 +575,18 @@ export default function Usuarios() {
 
                 {!editingId && (
                   <div>
-                    <Label>Contraseña *</Label>
+                    <Label>Contraseña</Label>
                     <Input
                       type="password"
                       value={formData.password}
                       onChange={(e) =>
                         setFormData({ ...formData, password: e.target.value })
                       }
-                      placeholder="Contraseña"
-                      required
+                      placeholder="Autoridad1 por defecto"
                     />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Si la deja vacía, la contraseña será Autoridad1.
+                    </p>
                   </div>
                 )}
 
