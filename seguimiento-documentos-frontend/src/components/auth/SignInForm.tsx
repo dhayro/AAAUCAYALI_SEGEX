@@ -40,17 +40,17 @@ export default function SignInForm() {
           className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
         >
           <ChevronLeftIcon className="size-5 rtl:rotate-180" />
-          Back to dashboard
+          Volver al inicio
         </Link>
       </div>
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center">
         <div>
           <div className="mb-5 sm:mb-8">
             <h1 className="mb-2 text-title-sm font-semibold text-gray-800 sm:text-title-md dark:text-white/90">
-              Sign In
+              Iniciar sesión
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Enter your email and password to sign in!
+              Ingresa tu usuario y contraseña para entrar al sistema.
             </p>
           </div>
           <div>
@@ -100,18 +100,6 @@ export default function SignInForm() {
                 </div>
               </div>
             </form>
-
-            <div className="mt-5">
-              <p className="text-center text-sm font-normal text-gray-700 sm:text-start dark:text-gray-400">
-                ¿No tienes cuenta? {""}
-                <Link
-                  to="/signup"
-                  className="text-brand-500 hover:text-brand-600 dark:text-brand-400"
-                >
-                  Regístrate
-                </Link>
-              </p>
-            </div>
           </div>
         </div>
       </div>

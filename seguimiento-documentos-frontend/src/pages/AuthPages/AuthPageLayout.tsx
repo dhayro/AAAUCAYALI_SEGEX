@@ -19,15 +19,15 @@ export default function AuthLayout({
             <div className="flex max-w-xs flex-col items-center">
               <Link to="/" className="mb-4 block">
                 <img
-                  width={231}
-                  height={48}
-                  src="/images/logo/auth-logo.svg"
-                  alt="Logo"
+                  width={320}
+                  height={84}
+                  src="/images/logo/logo_horizontal.svg"
+                  alt="SEGEX - Autoridad Administrativa del Agua Ucayali"
                 />
               </Link>
 
               <p className="text-center text-gray-400 dark:text-white/60">
-                Free and Open-Source Tailwind CSS Admin Dashboard Template
+                Sistema de seguimiento de expedientes · Autoridad Administrativa del Agua Ucayali
               </p>
             </div>
           </div>
