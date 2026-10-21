@@ -33,7 +33,14 @@ interface ResumenDashboard {
     observadas: number;
     cerradas: number;
   };
-  llamadas: { total: number; sin_respuesta: number; vencidas: number; por_vencer: number; acciones_pendientes: number };
+  llamadas: {
+    total: number;
+    respondidas: number;
+    sin_respuesta: number;
+    vencidas: number;
+    por_vencer: number;
+    acciones_pendientes: number;
+  };
   atencion: { id: number | string; cut: string; asignado: string | null; vence: string; dias: number; motivo: Motivo }[];
 }
 
@@ -172,7 +179,7 @@ export default function Inicio() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
               <Tarjeta
                 titulo="Llamadas vencidas"
                 valor={resumen.llamadas.vencidas}
