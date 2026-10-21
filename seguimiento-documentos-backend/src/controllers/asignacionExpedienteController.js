@@ -1,4 +1,5 @@
 const { Op } = require('sequelize');
+const sequelize = require('../config/database');
 const AsignacionExpediente = require('../models/AsignacionExpediente');
 const HistorialAsignacion = require('../models/HistorialAsignacion');
 const Usuario = require('../models/Usuario');
@@ -134,6 +135,79 @@ exports.crear = async (req, res) => {
     res.status(201).json(await obtenerConRelaciones(nueva.id));
   } catch (error) {
     res.status(400).json({ mensaje: error.message });
+  }
+};
+
+const MAX_CARGA_MASIVA = 500;
+
+// Carga masiva desde la plantilla Excel. Valida todas las filas antes de crear: si una falla, no se crea ninguna.
+exports.cargaMasiva = async (req, res) => {
+  try {
+    const filas = Array.isArray(req.body.filas) ? req.body.filas : [];
+    if (filas.length === 0) return res.status(400).json({ mensaje: 'El archivo no tiene filas para cargar' });
+    if (filas.length > MAX_CARGA_MASIVA) {
+      return res.status(400).json({ mensaje: `Máximo ${MAX_CARGA_MASIVA} filas por carga` });
+    }
+
+    const usuarios = await Usuario.findAll({ where: { estado: true }, attributes: ['id', 'usuario'] });
+    const idPorLogin = new Map(usuarios.map((u) => [String(u.usuario).trim().toLowerCase(), u.id]));
+
+    const errores = [];
+    const validas = [];
+    filas.forEach((f, i) => {
+      const fila = i + 2; // la fila 1 del Excel es el encabezado
+      const cut = normalizarTexto(f.cut);
+      const login = String(f.usuario ?? '').trim().toLowerCase();
+      const idUsuario = idPorLogin.get(login);
+      const plazo = parseInt(f.plazo, 10);
+      const fecha = f.fecha ? String(f.fecha).trim().slice(0, 10) : hoyLima();
+
+      const problemas = [];
+      if (!cut) problemas.push('CUT vacío');
+      if (!idUsuario) problemas.push(`usuario "${f.usuario ?? ''}" no existe o está inactivo`);
+      if (isNaN(plazo) || plazo < 1) problemas.push('el plazo debe ser un número mayor a 0');
+      if (!esFechaValida(fecha)) problemas.push('la fecha debe tener formato AAAA-MM-DD');
+
+      if (problemas.length) {
+        errores.push({ fila, mensaje: problemas.join('; ') });
+      } else {
+        validas.push({
+          cut,
+          id_usuario: idUsuario,
+          plazo_atencion: plazo,
+          fecha_asignacion: fecha,
+          fecha_vencimiento: sumarDiasCalendario(fecha, plazo),
+          observacion: normalizarTexto(f.observacion),
+          numero_orden: normalizarTexto(f.numero_orden),
+        });
+      }
+    });
+
+    if (errores.length) {
+      return res.status(400).json({
+        mensaje: 'Corrija las filas indicadas y vuelva a cargar el archivo. No se creó ninguna asignación.',
+        errores,
+      });
+    }
+
+    await sequelize.transaction(async (t) => {
+      for (const v of validas) {
+        await AsignacionExpediente.create(
+          {
+            ...v,
+            id_expediente: null,
+            estado: true,
+            id_usuario_creador: req.user.id,
+            id_usuario_modificador: req.user.id,
+          },
+          { transaction: t }
+        );
+      }
+    });
+
+    res.status(201).json({ creadas: validas.length });
+  } catch (error) {
+    res.status(500).json({ mensaje: error.message });
   }
 };
 

@@ -167,6 +167,7 @@ router.get('/:id/historial', authenticateToken, controller.obtenerHistorial);
 router.post('/prorroga-masiva/solicitar', authenticateToken, isSecretariaOrAbove, controller.prorrogarMasivo);
 router.post('/prorroga-masiva/aceptar', authenticateToken, isSecretariaOrAbove, controller.aceptarProrrogaMasivo);
 router.post('/prorroga-masiva/rechazar', authenticateToken, isSecretariaOrAbove, controller.rechazarProrrogaMasivo);
+router.post('/carga-masiva', authenticateToken, isSecretariaOrAbove, controller.cargaMasiva);
 
 /**
  * @swagger
