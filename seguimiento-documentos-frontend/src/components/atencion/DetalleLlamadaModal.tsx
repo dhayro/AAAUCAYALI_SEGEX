@@ -390,7 +390,7 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio }: Pr
                         {(accion.archivos || []).map((archivo: any) => (
                           <div key={archivo.id} className="flex flex-wrap items-center gap-3 rounded-lg bg-gray-50 p-2 dark:bg-gray-700/50">
                             <div className="min-w-0 flex-1">
-                              {editandoArchivo?.id === archivo.id ? (
+                              {editandoArchivo && editandoArchivo.id === archivo.id ? (
                                 <div className="flex items-center gap-2">
                                   <Input
                                     value={editandoArchivo.valor}
