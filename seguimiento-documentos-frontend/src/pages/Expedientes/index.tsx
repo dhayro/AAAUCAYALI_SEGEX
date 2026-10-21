@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import ExpedienteDetalleModal from "@/components/expedientes/ExpedienteDetalleModal";
+import AsignadoExpedienteModal from "@/components/asignaciones/AsignadoExpedienteModal";
 import { formatFechaHora } from "@/components/expedientes/format";
 import api from "@/utils/api";
 
@@ -23,6 +24,7 @@ export default function Expedientes() {
   const [expedientes, setExpedientes] = useState<Expediente[]>([]);
   const [loading, setLoading] = useState(true);
   const [cutAbierto, setCutAbierto] = useState<string | null>(null);
+  const [cutAsignado, setCutAsignado] = useState<string | null>(null);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [filters, setFilters] = useState({ filtro: "" });
   const [totalCount, setTotalCount] = useState(0);
@@ -99,6 +101,7 @@ export default function Expedientes() {
                     <th className="px-6 py-4 text-start text-sm font-semibold">Procedimiento</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">TUPA</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Fecha de creación</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold">Asignado</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -132,6 +135,14 @@ export default function Expedientes() {
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-center text-sm">
                         {formatFechaHora(exp.feccrea)}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <button
+                          onClick={() => setCutAsignado(exp.cut)}
+                          className="rounded border border-brand-600 px-2 py-1 text-xs font-semibold text-brand-600 hover:bg-brand-50 dark:border-brand-400 dark:text-brand-400 dark:hover:bg-gray-700"
+                        >
+                          Ver asignado
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -180,6 +191,10 @@ export default function Expedientes() {
           )}
         </div>
       </div>
+
+      {cutAsignado && (
+        <AsignadoExpedienteModal cut={cutAsignado} onClose={() => setCutAsignado(null)} />
+      )}
 
       {cutAbierto && (
         <ExpedienteDetalleModal cut={cutAbierto} onClose={() => setCutAbierto(null)} />
