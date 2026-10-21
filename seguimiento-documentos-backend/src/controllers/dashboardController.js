@@ -134,7 +134,7 @@ exports.resumen = async (req, res) => {
       llamadas: {
         total: llamadas.length,
         respondidas: llamadas.filter((l) => l.respondido).length,
-        sin_respuesta: sinResponder.length,
+        sin_respuesta: llamadas.filter((l) => !l.respondido).length,
         vencidas: llamadasVencidas.length,
         por_vencer: llamadasPorVencer.length,
         acciones_pendientes: accionesPendientes,
