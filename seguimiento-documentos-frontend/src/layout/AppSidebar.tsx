@@ -92,6 +92,12 @@ const navItems: NavItem[] = [
     path: "/asignacion-expediente",
   },
   {
+    icon: <TableIcon fontSize={24} />,
+    name: "Prórrogas",
+    key: "prorrogas",
+    path: "/prorrogas",
+  },
+  {
     icon: <ListIcon fontSize={24} />,
     name: "Maestros",
     key: "maestros",

@@ -27,6 +27,7 @@ import Cargos from "./pages/Cargos";
 import TiposDocumentos from "./pages/TiposDocumentos";
 import Procedimientos from "./pages/Procedimientos";
 import AsignacionExpediente from "./pages/AsignacionExpediente";
+import Prorrogas from "./pages/Prorrogas";
 import DocumentosNoAsignados from "./pages/DocumentosNoAsignados";
 import DocumentosProrroga from "./pages/DocumentosProrroga";
 import DocumentosRespuestas from "./pages/DocumentosRespuestas";
@@ -80,6 +81,7 @@ export default function App() {
             <Route path="/tipos-documentos" element={<TiposDocumentos />} />
             <Route path="/procedimientos" element={<Procedimientos />} />
             <Route path="/asignacion-expediente" element={<AsignacionExpediente />} />
+            <Route path="/prorrogas" element={<Prorrogas />} />
 
             {/* Others Page */}
             <Route path="/profile" element={<UserProfiles />} />

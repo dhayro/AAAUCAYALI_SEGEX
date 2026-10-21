@@ -6,6 +6,7 @@ import Label from "@/components/form/Label";
 import DatePickerLima from "@/components/form/DatePickerLima";
 import SearchableSelect from "@/components/form/SearchableSelect";
 import ExpedienteDetalleModal from "@/components/expedientes/ExpedienteDetalleModal";
+import HistorialAsignacionModal from "@/components/asignaciones/HistorialAsignacionModal";
 import { formatFecha } from "@/components/expedientes/format";
 import api from "@/utils/api";
 import { PencilIcon, TrashBinIcon, PlusIcon, CloseIcon } from "@/icons";
@@ -81,11 +82,6 @@ const ESTADO_PRORROGA: Record<string, { texto: string; clases: string }> = {
   RECHAZADA: { texto: "Rechazada", clases: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100" },
 };
 
-const ETIQUETA_EVENTO: Record<string, string> = {
-  SOLICITUD_PRORROGA: "Solicitud de prórroga",
-  PRORROGA_ACEPTADA: "Prórroga aceptada",
-  PRORROGA_RECHAZADA: "Prórroga rechazada",
-};
 
 const DiasRestantes = ({ a }: { a: Asignacion }) => {
   const vence = vencimientoVigente(a);
@@ -117,11 +113,7 @@ export default function AsignacionExpediente() {
 
   const [prorrogaTarget, setProrrogaTarget] = useState<Asignacion | null>(null);
   const [prorrogaData, setProrrogaData] = useState({ plazo: "" });
-  const [revisionTarget, setRevisionTarget] = useState<Asignacion | null>(null);
-  const [revisionData, setRevisionData] = useState({ plazo: "", observacion: "" });
   const [historialTarget, setHistorialTarget] = useState<Asignacion | null>(null);
-  const [historialRows, setHistorialRows] = useState<any[]>([]);
-  const [historialCargando, setHistorialCargando] = useState(false);
 
   const [cutAbierto, setCutAbierto] = useState<string | null>(null);
 
@@ -278,57 +270,8 @@ export default function AsignacionExpediente() {
     }
   };
 
-  const handleOpenRevision = (asignacion: Asignacion) => {
-    setRevisionTarget(asignacion);
-    setRevisionData({ plazo: String(asignacion.plazo_prorroga ?? ""), observacion: "" });
-  };
-
-  const handleAceptarProrroga = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!revisionTarget) return;
-    if (!revisionData.plazo || Number(revisionData.plazo) < 1) {
-      toast.error("El plazo de prórroga debe ser un número mayor a 0");
-      return;
-    }
-    try {
-      await api.patch(`/asignaciones-expediente/${revisionTarget.id}/prorroga/aceptar`, {
-        plazo_prorroga: Number(revisionData.plazo),
-        observacion: revisionData.observacion,
-      });
-      toast.success("Prórroga aceptada");
-      setRevisionTarget(null);
-      await fetchAsignaciones();
-    } catch (error: any) {
-      toast.error(error.response?.data?.mensaje || "Error al aceptar la prórroga");
-    }
-  };
-
-  const handleRechazarProrroga = async () => {
-    if (!revisionTarget) return;
-    try {
-      await api.patch(`/asignaciones-expediente/${revisionTarget.id}/prorroga/rechazar`, {
-        observacion: revisionData.observacion,
-      });
-      toast.success("Prórroga rechazada");
-      setRevisionTarget(null);
-      await fetchAsignaciones();
-    } catch (error: any) {
-      toast.error(error.response?.data?.mensaje || "Error al rechazar la prórroga");
-    }
-  };
-
-  const handleOpenHistorial = async (asignacion: Asignacion) => {
+  const handleOpenHistorial = (asignacion: Asignacion) => {
     setHistorialTarget(asignacion);
-    setHistorialRows([]);
-    setHistorialCargando(true);
-    try {
-      const res = await api.get(`/asignaciones-expediente/${asignacion.id}/historial`);
-      setHistorialRows(res.data || []);
-    } catch (error: any) {
-      toast.error("Error al cargar el historial");
-    } finally {
-      setHistorialCargando(false);
-    }
   };
 
   const handleDelete = async (id: number) => {
@@ -533,118 +476,12 @@ export default function AsignacionExpediente() {
           </div>
         )}
 
-        {/* Modal revisar prórroga */}
-        {revisionTarget && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
-            <form
-              onSubmit={handleAceptarProrroga}
-              className="w-full max-w-md space-y-4 rounded-lg bg-white p-6 shadow-2xl dark:bg-gray-800"
-            >
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  Revisar prórroga — {revisionTarget.cut}
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => setRevisionTarget(null)}
-                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400"
-                >
-                  <CloseIcon className="h-6 w-6" />
-                </button>
-              </div>
-              <div className="rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-700/50">
-                <div>
-                  Solicitada el <strong>{formatFecha(revisionTarget.fecha_prorroga)}</strong> por{" "}
-                  <strong>{revisionTarget.plazo_prorroga}</strong> días calendario.
-                </div>
-                <div className="mt-1 text-gray-600 dark:text-gray-300">
-                  Vencimiento actual: {formatFecha(revisionTarget.fecha_vencimiento)}
-                </div>
-              </div>
-              <div>
-                <Label>Días de prórroga a aceptar *</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={revisionData.plazo}
-                  onChange={(e) => setRevisionData({ ...revisionData, plazo: e.target.value })}
-                />
-                <p className="mt-1 text-xs text-gray-500">Puedes cambiar los días antes de aceptar.</p>
-              </div>
-              <div>
-                <Label>Observación</Label>
-                <textarea
-                  value={revisionData.observacion}
-                  onChange={(e) => setRevisionData({ ...revisionData, observacion: e.target.value })}
-                  rows={2}
-                  placeholder="Motivo o comentario (opcional)"
-                  className="w-full rounded border border-gray-300 bg-white px-3 py-2 dark:border-gray-600 dark:bg-gray-700"
-                />
-              </div>
-              <div className="flex gap-3 border-t pt-4 dark:border-gray-700">
-                <button type="submit" className="flex-1 rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700">
-                  Aceptar prórroga
-                </button>
-                <button
-                  type="button"
-                  onClick={handleRechazarProrroga}
-                  className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
-                >
-                  Rechazar
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* Modal historial */}
         {historialTarget && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900/50 p-4">
-            <div className="flex max-h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-gray-800">
-              <div className="flex items-center gap-3 bg-brand-600 px-5 py-3 text-white">
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-white/70">Historial</span>
-                <h2 className="text-lg font-bold">{historialTarget.cut}</h2>
-                <button
-                  onClick={() => setHistorialTarget(null)}
-                  className="ml-auto rounded-full p-1 text-white/80 hover:bg-white/20 hover:text-white"
-                >
-                  <CloseIcon className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="overflow-auto">
-                {historialCargando && (
-                  <div className="p-10 text-center text-sm text-gray-500">Cargando historial...</div>
-                )}
-                {!historialCargando && historialRows.length === 0 && (
-                  <div className="p-10 text-center text-sm text-gray-500">Esta asignación no tiene eventos de prórroga.</div>
-                )}
-                {!historialCargando && historialRows.length > 0 && (
-                  <table className="w-full text-sm">
-                    <thead className="sticky top-0 bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-700 dark:text-gray-300">
-                      <tr>
-                        <th className="px-4 py-2 text-start">Fecha</th>
-                        <th className="px-4 py-2 text-start">Evento</th>
-                        <th className="px-4 py-2 text-center">Días</th>
-                        <th className="px-4 py-2 text-start">Usuario</th>
-                        <th className="px-4 py-2 text-start">Observación</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                      {historialRows.map((h) => (
-                        <tr key={h.id}>
-                          <td className="whitespace-nowrap px-4 py-2">{formatFecha(h.fecha_evento)}</td>
-                          <td className="px-4 py-2 font-semibold">{ETIQUETA_EVENTO[h.tipo] || h.tipo}</td>
-                          <td className="px-4 py-2 text-center">{h.plazo ?? "—"}</td>
-                          <td className="px-4 py-2">{h.usuario ? `${h.usuario.nombre} ${h.usuario.apellido}` : "—"}</td>
-                          <td className="px-4 py-2 text-gray-600 dark:text-gray-300">{h.observacion || "—"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </div>
-          </div>
+          <HistorialAsignacionModal
+            asignacionId={historialTarget.id}
+            cut={historialTarget.cut}
+            onClose={() => setHistorialTarget(null)}
+          />
         )}
 
         {cutAbierto && (
@@ -728,14 +565,6 @@ export default function AsignacionExpediente() {
                               className="rounded border border-blue-600 px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-400"
                             >
                               Prórroga
-                            </button>
-                          )}
-                          {a.estado_prorroga === "PENDIENTE" && (
-                            <button
-                              onClick={() => handleOpenRevision(a)}
-                              className="rounded bg-amber-500 px-2 py-1 text-xs font-semibold text-white hover:bg-amber-600"
-                            >
-                              Revisar
                             </button>
                           )}
                           <button
