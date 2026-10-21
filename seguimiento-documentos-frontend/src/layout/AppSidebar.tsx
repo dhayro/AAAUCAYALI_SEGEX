@@ -150,6 +150,12 @@ const othersItems: NavItem[] = [
     path: "/signin",
     cerrarSesion: true,
   },
+  {
+    icon: <TableIcon fontSize={24} />,
+    name: "Admin Tokens SISGED",
+    key: "admin-tokens-sisged",
+    path: "/admin-sisged-tokens",
+  },
 ];
 
 const AppSidebar: React.FC = () => {
