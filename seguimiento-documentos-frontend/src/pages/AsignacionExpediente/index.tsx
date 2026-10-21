@@ -540,7 +540,7 @@ export default function AsignacionExpediente() {
 
         {/* Modal crear / editar */}
         {showModal && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+          <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/50 p-4">
             <div className="w-full max-w-lg rounded-lg bg-white shadow-2xl dark:bg-gray-800 max-h-[90vh] flex flex-col">
               <div className="flex items-center justify-between border-b p-6 dark:border-gray-700">
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -635,7 +635,7 @@ export default function AsignacionExpediente() {
 
         {/* Modal prórroga */}
         {prorrogaTarget && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+          <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/50 p-4">
             <div className="w-full max-w-md rounded-lg bg-white shadow-2xl dark:bg-gray-800">
               <div className="flex items-center justify-between border-b p-6 dark:border-gray-700">
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -752,7 +752,7 @@ export default function AsignacionExpediente() {
         )}
 
         {vistaPrevia && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+          <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/50 p-4">
             <div className="flex max-h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl dark:bg-gray-800">
               <div className="border-b p-5 dark:border-gray-700">
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Vista previa de la carga</h2>
