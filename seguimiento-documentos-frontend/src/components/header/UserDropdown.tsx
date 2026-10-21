@@ -1,8 +1,9 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { useClickOutside } from "@/hooks/useClickOutside";
 import { LogoutIcon, UserCircleIcon } from "@/icons";
-import { nombreActual, perfilActual } from "@/utils/sesion";
+import api from "@/utils/api";
+import { nombreActual, perfilActual, usuarioActualId } from "@/utils/sesion";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 
 const PERFIL_TEXTO: Record<string, string> = {
@@ -17,11 +18,21 @@ const ITEM =
 
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
+  const [datos, setDatos] = useState<{ cargo?: string | null; email?: string | null }>({});
   const ref = useRef<HTMLDivElement>(null);
   const nombre = nombreActual() || "Usuario";
   const perfil = PERFIL_TEXTO[perfilActual() ?? ""] ?? "";
 
   useClickOutside(ref, () => setIsOpen(false));
+
+  useEffect(() => {
+    const id = usuarioActualId();
+    if (!id) return;
+    api
+      .get(`/usuarios/${id}`)
+      .then((res) => setDatos({ cargo: res.data.cargo, email: res.data.email }))
+      .catch(() => setDatos({}));
+  }, []);
 
   const cerrarSesion = () => {
     localStorage.removeItem("token");
@@ -57,7 +68,9 @@ export default function UserDropdown() {
       >
         <div className="px-3 pb-3">
           <span className="block text-sm font-semibold text-gray-800 dark:text-gray-100">{nombre}</span>
-          {perfil && <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">{perfil}</span>}
+          {datos.cargo && <span className="mt-0.5 block text-xs font-medium text-gray-600 dark:text-gray-300">{datos.cargo}</span>}
+          {perfil && <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">Perfil: {perfil}</span>}
+          {datos.email && <span className="mt-0.5 block truncate text-xs text-gray-500 dark:text-gray-400">{datos.email}</span>}
         </div>
 
         <ul className="flex flex-col gap-1 border-t border-gray-200 pt-3 dark:border-gray-800">
