@@ -9,6 +9,7 @@ import ExpedienteDetalleModal from "@/components/expedientes/ExpedienteDetalleMo
 import { SearchIcon } from "@/icons";
 import { colorUsuario } from "@/utils/colorUsuario";
 import { formatFecha, formatFechaHora } from "@/components/expedientes/format";
+import { BadgePlazo } from "@/components/atencion/EditorPlazo";
 import api from "@/utils/api";
 
 interface Llamada {
@@ -37,7 +38,7 @@ export default function Llamadas() {
   const [detalleId, setDetalleId] = useState<number | null>(null);
   const [cutAbierto, setCutAbierto] = useState<string | null>(null);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
-  const [filters, setFilters] = useState({ cut: "", respondido: "" });
+  const [filters, setFilters] = useState({ cut: "", respondido: "", plazo: "" });
   const [totalCount, setTotalCount] = useState(0);
 
   const fetchLlamadas = useCallback(async () => {
@@ -46,6 +47,7 @@ export default function Llamadas() {
       const params: any = { page: pagination.pageIndex + 1, limit: pagination.pageSize };
       if (filters.cut) params.cut = filters.cut;
       if (filters.respondido) params.respondido = filters.respondido;
+      if (filters.plazo) params.plazo = filters.plazo;
       const response = await api.get("/atenciones/llamadas", { params });
       setLlamadas(response.data.llamadas || []);
       setTotalCount(response.data.totalLlamadas || 0);
@@ -89,7 +91,7 @@ export default function Llamadas() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 rounded-lg bg-gray-50 p-4 dark:bg-gray-800 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 rounded-lg bg-gray-50 p-4 dark:bg-gray-800 md:grid-cols-3">
           <div>
             <Label>Buscar por CUT</Label>
             <Input name="cut" value={filters.cut} onChange={handleFilterChange} placeholder="Ej: 163943-2026" />
@@ -100,6 +102,14 @@ export default function Llamadas() {
               <option value="">Todas</option>
               <option value="false">No respondidas</option>
               <option value="true">Respondidas</option>
+            </select>
+          </div>
+          <div>
+            <Label>Plazo de respuesta</Label>
+            <select name="plazo" value={filters.plazo} onChange={handleFilterChange} className={selectClass}>
+              <option value="">Todos</option>
+              <option value="VENCIDAS">Vencidas</option>
+              <option value="POR_VENCER">Por vencer (2 días)</option>
             </select>
           </div>
         </div>
@@ -120,7 +130,7 @@ export default function Llamadas() {
                     <th className="px-6 py-4 text-center text-sm font-semibold">Fecha y hora</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">Quien llama</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">Motivo</th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold">Fecha respuesta</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold">Plazo de respuesta</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Respondido</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">Registrada por</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">Atiende</th>
@@ -155,7 +165,12 @@ export default function Llamadas() {
                       <td className="max-w-xs px-6 py-4 text-sm">
                         <div className="line-clamp-2 whitespace-pre-wrap break-words" title={l.motivo}>{l.motivo}</div>
                       </td>
-                      <td className="whitespace-nowrap px-6 py-4 text-center text-sm">{formatFecha(l.fecha_respuesta)}</td>
+                      <td className="whitespace-nowrap px-6 py-4 text-center text-sm">
+                        <div>{formatFecha(l.fecha_respuesta)}</div>
+                        <div className="mt-1">
+                          <BadgePlazo respondido={l.respondido} fechaLimite={l.fecha_respuesta} />
+                        </div>
+                      </td>
                       <td className="px-6 py-4 text-center">
                         <span
                           className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${

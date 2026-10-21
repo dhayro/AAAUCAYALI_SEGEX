@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
-import DatePickerLima from "@/components/form/DatePickerLima";
+import { fechaLegible, limiteDesde } from "@/components/atencion/plazo";
 import SearchableSelect from "@/components/form/SearchableSelect";
 import api from "@/utils/api";
 import { puedeGestionarAsignaciones } from "@/utils/sesion";
@@ -37,7 +37,7 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
     nombre_llamante: "",
     telefono: "",
     motivo: "",
-    fecha_respuesta: "",
+    plazo_dias: "",
     respondido: false,
     id_responsable: "",
   });
@@ -81,7 +81,7 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
       nombre_llamante: form.nombre_llamante,
       telefono: form.telefono,
       motivo: form.motivo,
-      fecha_respuesta: form.fecha_respuesta || null,
+      fecha_respuesta: limiteDesde(form.fecha_llamada, form.plazo_dias),
       respondido: form.respondido,
       acciones,
     };
@@ -167,12 +167,21 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
           </div>
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <DatePickerLima
-              label="Fecha de respuesta al administrado"
-              value={form.fecha_respuesta}
-              onChange={(date) => setForm({ ...form, fecha_respuesta: date })}
-              placeholder="DD/MM/YYYY"
-            />
+            <div>
+              <Label>Plazo para responder al administrado (días)</Label>
+              <Input
+                type="number"
+                min={0}
+                value={form.plazo_dias}
+                onChange={(e) => setForm({ ...form, plazo_dias: e.target.value })}
+                placeholder="Ej: 5"
+              />
+              {limiteDesde(form.fecha_llamada, form.plazo_dias) && (
+                <p className="mt-1 text-xs text-gray-500">
+                  Límite: {fechaLegible(limiteDesde(form.fecha_llamada, form.plazo_dias))}
+                </p>
+              )}
+            </div>
             <label className="flex items-end gap-2 pb-2 text-sm">
               <input
                 type="checkbox"

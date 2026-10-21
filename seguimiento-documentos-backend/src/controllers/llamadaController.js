@@ -8,6 +8,7 @@ const ArchivoAccion = require('../models/ArchivoAccion');
 const HistorialLlamada = require('../models/HistorialLlamada');
 const Expediente = require('../models/Expediente');
 const Usuario = require('../models/Usuario');
+const { hoyLima, sumarDiasCalendario } = require('../utils/fechas');
 
 const CARPETA_ARCHIVOS = path.join(__dirname, '../../uploads/atenciones');
 fs.mkdirSync(CARPETA_ARCHIVOS, { recursive: true });
@@ -158,6 +159,15 @@ exports.listarLlamadas = async (req, res) => {
     if (req.query.cut) where.cut = { [Op.like]: `%${textoMayuscula(req.query.cut)}%` };
     if (req.query.respondido !== undefined && req.query.respondido !== '') {
       where.respondido = parseBoolean(req.query.respondido);
+    }
+    // Plazo: VENCIDAS = sin respuesta con fecha límite ya pasada; POR_VENCER = vence en los próximos 2 días.
+    const hoy = hoyLima();
+    if (req.query.plazo === 'VENCIDAS') {
+      where.respondido = false;
+      where.fecha_respuesta = { [Op.lt]: hoy };
+    } else if (req.query.plazo === 'POR_VENCER') {
+      where.respondido = false;
+      where.fecha_respuesta = { [Op.between]: [hoy, sumarDiasCalendario(hoy, 2)] };
     }
     if (!esGestor(req.user)) {
       where[Op.or] = [{ id_responsable: req.user.id }, { id_usuario_creador: req.user.id }];

@@ -8,6 +8,7 @@ import { formatFecha, formatFechaHora } from "@/components/expedientes/format";
 import api from "@/utils/api";
 import { puedeGestionarAsignaciones, usuarioActualId } from "@/utils/sesion";
 import { CloseIcon } from "@/icons";
+import { BadgePlazo, EditorPlazo } from "@/components/atencion/EditorPlazo";
 import { colorUsuario } from "@/utils/colorUsuario";
 
 type Props = {
@@ -330,8 +331,17 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio }: Pr
                     <div className="text-xs text-gray-500">{llamada.telefono || "Sin teléfono"}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500">Fecha de respuesta</div>
+                    <div className="text-xs text-gray-500">Plazo de respuesta</div>
                     <div className="font-semibold">{formatFecha(llamada.fecha_respuesta)}</div>
+                    <div className="mt-1">
+                      <BadgePlazo respondido={llamada.respondido} fechaLimite={llamada.fecha_respuesta} />
+                    </div>
+                    <EditorPlazo
+                      llamadaId={llamadaId}
+                      fechaLlamada={llamada.fecha_llamada}
+                      respondido={llamada.respondido}
+                      onGuardado={cargar}
+                    />
                   </div>
                   <div className="md:col-span-2">
                     <div className="text-xs text-gray-500">Motivo</div>
