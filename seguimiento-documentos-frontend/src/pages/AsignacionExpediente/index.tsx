@@ -152,6 +152,8 @@ export default function AsignacionExpediente() {
     filas: any[];
     errores: { fila: number; mensaje: string }[];
     total: number;
+    listas: number;
+    omitidas: number;
   } | null>(null);
   const [datosPendientes, setDatosPendientes] = useState<any[]>([]);
   const [confirmandoCarga, setConfirmandoCarga] = useState(false);
@@ -287,7 +289,8 @@ export default function AsignacionExpediente() {
     setConfirmandoCarga(true);
     try {
       const res = await api.post("/asignaciones-expediente/carga-masiva", { filas: datosPendientes, confirmar: true });
-      toast.success(`Se crearon ${res.data.creadas} asignaciones`);
+      const omitidas = res.data.omitidas ? ` · ${res.data.omitidas} omitida(s) por ya estar asignadas` : "";
+      toast.success(`Se crearon ${res.data.creadas} asignaciones${omitidas}`);
       setVistaPrevia(null);
       setDatosPendientes([]);
       await fetchAsignaciones();
@@ -709,18 +712,18 @@ export default function AsignacionExpediente() {
 
         {vistaPrevia && (
           <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
-            <div className="flex max-h-[90vh] w-full max-w-5xl flex-col rounded-lg bg-white shadow-2xl dark:bg-gray-800">
+            <div className="flex max-h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl dark:bg-gray-800">
               <div className="border-b p-5 dark:border-gray-700">
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Vista previa de la carga</h2>
                 <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                  {vistaPrevia.total} fila{vistaPrevia.total === 1 ? "" : "s"} · {vistaPrevia.filas.length - vistaPrevia.errores.length} lista
-                  {vistaPrevia.filas.length - vistaPrevia.errores.length === 1 ? "" : "s"} · {vistaPrevia.errores.length} con error
+                  {vistaPrevia.listas} lista{vistaPrevia.listas === 1 ? "" : "s"} · {vistaPrevia.omitidas} omitida
+                  {vistaPrevia.omitidas === 1 ? "" : "s"} (ya asignadas) · {vistaPrevia.errores.length} con error
                   {vistaPrevia.errores.length > 0 && " · corrija el archivo y vuelva a cargarlo para poder confirmar"}
                 </p>
               </div>
 
-              <div className="overflow-auto p-5">
-                <table className="w-full text-sm">
+              <div className="min-h-0 flex-1 overflow-auto p-5">
+                <table className="min-w-[900px] w-full text-sm">
                   <thead className="sticky top-0 bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-700 dark:text-gray-300">
                     <tr>
                       <th className="px-3 py-2 text-start">Fila</th>
@@ -735,7 +738,16 @@ export default function AsignacionExpediente() {
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                     {vistaPrevia.filas.map((f) => (
-                      <tr key={f.fila} className={f.problemas ? "bg-red-50 dark:bg-red-900/20" : ""}>
+                      <tr
+                        key={f.fila}
+                        className={
+                          f.estado === "ERROR"
+                            ? "bg-red-50 dark:bg-red-900/20"
+                            : f.estado === "OMITIDA"
+                            ? "bg-amber-50 dark:bg-amber-900/20"
+                            : ""
+                        }
+                      >
                         <td className="px-3 py-2">{f.fila}</td>
                         <td className="px-3 py-2 font-medium">{f.cut || "—"}</td>
                         <td className="px-3 py-2">{f.nombre || f.usuario || "—"}</td>
@@ -744,9 +756,11 @@ export default function AsignacionExpediente() {
                         <td className="px-3 py-2 text-center">{formatFecha(f.fecha_vencimiento)}</td>
                         <td className="max-w-xs truncate px-3 py-2">{f.observacion || "—"}</td>
                         <td className="px-3 py-2">
-                          {f.problemas ? (
-                            <span className="text-red-700 dark:text-red-300">{f.problemas}</span>
-                          ) : (
+                          {f.estado === "ERROR" && <span className="text-red-700 dark:text-red-300">{f.mensaje}</span>}
+                          {f.estado === "OMITIDA" && (
+                            <span className="font-medium text-amber-800 dark:text-amber-200">Omitida: {f.mensaje}</span>
+                          )}
+                          {f.estado === "LISTA" && (
                             <span className="font-semibold text-green-700 dark:text-green-300">Lista</span>
                           )}
                         </td>
@@ -768,10 +782,10 @@ export default function AsignacionExpediente() {
                 </button>
                 <button
                   onClick={confirmarCarga}
-                  disabled={confirmandoCarga || vistaPrevia.errores.length > 0 || vistaPrevia.filas.length === 0}
+                  disabled={confirmandoCarga || vistaPrevia.errores.length > 0 || vistaPrevia.listas === 0}
                   className="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
                 >
-                  {confirmandoCarga ? "Creando..." : `Confirmar y crear ${vistaPrevia.filas.length} asignaciones`}
+                  {confirmandoCarga ? "Creando..." : `Confirmar y crear ${vistaPrevia.listas} asignaciones`}
                 </button>
               </div>
             </div>
