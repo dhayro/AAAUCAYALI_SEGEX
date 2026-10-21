@@ -130,6 +130,21 @@ const DiasRestantes = ({ a }: { a: Asignacion }) => {
 const nombreUsuario = (u?: UsuarioResumen | null) =>
   u ? `${u.nombre} ${u.apellido}` : "—";
 
+// Convierte la fecha de una celda Excel (fecha real o texto dd/mm/aaaa) a AAAA-MM-DD.
+const aFechaYMD = (valor: any) => {
+  if (valor instanceof Date && !isNaN(valor.getTime())) {
+    const mes = String(valor.getMonth() + 1).padStart(2, "0");
+    const dia = String(valor.getDate()).padStart(2, "0");
+    return `${valor.getFullYear()}-${mes}-${dia}`;
+  }
+  const texto = String(valor ?? "").trim();
+  const coincidencia = texto.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (coincidencia) {
+    return `${coincidencia[3]}-${coincidencia[2].padStart(2, "0")}-${coincidencia[1].padStart(2, "0")}`;
+  }
+  return texto;
+};
+
 export default function AsignacionExpediente() {
   const [asignaciones, setAsignaciones] = useState<Asignacion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -252,9 +267,9 @@ export default function AsignacionExpediente() {
     setCargandoExcel(true);
     setErroresCarga([]);
     try {
-      const libro = XLSX.read(await archivo.arrayBuffer(), { type: "array" });
+      const libro = XLSX.read(await archivo.arrayBuffer(), { type: "array", cellDates: true });
       const hoja = libro.Sheets[libro.SheetNames[0]];
-      const filas = XLSX.utils.sheet_to_json<Record<string, any>>(hoja, { defval: "", raw: false });
+      const filas = XLSX.utils.sheet_to_json<Record<string, any>>(hoja, { defval: "", raw: true });
       const datos = filas
         .map((f, i) => ({ fila: i + 2, original: f }))
         .filter((x) => String(x.original["CUT"] ?? "").trim() !== "")
@@ -262,7 +277,7 @@ export default function AsignacionExpediente() {
           fila,
           cut: f["CUT"],
           usuario: f["USUARIO ASIGNADO"],
-          fecha: f["FECHA ASIGNACION (AAAA-MM-DD)"],
+          fecha: aFechaYMD(f["FECHA ASIGNACION (AAAA-MM-DD)"]),
           plazo: f["PLAZO (DIAS)"],
           numero_orden: f["NUMERO DE ORDEN"],
           observacion: f["OBSERVACION"],
