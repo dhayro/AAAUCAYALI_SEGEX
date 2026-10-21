@@ -1,8 +1,10 @@
 import DatePickerLima from "@/components/form/DatePickerLima";
-import { formatFecha } from "@/components/expedientes/format";
+import { formatFecha, formatFechaHora } from "@/components/expedientes/format";
+import { DownloadIcon } from "@/icons";
 import api from "@/utils/api";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import * as XLSX from "xlsx";
 
 interface Resumen {
   asignaciones: number;
@@ -40,6 +42,26 @@ interface Llamada {
   acciones_pendientes: number;
 }
 
+interface Prorroga {
+  cut: string;
+  fecha_solicitud: string | null;
+  plazo_prorroga: number | null;
+  motivo: string;
+  estado: string;
+  vence_original: string;
+  vence_nueva: string | null;
+}
+
+interface Accion {
+  cut: string;
+  accion: string;
+  estado: string;
+  observacion: string;
+  fecha_ejecucion: string | null;
+}
+
+const TAMANO_PAGINA = 8;
+
 const hoyYMD = () =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 
@@ -73,6 +95,46 @@ const SITUACION: Record<string, { texto: string; clases: string }> = {
   SIN_PLAZO: { texto: "Sin plazo", clases: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200" },
 };
 
+const ESTADO_PRORROGA: Record<string, string> = {
+  PENDIENTE: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100",
+  ACEPTADA: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100",
+  RECHAZADA: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100",
+};
+
+// Paginador compacto usado por cada tabla de la sección.
+function Paginador({ total, pagina, onCambio }: { total: number; pagina: number; onCambio: (p: number) => void }) {
+  const paginas = Math.max(1, Math.ceil(total / TAMANO_PAGINA));
+  if (total <= TAMANO_PAGINA) return null;
+  return (
+    <div className="mt-2 flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+      <span>
+        Mostrando {pagina * TAMANO_PAGINA + 1}-{Math.min((pagina + 1) * TAMANO_PAGINA, total)} de {total}
+      </span>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => onCambio(Math.max(0, pagina - 1))}
+          disabled={pagina === 0}
+          className="rounded border border-gray-300 px-2 py-1 disabled:opacity-50 dark:border-gray-600"
+        >
+          ← Anterior
+        </button>
+        <span>
+          {pagina + 1} / {paginas}
+        </span>
+        <button
+          onClick={() => onCambio(Math.min(paginas - 1, pagina + 1))}
+          disabled={pagina + 1 >= paginas}
+          className="rounded border border-gray-300 px-2 py-1 disabled:opacity-50 dark:border-gray-600"
+        >
+          Siguiente →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const celdaVacia = (texto: string) => <div className="p-6 text-center text-sm text-gray-500">{texto}</div>;
+
 // Sección "Mi desempeño" del perfil: solo muestra los datos de quien inicia sesión.
 export default function MiDesempeno() {
   const [filtros, setFiltros] = useState(() => {
@@ -82,7 +144,10 @@ export default function MiDesempeno() {
   const [resumen, setResumen] = useState<Resumen | null>(null);
   const [asignaciones, setAsignaciones] = useState<Asignacion[]>([]);
   const [llamadas, setLlamadas] = useState<Llamada[]>([]);
+  const [prorrogas, setProrrogas] = useState<Prorroga[]>([]);
+  const [acciones, setAcciones] = useState<Accion[]>([]);
   const [cargando, setCargando] = useState(false);
+  const [paginas, setPaginas] = useState({ asignaciones: 0, llamadas: 0, prorrogas: 0, acciones: 0 });
 
   const cargar = useCallback(async () => {
     if (filtros.desde > filtros.hasta) return toast.error("La fecha inicial no puede ser mayor que la final");
@@ -92,6 +157,9 @@ export default function MiDesempeno() {
       setResumen(res.data.resumen);
       setAsignaciones(res.data.asignaciones || []);
       setLlamadas(res.data.llamadas || []);
+      setProrrogas(res.data.prorrogas || []);
+      setAcciones(res.data.acciones || []);
+      setPaginas({ asignaciones: 0, llamadas: 0, prorrogas: 0, acciones: 0 });
     } catch {
       toast.error("No se pudo cargar tu desempeño");
     } finally {
@@ -103,25 +171,89 @@ export default function MiDesempeno() {
     cargar();
   }, []);
 
-  const indicadores = resumen
-    ? [
-        { titulo: "Asignaciones", valor: resumen.asignaciones, tono: "text-gray-900 dark:text-white" },
-        { titulo: "Cerradas", valor: resumen.cerradas, tono: "text-green-600 dark:text-green-400" },
-        { titulo: "Observadas", valor: resumen.observadas, tono: "text-amber-600 dark:text-amber-400" },
-        { titulo: "Vencidas", valor: resumen.vencidas, tono: "text-red-600 dark:text-red-400" },
-        { titulo: "Tiempo promedio", valor: formatoHoras(resumen.tiempo_promedio_horas), tono: "text-gray-900 dark:text-white" },
-        { titulo: "Llamadas respondidas", valor: `${resumen.llamadas_respondidas} de ${resumen.llamadas}`, tono: "text-gray-900 dark:text-white" },
-        { titulo: "Llamadas vencidas", valor: resumen.llamadas_vencidas, tono: "text-red-600 dark:text-red-400" },
-        { titulo: "Acciones pendientes", valor: resumen.acciones_pendientes, tono: "text-amber-600 dark:text-amber-400" },
-      ]
-    : [];
+  const indicadores = useMemo(
+    () =>
+      resumen
+        ? [
+            { titulo: "Asignaciones", valor: resumen.asignaciones, tono: "text-gray-900 dark:text-white" },
+            { titulo: "Cerradas", valor: resumen.cerradas, tono: "text-green-600 dark:text-green-400" },
+            { titulo: "Observadas", valor: resumen.observadas, tono: "text-amber-600 dark:text-amber-400" },
+            { titulo: "Vencidas", valor: resumen.vencidas, tono: "text-red-600 dark:text-red-400" },
+            { titulo: "Tiempo promedio", valor: formatoHoras(resumen.tiempo_promedio_horas), tono: "text-gray-900 dark:text-white" },
+            { titulo: "Llamadas respondidas", valor: `${resumen.llamadas_respondidas} de ${resumen.llamadas}`, tono: "text-gray-900 dark:text-white" },
+            { titulo: "Llamadas vencidas", valor: resumen.llamadas_vencidas, tono: "text-red-600 dark:text-red-400" },
+            { titulo: "Acciones pendientes", valor: resumen.acciones_pendientes, tono: "text-amber-600 dark:text-amber-400" },
+          ]
+        : [],
+    [resumen]
+  );
+
+  const exportarExcel = () => {
+    const libro = XLSX.utils.book_new();
+    const hojas: [string, string[], any[][]][] = [
+      [
+        "Asignaciones",
+        ["CUT", "Asignación", "Vence", "Estado", "N° respuestas", "Tiempo", "Días restantes"],
+        asignaciones.map((a) => [
+          a.cut,
+          formatFecha(a.fecha_asignacion),
+          formatFecha(a.vence),
+          ESTADO_ASIG[a.estado]?.texto ?? a.estado,
+          a.total_respuestas,
+          a.total_respuestas > 0 && a.tiempo_respuesta_horas !== null ? `Respondiste en ${formatoHoras(a.tiempo_respuesta_horas)}` : a.cerrada ? "Cerrada" : textoFaltante(a.dias_restantes),
+          a.dias_restantes ?? "",
+        ]),
+      ],
+      [
+        "Llamadas",
+        ["Fecha", "CUT", "Quien llama", "Motivo", "Límite", "Situación", "Tiempo", "Acciones pendientes"],
+        llamadas.map((l) => [
+          formatFechaHora(l.fecha_llamada),
+          l.cut,
+          l.nombre_llamante,
+          l.motivo,
+          formatFecha(l.fecha_limite),
+          SITUACION[l.situacion]?.texto ?? l.situacion,
+          l.respondido ? (l.tiempo_respuesta_horas !== null ? `Respondiste en ${formatoHoras(l.tiempo_respuesta_horas)}` : "Respondida") : textoFaltante(l.dias_restantes),
+          l.acciones_pendientes,
+        ]),
+      ],
+      [
+        "Prórrogas",
+        ["CUT", "Solicitud", "Días pedidos", "Motivo", "Estado", "Vence original", "Vence con prórroga"],
+        prorrogas.map((p) => [
+          p.cut,
+          formatFecha(p.fecha_solicitud),
+          p.plazo_prorroga ?? "",
+          p.motivo,
+          p.estado,
+          formatFecha(p.vence_original),
+          formatFecha(p.vence_nueva),
+        ]),
+      ],
+      [
+        "Acciones",
+        ["CUT", "Tipo de acción", "Estado", "Observación", "Fecha de ejecución"],
+        acciones.map((a) => [a.cut, a.accion, a.estado, a.observacion, formatFecha(a.fecha_ejecucion)]),
+      ],
+    ];
+    hojas.forEach(([nombre, encabezado, datos]) => {
+      const hoja = XLSX.utils.aoa_to_sheet([encabezado, ...datos]);
+      hoja["!cols"] = encabezado.map(() => ({ wch: 20 }));
+      XLSX.utils.book_append_sheet(libro, hoja, nombre);
+    });
+    XLSX.writeFile(libro, `Mi-desempeno-${filtros.desde}-a-${filtros.hasta}.xlsx`);
+  };
+
+  const ventana = <T,>(lista: T[], pagina: number) => lista.slice(pagina * TAMANO_PAGINA, (pagina + 1) * TAMANO_PAGINA);
+  const sinDatos = !cargando && resumen !== null && resumen.asignaciones === 0 && resumen.llamadas === 0 && prorrogas.length === 0 && acciones.length === 0;
 
   return (
     <section className="space-y-5 rounded-2xl bg-white p-6 shadow dark:bg-gray-800">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <h2 className="text-sm font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">Mi desempeño</h2>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Tus asignaciones y llamadas en el periodo</p>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Tus asignaciones, llamadas, prórrogas y acciones en el periodo</p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
           <div className="w-44">
@@ -137,6 +269,14 @@ export default function MiDesempeno() {
           >
             {cargando ? "Cargando..." : "Actualizar"}
           </button>
+          <button
+            onClick={exportarExcel}
+            disabled={!resumen}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50"
+          >
+            <DownloadIcon className="h-4 w-4" />
+            Exportar Excel
+          </button>
         </div>
       </div>
 
@@ -151,16 +291,16 @@ export default function MiDesempeno() {
         </div>
       )}
 
+      {sinDatos && <div className="p-6 text-center text-sm text-gray-500">No tienes movimientos en este periodo.</div>}
+
       <div>
-        <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-          Mis asignaciones ({asignaciones.length})
-        </h3>
-        <div className="max-h-96 overflow-auto rounded-lg ring-1 ring-gray-200 dark:ring-gray-700">
+        <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Mis asignaciones ({asignaciones.length})</h3>
+        <div className="overflow-x-auto rounded-lg ring-1 ring-gray-200 dark:ring-gray-700">
           {asignaciones.length === 0 ? (
-            <div className="p-6 text-center text-sm text-gray-500">No tienes asignaciones en este periodo</div>
+            celdaVacia("No tienes asignaciones en este periodo")
           ) : (
-            <table className="w-full min-w-[640px] text-sm">
-              <thead className="sticky top-0 bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-700 dark:text-gray-300">
+            <table className="w-full min-w-[720px] text-sm">
+              <thead className="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-700 dark:text-gray-300">
                 <tr>
                   <th className="px-3 py-2 text-start">CUT</th>
                   <th className="px-3 py-2 text-center">Asignación</th>
@@ -170,7 +310,7 @@ export default function MiDesempeno() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {asignaciones.map((a, i) => (
+                {ventana(asignaciones, paginas.asignaciones).map((a, i) => (
                   <tr key={`${a.cut}-${i}`}>
                     <td className="px-3 py-2 font-medium">{a.cut}</td>
                     <td className="px-3 py-2 text-center">{formatFecha(a.fecha_asignacion)}</td>
@@ -193,18 +333,17 @@ export default function MiDesempeno() {
             </table>
           )}
         </div>
+        <Paginador total={asignaciones.length} pagina={paginas.asignaciones} onCambio={(p) => setPaginas({ ...paginas, asignaciones: p })} />
       </div>
 
       <div>
-        <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-          Mis llamadas ({llamadas.length})
-        </h3>
-        <div className="max-h-96 overflow-auto rounded-lg ring-1 ring-gray-200 dark:ring-gray-700">
+        <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Mis llamadas ({llamadas.length})</h3>
+        <div className="overflow-x-auto rounded-lg ring-1 ring-gray-200 dark:ring-gray-700">
           {llamadas.length === 0 ? (
-            <div className="p-6 text-center text-sm text-gray-500">No tienes llamadas en este periodo</div>
+            celdaVacia("No tienes llamadas en este periodo")
           ) : (
-            <table className="w-full min-w-[720px] text-sm">
-              <thead className="sticky top-0 bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-700 dark:text-gray-300">
+            <table className="w-full min-w-[760px] text-sm">
+              <thead className="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-700 dark:text-gray-300">
                 <tr>
                   <th className="px-3 py-2 text-start">CUT</th>
                   <th className="px-3 py-2 text-start">Quien llama</th>
@@ -215,7 +354,7 @@ export default function MiDesempeno() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {llamadas.map((l, i) => (
+                {ventana(llamadas, paginas.llamadas).map((l, i) => (
                   <tr key={`${l.cut}-${i}`}>
                     <td className="px-3 py-2 font-medium">{l.cut}</td>
                     <td className="max-w-xs px-3 py-2">
@@ -244,6 +383,91 @@ export default function MiDesempeno() {
             </table>
           )}
         </div>
+        <Paginador total={llamadas.length} pagina={paginas.llamadas} onCambio={(p) => setPaginas({ ...paginas, llamadas: p })} />
+      </div>
+
+      <div>
+        <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Mis prórrogas ({prorrogas.length})</h3>
+        <div className="overflow-x-auto rounded-lg ring-1 ring-gray-200 dark:ring-gray-700">
+          {prorrogas.length === 0 ? (
+            celdaVacia("No tienes prórrogas en este periodo")
+          ) : (
+            <table className="w-full min-w-[760px] text-sm">
+              <thead className="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-700 dark:text-gray-300">
+                <tr>
+                  <th className="px-3 py-2 text-start">CUT</th>
+                  <th className="px-3 py-2 text-center">Solicitud</th>
+                  <th className="px-3 py-2 text-center">Días pedidos</th>
+                  <th className="px-3 py-2 text-start">Motivo</th>
+                  <th className="px-3 py-2 text-start">Estado</th>
+                  <th className="px-3 py-2 text-center">Vence con prórroga</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                {ventana(prorrogas, paginas.prorrogas).map((p, i) => (
+                  <tr key={`${p.cut}-${i}`}>
+                    <td className="px-3 py-2 font-medium">{p.cut}</td>
+                    <td className="px-3 py-2 text-center">{formatFecha(p.fecha_solicitud)}</td>
+                    <td className="px-3 py-2 text-center">{p.plazo_prorroga ?? "—"}</td>
+                    <td className="max-w-xs truncate px-3 py-2" title={p.motivo}>
+                      {p.motivo || "—"}
+                    </td>
+                    <td className="px-3 py-2">
+                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${ESTADO_PRORROGA[p.estado] ?? ""}`}>{p.estado}</span>
+                    </td>
+                    <td className="px-3 py-2 text-center">{p.vence_nueva ? formatFecha(p.vence_nueva) : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+        <Paginador total={prorrogas.length} pagina={paginas.prorrogas} onCambio={(p) => setPaginas({ ...paginas, prorrogas: p })} />
+      </div>
+
+      <div>
+        <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Mis acciones de llamada ({acciones.length})</h3>
+        <div className="overflow-x-auto rounded-lg ring-1 ring-gray-200 dark:ring-gray-700">
+          {acciones.length === 0 ? (
+            celdaVacia("No tienes acciones de llamada en este periodo")
+          ) : (
+            <table className="w-full min-w-[720px] text-sm">
+              <thead className="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-700 dark:text-gray-300">
+                <tr>
+                  <th className="px-3 py-2 text-start">CUT</th>
+                  <th className="px-3 py-2 text-start">Tipo de acción</th>
+                  <th className="px-3 py-2 text-start">Estado</th>
+                  <th className="px-3 py-2 text-start">Observación</th>
+                  <th className="px-3 py-2 text-center">Fecha de ejecución</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                {ventana(acciones, paginas.acciones).map((a, i) => (
+                  <tr key={`${a.cut}-${i}`}>
+                    <td className="px-3 py-2 font-medium">{a.cut}</td>
+                    <td className="px-3 py-2">{a.accion}</td>
+                    <td className="px-3 py-2">
+                      <span
+                        className={
+                          a.estado === "Ejecutada"
+                            ? "font-semibold text-green-700 dark:text-green-300"
+                            : "font-semibold text-amber-700 dark:text-amber-300"
+                        }
+                      >
+                        {a.estado}
+                      </span>
+                    </td>
+                    <td className="max-w-xs truncate px-3 py-2" title={a.observacion}>
+                      {a.observacion || "—"}
+                    </td>
+                    <td className="px-3 py-2 text-center">{formatFecha(a.fecha_ejecucion)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+        <Paginador total={acciones.length} pagina={paginas.acciones} onCambio={(p) => setPaginas({ ...paginas, acciones: p })} />
       </div>
     </section>
   );
