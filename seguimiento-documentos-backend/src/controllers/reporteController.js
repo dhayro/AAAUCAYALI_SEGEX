@@ -2,6 +2,7 @@ const { Op } = require('sequelize');
 const AsignacionExpediente = require('../models/AsignacionExpediente');
 const LlamadaAdministrado = require('../models/LlamadaAdministrado');
 const AccionLlamada = require('../models/AccionLlamada');
+const HistorialLlamada = require('../models/HistorialLlamada');
 const Usuario = require('../models/Usuario');
 const Cargo = require('../models/Cargo');
 const { hoyLima, sumarDiasCalendario } = require('../utils/fechas');
@@ -115,6 +116,20 @@ exports.llamadas = async (req, res) => {
     });
 
     const hoy = hoyLima();
+    // Momento en que se marcó como respondida (último evento RESPONDIDO del historial).
+    const respuestas = ids.length
+      ? await HistorialLlamada.findAll({
+          attributes: ['id_llamada', 'fecha_registro'],
+          where: { id_llamada: { [Op.in]: ids }, tipo: 'RESPONDIDO' },
+          raw: true,
+        })
+      : [];
+    const respondidoEn = {};
+    respuestas.forEach((h) => {
+      const f = new Date(h.fecha_registro);
+      if (!respondidoEn[h.id_llamada] || f > respondidoEn[h.id_llamada]) respondidoEn[h.id_llamada] = f;
+    });
+
     let filas = llamadas.map((l) => {
       const plain = l.get({ plain: true });
       const acc = contarAcciones[l.id] || { total: 0, ejecutadas: 0 };
@@ -133,6 +148,10 @@ exports.llamadas = async (req, res) => {
         responsable: plain.responsable ? `${plain.responsable.nombre} ${plain.responsable.apellido}` : '',
         registrada_por: plain.creador ? `${plain.creador.nombre} ${plain.creador.apellido}` : '',
         fecha_limite: l.fecha_respuesta,
+        respondido_en: respondidoEn[l.id] ? aLima(respondidoEn[l.id]) : null,
+        tiempo_respuesta_horas: respondidoEn[l.id]
+          ? Math.round(((respondidoEn[l.id] - new Date(l.fecha_llamada)) / 3600000) * 10) / 10
+          : null,
         dias_restantes: l.respondido ? null : dias,
         situacion,
         respondido: l.respondido,
