@@ -323,6 +323,7 @@ exports.actualizarAccionLlamada = async (req, res) => {
     if (!puedeOperarLlamada(llamada, req.user)) {
       return res.status(403).json({ mensaje: 'Solo el responsable puede actualizar esta acción' });
     }
+    if (accion.estado === 'EJECUTADO') throw errorConEstado('Esta acción ya está ejecutada y no puede modificarse');
 
     const catalogo = await AccionAtencion.findByPk(accion.id_accion, { attributes: ['nombre', 'requiere_archivo'] });
     const cambios = { id_usuario_modificador: req.user.id };
@@ -386,6 +387,7 @@ exports.subirArchivo = async (req, res) => {
       return res.status(403).json({ mensaje: 'Solo el responsable puede subir archivos' });
     }
 
+    if (accion.estado === 'EJECUTADO') throw errorConEstado('Esta acción ya está ejecutada y no puede modificarse');
     await ArchivoAccion.create({
       id_accion_llamada: accion.id,
       nombre_original: req.file.originalname,
@@ -415,13 +417,7 @@ exports.eliminarArchivo = async (req, res) => {
       return res.status(403).json({ mensaje: 'Solo el responsable puede eliminar archivos' });
     }
 
-    const catalogo = await AccionAtencion.findByPk(accion.id_accion, { attributes: ['requiere_archivo'] });
-    if (accion.estado === 'EJECUTADO' && catalogo.requiere_archivo) {
-      const cuantos = await ArchivoAccion.count({ where: { id_accion_llamada: accion.id } });
-      if (cuantos <= 1) {
-        throw errorConEstado('Esta acción está ejecutada y necesita al menos un archivo; suba el nuevo antes de eliminar este');
-      }
-    }
+    if (accion.estado === 'EJECUTADO') throw errorConEstado('Esta acción ya está ejecutada y no puede modificarse');
 
     const ruta = path.join(CARPETA_ARCHIVOS, path.basename(archivo.nombre_guardado));
     await archivo.destroy();
@@ -450,6 +446,7 @@ exports.editarArchivo = async (req, res) => {
       return res.status(403).json({ mensaje: 'Solo el responsable puede editar archivos' });
     }
 
+    if (accion.estado === 'EJECUTADO') throw errorConEstado('Esta acción ya está ejecutada y no puede modificarse');
     const descripcion = textoMayuscula(req.body.descripcion);
     if (!descripcion) throw errorConEstado('La descripción no puede quedar vacía');
     if (descripcion !== archivo.descripcion) {
