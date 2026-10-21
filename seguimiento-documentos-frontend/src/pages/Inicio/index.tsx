@@ -57,13 +57,6 @@ const MOTIVO: Record<Motivo, { texto: string; clases: string }> = {
   },
 };
 
-const formatoTiempo = (horas: number | null) => {
-  if (horas === null) return "—";
-  const dias = Math.floor(horas / 24);
-  const resto = Math.round(horas - dias * 24);
-  return dias > 0 ? `${dias} d ${resto} h` : `${Math.round(horas)} h`;
-};
-
 const textoDias = (dias: number) => (dias < 0 ? `Vencida hace ${-dias} d` : dias === 0 ? "Vence hoy" : `${dias} d`);
 
 interface TarjetaProps {
@@ -125,7 +118,7 @@ export default function Inicio() {
 
         {resumen && (
           <>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <Tarjeta titulo="Asignaciones abiertas" valor={resumen.asignaciones.abiertas} ayuda="Sin cerrar" />
               <Tarjeta
                 titulo="Vencidas"
@@ -138,11 +131,6 @@ export default function Inicio() {
                 valor={resumen.asignaciones.por_vencer}
                 ayuda="Vencen en los próximos días"
                 tono={resumen.asignaciones.por_vencer > 0 ? "alerta" : "neutro"}
-              />
-              <Tarjeta
-                titulo="Tiempo de respuesta"
-                valor={formatoTiempo(resumen.asignaciones.tiempo_promedio_horas)}
-                ayuda={`Promedio de ${resumen.asignaciones.cerradas} cerradas, desde la asignación`}
               />
             </div>
 
