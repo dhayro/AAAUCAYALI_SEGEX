@@ -238,6 +238,10 @@ exports.rechazarProrroga = async (req, res) => {
     if (actual.estado_prorroga !== 'PENDIENTE') {
       return res.status(400).json({ mensaje: 'No hay una prórroga pendiente para rechazar' });
     }
+    const motivo = normalizarTexto(req.body.observacion);
+    if (!motivo) {
+      return res.status(400).json({ mensaje: 'Debe indicar el motivo del rechazo' });
+    }
 
     await actual.update({
       estado_prorroga: 'RECHAZADA',
@@ -249,7 +253,7 @@ exports.rechazarProrroga = async (req, res) => {
       tipo: 'PRORROGA_RECHAZADA',
       plazo: actual.plazo_prorroga,
       fecha_evento: hoyLima(),
-      observacion: normalizarTexto(req.body.observacion),
+      observacion: motivo,
       id_usuario: req.user.id,
     });
 

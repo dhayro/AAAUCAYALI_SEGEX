@@ -47,6 +47,10 @@ export default function RevisionProrrogaModal({ asignacion, onClose, onRevisada 
   };
 
   const rechazar = async () => {
+    if (!observacion.trim()) {
+      toast.error("Escribe el motivo del rechazo");
+      return;
+    }
     setEnviando(true);
     try {
       await api.patch(`/asignaciones-expediente/${asignacion.id}/prorroga/rechazar`, { observacion });
@@ -83,12 +87,12 @@ export default function RevisionProrrogaModal({ asignacion, onClose, onRevisada 
           <p className="mt-1 text-xs text-gray-500">Puedes cambiar los días antes de aceptar.</p>
         </div>
         <div>
-          <Label>Observación</Label>
+          <Label>Observación (obligatoria para rechazar)</Label>
           <textarea
             value={observacion}
             onChange={(e) => setObservacion(e.target.value)}
             rows={2}
-            placeholder="Motivo o comentario (opcional)"
+            placeholder="Escribe el motivo del rechazo o un comentario (opcional al aceptar)"
             className="w-full rounded border border-gray-300 bg-white px-3 py-2 dark:border-gray-600 dark:bg-gray-700"
           />
         </div>
