@@ -361,6 +361,18 @@ export default function Usuarios() {
     setShowResetModal(true);
   };
 
+  // Completa nombre y apellidos desde RENIEC al escribir un DNI de 8 dígitos.
+  const consultarDni = async (dni: string) => {
+    try {
+      const res = await api.get(`/usuarios/reniec/${dni}`);
+      setFormData((prev) =>
+        prev.dni === dni ? { ...prev, nombre: res.data.nombre, apellido: res.data.apellido } : prev
+      );
+    } catch (error: any) {
+      toast.error(error.response?.data?.mensaje || "No se pudo consultar RENIEC");
+    }
+  };
+
   const handleConfirmReset = async () => {
     if (!resetUserId) return;
 
@@ -471,9 +483,11 @@ export default function Usuarios() {
                     <Label>DNI</Label>
                     <Input
                       value={formData.dni}
-                      onChange={(e) =>
-                        setFormData({ ...formData, dni: e.target.value })
-                      }
+                      onChange={(e) => {
+                        const dni = e.target.value.replace(/\D/g, "").slice(0, 8);
+                        setFormData({ ...formData, dni });
+                        if (dni.length === 8) consultarDni(dni);
+                      }}
                       placeholder="12345678"
                     />
                   </div>
