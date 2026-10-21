@@ -7,6 +7,7 @@ import ExpedienteDetalleModal from "@/components/expedientes/ExpedienteDetalleMo
 import AsignadoExpedienteModal from "@/components/asignaciones/AsignadoExpedienteModal";
 import { formatFechaHora } from "@/components/expedientes/format";
 import api from "@/utils/api";
+import { UserCircleIcon } from "@/icons";
 
 interface Expediente {
   id: number;
@@ -139,9 +140,11 @@ export default function Expedientes() {
                       <td className="px-6 py-4 text-center">
                         <button
                           onClick={() => setCutAsignado(exp.cut)}
-                          className="rounded border border-brand-600 px-2 py-1 text-xs font-semibold text-brand-600 hover:bg-brand-50 dark:border-brand-400 dark:text-brand-400 dark:hover:bg-gray-700"
+                          title="Ver a quién está asignado"
+                          aria-label={`Ver asignado de ${exp.cut}`}
+                          className="inline-flex rounded-md p-1.5 text-brand-600 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-gray-700"
                         >
-                          Ver asignado
+                          <UserCircleIcon className="h-5 w-5" />
                         </button>
                       </td>
                     </tr>
