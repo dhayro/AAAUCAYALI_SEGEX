@@ -1,5 +1,16 @@
 const SisgedToken = require('../models/SisgedToken');
 
+const expiracionDelJwt = (token) => {
+  try {
+    const partes = String(token).trim().split('.');
+    if (partes.length !== 3) return null;
+    const payload = JSON.parse(Buffer.from(partes[1], 'base64url').toString('utf8'));
+    return payload.exp ? new Date(payload.exp * 1000) : null;
+  } catch {
+    return null;
+  }
+};
+
 exports.obtenerTokensActivos = async (req, res) => {
   try {
     const tokens = await SisgedToken.findAll({
@@ -35,10 +46,11 @@ exports.agregarToken = async (req, res) => {
       });
     }
 
-    if (!fecha_vencimiento) {
+    const vencimiento = expiracionDelJwt(token) || (fecha_vencimiento ? new Date(fecha_vencimiento) : null);
+    if (!vencimiento || isNaN(vencimiento)) {
       return res.status(400).json({
         success: false,
-        error: 'Fecha de vencimiento es requerida (YYYY-MM-DD)'
+        error: 'No se pudo determinar la fecha de vencimiento del token'
       });
     }
 
@@ -51,7 +63,7 @@ exports.agregarToken = async (req, res) => {
     // Crear nuevo token
     const nuevoToken = await SisgedToken.create({
       token,
-      fecha_vencimiento: new Date(fecha_vencimiento),
+      fecha_vencimiento: vencimiento,
       dias_validez: dias_validez || 30,
       activo: true,
       notas: notas || 'Token agregado manualmente'
