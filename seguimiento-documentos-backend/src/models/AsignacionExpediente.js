@@ -46,6 +46,10 @@ const AsignacionExpediente = sequelize.define('AsignacionExpediente', {
     type: DataTypes.STRING(20),
     comment: 'PENDIENTE, ACEPTADA o RECHAZADA; null si no hay solicitud',
   },
+  motivo_prorroga: {
+    type: DataTypes.TEXT,
+    comment: 'Justificación que indica quien solicita la prórroga',
+  },
   fecha_vencimiento_prorroga: {
     type: DataTypes.DATEONLY,
     comment: 'Solo se calcula al aceptar la prórroga',

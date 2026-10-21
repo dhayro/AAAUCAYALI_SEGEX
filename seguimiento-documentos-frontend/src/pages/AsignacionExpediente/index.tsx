@@ -36,6 +36,7 @@ interface Asignacion {
   plazo_prorroga?: number | null;
   fecha_vencimiento_prorroga?: string | null;
   estado_prorroga?: string | null;
+  motivo_prorroga?: string | null;
   observacion?: string | null;
   numero_orden?: string | null;
   asignado?: (UsuarioResumen & { Cargo?: { nombre: string } | null }) | null;
@@ -112,7 +113,7 @@ export default function AsignacionExpediente() {
   const [selectedUsuarioName, setSelectedUsuarioName] = useState("");
 
   const [prorrogaTarget, setProrrogaTarget] = useState<Asignacion | null>(null);
-  const [prorrogaData, setProrrogaData] = useState({ plazo: "" });
+  const [prorrogaData, setProrrogaData] = useState({ plazo: "", motivo: "" });
   const [historialTarget, setHistorialTarget] = useState<Asignacion | null>(null);
 
   const [cutAbierto, setCutAbierto] = useState<string | null>(null);
@@ -246,7 +247,7 @@ export default function AsignacionExpediente() {
 
   const handleOpenProrroga = (asignacion: Asignacion) => {
     setProrrogaTarget(asignacion);
-    setProrrogaData({ plazo: "" });
+    setProrrogaData({ plazo: "", motivo: "" });
   };
 
   const handleSubmitProrroga = async (e: React.FormEvent) => {
@@ -257,10 +258,15 @@ export default function AsignacionExpediente() {
       toast.error("El plazo de prórroga debe ser un número mayor a 0");
       return;
     }
+    if (!prorrogaData.motivo.trim()) {
+      toast.error("Escribe el motivo por el que solicitas la prórroga");
+      return;
+    }
 
     try {
       await api.patch(`/asignaciones-expediente/${prorrogaTarget.id}/prorroga`, {
         plazo_prorroga: Number(prorrogaData.plazo),
+        motivo: prorrogaData.motivo,
       });
       toast.success("Prórroga solicitada, pendiente de aceptación");
       setProrrogaTarget(null);
@@ -451,6 +457,16 @@ export default function AsignacionExpediente() {
                     value={prorrogaData.plazo}
                     onChange={(e) => setProrrogaData({ ...prorrogaData, plazo: e.target.value })}
                     placeholder="Ej: 5"
+                  />
+                </div>
+                <div>
+                  <Label>Motivo de la prórroga *</Label>
+                  <textarea
+                    value={prorrogaData.motivo}
+                    onChange={(e) => setProrrogaData({ ...prorrogaData, motivo: e.target.value })}
+                    rows={3}
+                    placeholder="Explica por qué se necesita la prórroga"
+                    className="w-full rounded border border-gray-300 bg-white px-3 py-2 dark:border-gray-600 dark:bg-gray-700"
                   />
                 </div>
                 <p className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">

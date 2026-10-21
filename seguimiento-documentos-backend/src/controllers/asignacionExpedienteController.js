@@ -170,12 +170,17 @@ exports.prorrogar = async (req, res) => {
     }
 
     const plazo = parsePlazo(req.body.plazo_prorroga);
+    const motivo = normalizarTexto(req.body.motivo);
+    if (!motivo) {
+      return res.status(400).json({ mensaje: 'Debe indicar el motivo de la prórroga' });
+    }
     const hoy = hoyLima();
 
     await actual.update({
       fecha_prorroga: hoy,
       plazo_prorroga: plazo,
       estado_prorroga: 'PENDIENTE',
+      motivo_prorroga: motivo,
       fecha_vencimiento_prorroga: null,
       id_usuario_modificador: req.user.id,
     });
@@ -184,6 +189,7 @@ exports.prorrogar = async (req, res) => {
       tipo: 'SOLICITUD_PRORROGA',
       plazo,
       fecha_evento: hoy,
+      observacion: motivo,
       id_usuario: req.user.id,
     });
 

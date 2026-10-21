@@ -25,6 +25,7 @@ interface Prorroga {
   fecha_vencimiento: string;
   fecha_prorroga?: string | null;
   plazo_prorroga?: number | null;
+  motivo_prorroga?: string | null;
   estado_prorroga?: string | null;
   fecha_vencimiento_prorroga?: string | null;
   asignado?: UsuarioResumen | null;

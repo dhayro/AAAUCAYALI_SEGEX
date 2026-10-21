@@ -12,6 +12,7 @@ export type AsignacionProrroga = {
   fecha_vencimiento: string;
   fecha_prorroga?: string | null;
   plazo_prorroga?: number | null;
+  motivo_prorroga?: string | null;
 };
 
 type Props = {
@@ -79,6 +80,10 @@ export default function RevisionProrrogaModal({ asignacion, onClose, onRevisada 
           </div>
           <div className="mt-1 text-gray-600 dark:text-gray-300">
             Vencimiento actual: {formatFecha(asignacion.fecha_vencimiento)}
+          </div>
+          <div className="mt-2 border-l-2 border-brand-500 pl-2 text-gray-800 dark:text-gray-200">
+            <span className="text-xs font-semibold uppercase text-gray-500">Motivo: </span>
+            {asignacion.motivo_prorroga || "—"}
           </div>
         </div>
         <div>
