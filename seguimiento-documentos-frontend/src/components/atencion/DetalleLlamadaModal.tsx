@@ -310,7 +310,7 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
 
   return (
     <>
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900/50 p-4">
+      <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-gray-900/50 p-4">
         <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-gray-800">
           <div className="flex items-center gap-3 bg-brand-600 px-5 py-3 text-white">
             <span className="text-[10px] font-semibold uppercase tracking-widest text-white/70">Llamada</span>
@@ -755,7 +755,7 @@ function UltimoCambioPlazo({ antecedentes }: { antecedentes: any[] }) {
 
 function AntecedentesModal({ cut, antecedentes, onClose }: { cut: string; antecedentes: any[]; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-gray-900/50 p-4">
+    <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-gray-900/50 p-4">
       <div className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-gray-800">
         <div className="flex items-center gap-3 bg-brand-600 px-5 py-3 text-white">
           <span className="text-[10px] font-semibold uppercase tracking-widest text-white/70">Antecedentes</span>

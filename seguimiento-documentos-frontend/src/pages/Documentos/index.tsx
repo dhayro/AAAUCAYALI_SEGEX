@@ -448,7 +448,7 @@ export default function Documentos() {
 
       {/* Response Modal */}
       {showResponseModal && selectedAsignacion && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
+        <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/50">
           <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-2xl dark:bg-gray-800">
             <h2 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">Dar Respuesta</h2>
             <textarea
@@ -482,7 +482,7 @@ export default function Documentos() {
 
       {/* Prorroga Modal */}
       {showProrrogaModal && selectedAsignacion && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
+        <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/50">
           <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-2xl dark:bg-gray-800">
             <h2 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">Solicitar Prórroga</h2>
 
@@ -534,7 +534,7 @@ export default function Documentos() {
 
       {/* Details Modal */}
       {showDetailsModal && selectedAsignacion && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
+        <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/50">
           <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-2xl dark:bg-gray-800">
             <h2 className="mb-4 text-lg font-bold text-gray-900 dark:text-white">Detalles del Documento</h2>
             <div className="mb-6 space-y-3 text-sm">

@@ -111,7 +111,7 @@ export default function ExpedienteDetalleModal({ cut, onClose }: Props) {
 
   return (
     <>
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900/50 p-4">
+      <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-gray-900/50 p-4">
         <div className="flex max-h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-gray-800">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 bg-brand-600 px-5 py-3 text-white">
             <div className="flex items-baseline gap-3">

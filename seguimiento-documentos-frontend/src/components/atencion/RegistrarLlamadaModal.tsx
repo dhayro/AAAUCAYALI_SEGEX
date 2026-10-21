@@ -135,7 +135,7 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
 
   return (
     <>
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+    <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/50 p-4">
       <form onSubmit={enviar} className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-2xl dark:bg-gray-800">
         <div className="flex items-center justify-between border-b p-5 dark:border-gray-700">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Registrar llamada</h2>

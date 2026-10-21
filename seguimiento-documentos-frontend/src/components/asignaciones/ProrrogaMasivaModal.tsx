@@ -76,7 +76,7 @@ export default function ProrrogaMasivaModal({ modo, ids, onClose, onDone }: Prop
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+    <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/50 p-4">
       <form onSubmit={enviar} className="w-full max-w-md space-y-4 rounded-lg bg-white p-6 shadow-2xl dark:bg-gray-800">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{TITULOS[modo]}</h2>

@@ -630,7 +630,7 @@ export default function SincronizarDatos() {
       </div>
 
       {showArchivoModal && (
-        <div className="fixed inset-0 bg-black/50 z-[10000] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 z-[999999] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-6xl w-full h-[87vh] z-[10001] flex flex-col">
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 flex justify-between items-center">
               <h2 className="text-xl font-bold">📄 Visor de Archivo</h2>
@@ -668,7 +668,7 @@ export default function SincronizarDatos() {
       )}
 
       {showTrazabilidadModal && (
-        <div className="fixed inset-0 bg-black/50 z-[9998] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 z-[999999] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-auto z-[9999]">
             {/* Header */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 border-b sticky top-0">
@@ -828,7 +828,7 @@ export default function SincronizarDatos() {
       )}
 
       {showMovimientosModal && (
-        <div className="fixed inset-0 bg-black/50 z-[9998] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 z-[999999] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-5xl w-full max-h-[90vh] overflow-auto z-[9999]">
             {/* Header */}
             <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-6 border-b sticky top-0">

@@ -10,7 +10,7 @@ type Props = {
 
 export default function VisorArchivoModal({ titulo, url, cargando, error, onClose }: Props) {
   return (
-    <div className="fixed inset-0 z-[11000] flex items-center justify-center bg-gray-900/60 p-4">
+    <div className="fixed inset-0 z-[1000000] flex items-center justify-center bg-gray-900/60 p-4">
       <div className="flex h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-gray-800">
         <div className="flex items-center gap-3 bg-brand-600 px-5 py-3 text-white">
           <h2 className="min-w-0 flex-1 truncate text-sm font-bold">{titulo}</h2>

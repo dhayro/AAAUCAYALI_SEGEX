@@ -166,7 +166,7 @@ export default function TiposDocumentos() {
 
         {/* Modal */}
         {showModal && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+          <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/50 p-4">
             <div className="w-full max-w-md rounded-lg bg-white shadow-2xl dark:bg-gray-800">
               <div className="flex items-center justify-between border-b p-6 dark:border-gray-700">
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">

@@ -212,7 +212,7 @@ export default function RespuestasAsignacionModal({
 
   return (
     <>
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900/50 p-4">
+      <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-gray-900/50 p-4">
         <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-gray-800">
           <div className="flex items-center gap-3 bg-brand-600 px-5 py-3 text-white">
             <span className="text-[10px] font-semibold uppercase tracking-widest text-white/70">Respuestas</span>

@@ -11,7 +11,7 @@ type Props = {
 
 export default function MovimientosModal({ titulo, rows, cargando, error, onClose }: Props) {
   return (
-    <div className="fixed inset-0 z-[10500] flex items-center justify-center bg-gray-900/50 p-4">
+    <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-gray-900/50 p-4">
       <div className="flex max-h-[85vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-gray-800">
         <div className="flex items-center gap-3 bg-brand-600 px-5 py-3 text-white">
           <div className="flex min-w-0 items-baseline gap-3">
