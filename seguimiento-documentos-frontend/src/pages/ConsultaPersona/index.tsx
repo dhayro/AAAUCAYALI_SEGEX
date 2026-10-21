@@ -1,5 +1,6 @@
 import SearchableSelect from "@/components/form/SearchableSelect";
 import Label from "@/components/form/Label";
+import Input from "@/components/form/input/InputField";
 import ReporteTabla, { type Columna } from "@/components/reportes/ReporteTabla";
 import { formatFecha, formatFechaHora } from "@/components/expedientes/format";
 import api from "@/utils/api";
@@ -44,12 +45,7 @@ const SITUACION: Record<string, string> = {
 const COLUMNAS_ASIGNACIONES: Columna[] = [
   { titulo: "CUT", celda: (f) => <span className="font-medium">{f.cut}</span>, excel: (f) => f.cut },
   { titulo: "Asignación", align: "center", celda: (f) => formatFecha(f.fecha_asignacion), excel: (f) => formatFecha(f.fecha_asignacion) },
-  {
-    titulo: "Vence",
-    align: "center",
-    celda: (f) => formatFecha(f.vence),
-    excel: (f) => formatFecha(f.vence),
-  },
+  { titulo: "Vence", align: "center", celda: (f) => formatFecha(f.vence), excel: (f) => formatFecha(f.vence) },
   { titulo: "Respuestas", align: "center", celda: (f) => f.total_respuestas, excel: (f) => f.total_respuestas },
   { titulo: "Estado", celda: (f) => ESTADO_ASIG[f.estado_respuesta] ?? f.estado_respuesta, excel: (f) => ESTADO_ASIG[f.estado_respuesta] ?? f.estado_respuesta },
   {
@@ -76,7 +72,7 @@ const COLUMNAS_ASIGNACIONES: Columna[] = [
 const COLUMNAS_LLAMADAS: Columna[] = [
   { titulo: "Fecha", celda: (f) => formatFechaHora(f.fecha_llamada), excel: (f) => formatFechaHora(f.fecha_llamada) },
   { titulo: "CUT", celda: (f) => <span className="font-medium">{f.cut}</span>, excel: (f) => f.cut },
-  { titulo: "Quien llama", celda: (f) => f.nombre_llamante, excel: (f) => f.nombre_llamante },
+  { titulo: "Quien llamó", celda: (f) => f.nombre_llamante, excel: (f) => f.nombre_llamante },
   {
     titulo: "Motivo",
     celda: (f) => (
@@ -86,6 +82,7 @@ const COLUMNAS_LLAMADAS: Columna[] = [
     ),
     excel: (f) => f.motivo,
   },
+  { titulo: "Responsable", celda: (f) => f.responsable, excel: (f) => f.responsable },
   { titulo: "Límite", align: "center", celda: (f) => formatFecha(f.fecha_limite), excel: (f) => formatFecha(f.fecha_limite) },
   { titulo: "Situación", celda: (f) => SITUACION[f.situacion] ?? f.situacion, excel: (f) => SITUACION[f.situacion] ?? f.situacion },
   {
@@ -106,11 +103,12 @@ const COLUMNAS_LLAMADAS: Columna[] = [
   { titulo: "Acciones pendientes", align: "center", celda: (f) => f.acciones_pendientes, excel: (f) => f.acciones_pendientes },
 ];
 
-// Consulta por persona: asignaciones o llamadas de una persona en un rango de fechas.
+// Consulta por persona: asignaciones de una persona, o consulta de llamadas filtrables por responsable, quien llamó, CUT y fecha.
 export default function ConsultaPersona() {
   const [usuarios, setUsuarios] = useState<UsuarioOpcion[]>([]);
   const [persona, setPersona] = useState<number | "">("");
   const [tab, setTab] = useState<"asignaciones" | "llamadas">("asignaciones");
+  const [quienLlamo, setQuienLlamo] = useState("");
 
   const fetchUsuarios = useCallback(async (filtro = "") => {
     try {
@@ -129,7 +127,12 @@ export default function ConsultaPersona() {
   const seleccionada = usuarios.find((u) => u.id === persona);
 
   const paramsAsignaciones = useMemo(() => ({ id_usuario: String(persona) }), [persona]);
-  const paramsLlamadas = useMemo(() => ({ id_responsable: String(persona) }), [persona]);
+  const paramsLlamadas = useMemo(() => {
+    const params: Record<string, string> = {};
+    if (persona !== "") params.id_responsable = String(persona);
+    if (quienLlamo.trim()) params.nombre_llamante = quienLlamo.trim();
+    return params;
+  }, [persona, quienLlamo]);
 
   const pestana = (valor: "asignaciones" | "llamadas", texto: string) => (
     <button
@@ -142,22 +145,24 @@ export default function ConsultaPersona() {
     </button>
   );
 
+  const sinPersonaEnAsignaciones = tab === "asignaciones" && persona === "";
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Consulta por persona</h1>
         <p className="mt-2 text-gray-600 dark:text-gray-400">
-          Revisa las asignaciones o las llamadas que atiende una persona, con su tiempo de respuesta
+          Revise las asignaciones de una persona o consulte llamadas por quien llamó, el CUT, la fecha o el responsable
         </p>
       </div>
 
       <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
-        <Label>Persona</Label>
+        <Label>{tab === "llamadas" ? "Responsable (opcional)" : "Persona"}</Label>
         <div className="flex items-center gap-2">
           <div className="flex-1 md:max-w-xl">
             <SearchableSelect
               value={persona}
-              onChange={(valor) => setPersona(Number(valor))}
+              onChange={(valor) => setPersona(valor === "" ? "" : Number(valor))}
               options={usuarios.map((u) => ({ id: u.id, nombre: etiqueta(u) }))}
               onSearch={(termino) => fetchUsuarios(termino)}
               placeholder="Buscar persona..."
@@ -175,40 +180,44 @@ export default function ConsultaPersona() {
         </div>
       </div>
 
-      {persona === "" ? (
+      <div className="flex gap-2">
+        {pestana("asignaciones", "Asignaciones")}
+        {pestana("llamadas", "Llamadas")}
+      </div>
+
+      {sinPersonaEnAsignaciones ? (
         <div className="rounded-lg bg-white p-12 text-center text-gray-500 shadow dark:bg-gray-800">
-          Seleccione una persona para ver su trabajo
+          Seleccione una persona para ver sus asignaciones
         </div>
+      ) : tab === "asignaciones" ? (
+        <ReporteTabla
+          key={`asig-${persona}`}
+          titulo={`Asignaciones de ${seleccionada ? etiqueta(seleccionada) : ""}`}
+          descripcion="Expedientes asignados a esta persona, con su respuesta y tiempo de atención"
+          endpoint="/reportes/asignaciones"
+          nombreArchivo="Consulta-Asignaciones"
+          columnas={COLUMNAS_ASIGNACIONES}
+          paramsExtra={paramsAsignaciones}
+          anchoMinimo={1000}
+        />
       ) : (
-        <>
-          <div className="flex gap-2">
-            {pestana("asignaciones", "Asignaciones")}
-            {pestana("llamadas", "Llamadas")}
-          </div>
-          {tab === "asignaciones" ? (
-            <ReporteTabla
-              key={`asig-${persona}`}
-              titulo={`Asignaciones de ${seleccionada ? etiqueta(seleccionada) : ""}`}
-              descripcion="Expedientes asignados a esta persona, con su respuesta y tiempo de atención"
-              endpoint="/reportes/asignaciones"
-              nombreArchivo="Consulta-Asignaciones"
-              columnas={COLUMNAS_ASIGNACIONES}
-              paramsExtra={paramsAsignaciones}
-              anchoMinimo={1000}
-            />
-          ) : (
-            <ReporteTabla
-              key={`llam-${persona}`}
-              titulo={`Llamadas que atiende ${seleccionada ? seleccionada.nombre : ""}`}
-              descripcion="Llamadas de administrados a cargo de esta persona, con su plazo y su tiempo de respuesta"
-              endpoint="/reportes/llamadas"
-              nombreArchivo="Consulta-Llamadas"
-              columnas={COLUMNAS_LLAMADAS}
-              paramsExtra={paramsLlamadas}
-              anchoMinimo={1100}
-            />
-          )}
-        </>
+        <ReporteTabla
+          key="llamadas"
+          titulo="Consulta de llamadas"
+          descripcion="Llamadas de administrados, con su plazo y su tiempo de respuesta. Filtre por rango de fechas, quien llamó, CUT o responsable"
+          endpoint="/reportes/llamadas"
+          nombreArchivo="Consulta-Llamadas"
+          columnas={COLUMNAS_LLAMADAS}
+          conCut
+          paramsExtra={paramsLlamadas}
+          filtrosExtra={
+            <div className="min-w-[220px] flex-1">
+              <Label>Quien llamó</Label>
+              <Input value={quienLlamo} onChange={(e) => setQuienLlamo(e.target.value)} placeholder="Nombre de quien llamó" />
+            </div>
+          }
+          anchoMinimo={1200}
+        />
       )}
     </div>
   );
