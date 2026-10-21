@@ -3,10 +3,11 @@ import { Link } from "react-router";
 import { toast } from "sonner";
 import PageMeta from "@/components/common/PageMeta";
 import { estadoPlazo, fechaLegible } from "@/components/atencion/plazo";
+import DetalleLlamadaModal from "@/components/atencion/DetalleLlamadaModal";
 import { formatFechaHora } from "@/components/expedientes/format";
+import { SearchIcon } from "@/icons";
 import api from "@/utils/api";
 import { colorUsuario } from "@/utils/colorUsuario";
-import DetalleLlamadaModal from "@/components/atencion/DetalleLlamadaModal";
 
 interface LlamadaMonitor {
   id: number;
@@ -27,6 +28,12 @@ interface ResumenMonitor {
   vencidas: number;
   por_vencer: number;
   sin_plazo: number;
+}
+
+interface UsuarioOpcion {
+  id: number;
+  nombre: string;
+  usuario: string;
 }
 
 const INTERVALO_MS = 10000;
@@ -109,9 +116,7 @@ function TarjetaLlamada({
               {l.total_del_cut} llamadas por este CUT
             </span>
           )}
-          {nueva && (
-            <span className="rounded-full bg-brand-600 px-3 py-1 text-xs font-bold text-white">Nueva</span>
-          )}
+          {nueva && <span className="rounded-full bg-brand-600 px-3 py-1 text-xs font-bold text-white">Nueva</span>}
           <span className={`rounded-full px-3 py-1 text-xs font-bold ${estado.clases}`}>{estado.texto}</span>
         </div>
       </div>
@@ -162,14 +167,42 @@ export default function MonitorLlamadas() {
   const [sonidoListo, setSonidoListo] = useState(false);
   // id de llamada -> momento en que apareció (para marcarla como nueva un rato)
   const [nuevas, setNuevas] = useState<Record<number, number>>({});
-
   const [detalleId, setDetalleId] = useState<number | null>(null);
+  const [busqueda, setBusqueda] = useState("");
+  const [busquedaAplicada, setBusquedaAplicada] = useState("");
+  const [responsable, setResponsable] = useState("");
+  const [usuarios, setUsuarios] = useState<UsuarioOpcion[]>([]);
+
   const ctxRef = useRef<AudioContext | null>(null);
   const idsConocidos = useRef<Set<number> | null>(null);
+  const filtroActual = useRef("");
+
+  useEffect(() => {
+    api
+      .get("/usuarios/select", { params: { limit: 200 } })
+      .then((res) => setUsuarios(Array.isArray(res.data) ? res.data : []))
+      .catch(() => setUsuarios([]));
+  }, []);
+
+  // Espera a que el usuario deje de escribir antes de consultar.
+  useEffect(() => {
+    const espera = setTimeout(() => setBusquedaAplicada(busqueda.trim()), 400);
+    return () => clearTimeout(espera);
+  }, [busqueda]);
 
   const cargar = useCallback(async () => {
     try {
-      const res = await api.get("/dashboard/monitor-llamadas");
+      const clave = `${busquedaAplicada}|${responsable}`;
+      if (filtroActual.current !== clave) {
+        // Al cambiar el filtro la lista cambia por completo: no se avisa como llamadas nuevas.
+        filtroActual.current = clave;
+        idsConocidos.current = null;
+      }
+
+      const params: Record<string, string> = {};
+      if (busquedaAplicada) params.q = busquedaAplicada;
+      if (responsable) params.responsable = responsable;
+      const res = await api.get("/dashboard/monitor-llamadas", { params });
       const lista: LlamadaMonitor[] = res.data.llamadas || [];
       const ids = new Set(lista.map((l) => l.id));
 
@@ -193,7 +226,7 @@ export default function MonitorLlamadas() {
     } finally {
       setCargando(false);
     }
-  }, []);
+  }, [busquedaAplicada, responsable]);
 
   useEffect(() => {
     cargar();
@@ -217,6 +250,7 @@ export default function MonitorLlamadas() {
     };
   }, []);
 
+  const filtrando = busquedaAplicada !== "" || responsable !== "";
   const ahora = Date.now();
 
   return (
@@ -228,8 +262,8 @@ export default function MonitorLlamadas() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white md:text-3xl">Monitor de llamadas sin respuesta</h1>
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Ordenadas por fecha límite · se actualiza cada 10 segundos
-              {!sonidoListo && " · haz clic en la pantalla para activar el aviso sonoro"}
               {actualizado && ` · última actualización ${horaLima(actualizado)}`}
+              {!sonidoListo && " · haz clic en la pantalla para activar el aviso sonoro"}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -248,6 +282,30 @@ export default function MonitorLlamadas() {
           </div>
         </header>
 
+        <section className="mb-6 flex flex-col gap-3 md:flex-row">
+          <div className="relative flex-1">
+            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+            <input
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar por CUT o por quien llamó"
+              className="w-full rounded-xl border border-gray-300 bg-white py-3 pl-10 pr-3 text-base shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+            />
+          </div>
+          <select
+            value={responsable}
+            onChange={(e) => setResponsable(e.target.value)}
+            className="rounded-xl border border-gray-300 bg-white px-3 py-3 text-base shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:border-gray-600 dark:bg-gray-800 dark:text-white md:w-72"
+          >
+            <option value="">Atiende: todos</option>
+            {usuarios.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.nombre} ({u.usuario})
+              </option>
+            ))}
+          </select>
+        </section>
+
         <section className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
           <Indicador titulo="Vencidas" valor={resumen?.vencidas ?? 0} tono="rojo" />
           <Indicador titulo="Por vencer (5 días)" valor={resumen?.por_vencer ?? 0} tono="ambar" />
@@ -259,25 +317,23 @@ export default function MonitorLlamadas() {
 
         {!cargando && llamadas.length === 0 && (
           <div className="rounded-2xl bg-white p-12 text-center text-lg font-semibold text-green-700 shadow dark:bg-gray-800 dark:text-green-300">
-            No hay llamadas sin respuesta.
+            {filtrando ? "Ninguna llamada sin respuesta coincide con la búsqueda." : "No hay llamadas sin respuesta."}
           </div>
         )}
 
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
           {llamadas.map((l) => (
-            <TarjetaLlamada key={l.id} llamada={l} nueva={nuevas[l.id] !== undefined && ahora - nuevas[l.id] < DURACION_NUEVA_MS}
+            <TarjetaLlamada
+              key={l.id}
+              llamada={l}
+              nueva={nuevas[l.id] !== undefined && ahora - nuevas[l.id] < DURACION_NUEVA_MS}
               onAbrir={() => setDetalleId(l.id)}
             />
           ))}
         </section>
 
         {detalleId !== null && (
-          <DetalleLlamadaModal
-            llamadaId={detalleId}
-            soloLectura
-            onClose={() => setDetalleId(null)}
-            onCambio={cargar}
-          />
+          <DetalleLlamadaModal llamadaId={detalleId} soloLectura onClose={() => setDetalleId(null)} onCambio={cargar} />
         )}
       </div>
     </>

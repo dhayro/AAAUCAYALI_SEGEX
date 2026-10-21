@@ -151,8 +151,17 @@ exports.monitorLlamadas = async (req, res) => {
   try {
     const gestor = esGestor(req.user);
     const hoy = hoyLima();
-    const where = { respondido: false };
-    if (!gestor) where[Op.or] = [{ id_responsable: req.user.id }, { id_usuario_creador: req.user.id }];
+    const { q, responsable } = req.query;
+    const condiciones = [];
+    if (!gestor) condiciones.push({ [Op.or]: [{ id_responsable: req.user.id }, { id_usuario_creador: req.user.id }] });
+    if (q && String(q).trim()) {
+      const like = { [Op.like]: `%${String(q).trim().toUpperCase()}%` };
+      condiciones.push({ [Op.or]: [{ cut: like }, { nombre_llamante: like }] });
+    }
+    if (responsable && !isNaN(parseInt(responsable, 10))) {
+      condiciones.push({ id_responsable: parseInt(responsable, 10) });
+    }
+    const where = { respondido: false, ...(condiciones.length ? { [Op.and]: condiciones } : {}) };
 
     const llamadas = await LlamadaAdministrado.findAll({
       where,
