@@ -38,6 +38,11 @@ const includes = [
 
 const obtenerConRelaciones = (id) => AsignacionExpediente.findByPk(id, { include: includes });
 
+const PERFILES_VER_TODAS = ['admin', 'jefe', 'secretaria'];
+const puedeVerTodas = (usuario) => PERFILES_VER_TODAS.includes(usuario.perfil);
+const puedeVerAsignacion = (asignacion, usuario) =>
+  puedeVerTodas(usuario) || asignacion.id_usuario === usuario.id;
+
 const validarUsuario = async (valor) => {
   const id = parseInt(valor, 10);
   if (isNaN(id)) throw new Error('El usuario asignado es obligatorio');
@@ -56,6 +61,7 @@ exports.obtenerTodas = async (req, res) => {
     const whereClause = {};
     if (cut) whereClause.cut = { [Op.like]: `%${normalizarTexto(cut)}%` };
     if (id_usuario) whereClause.id_usuario = parseInt(id_usuario, 10);
+    if (!puedeVerTodas(req.user)) whereClause.id_usuario = req.user.id;
     if (estado !== undefined && estado !== '') whereClause.estado = parseBoolean(estado);
     if (parseBoolean(con_prorroga)) whereClause.estado_prorroga = { [Op.ne]: null };
     if (estado_prorroga) whereClause.estado_prorroga = normalizarTexto(estado_prorroga);
@@ -82,7 +88,7 @@ exports.obtenerTodas = async (req, res) => {
 exports.obtenerPorId = async (req, res) => {
   try {
     const asignacion = await obtenerConRelaciones(req.params.id);
-    if (!asignacion) {
+    if (!asignacion || !puedeVerAsignacion(asignacion, req.user)) {
       return res.status(404).json({ mensaje: 'Asignación no encontrada' });
     }
     res.json(asignacion);
@@ -284,6 +290,10 @@ exports.rechazarProrrogaMasivo = accionMasiva(rechazarProrrogaPendiente);
 
 exports.obtenerHistorial = async (req, res) => {
   try {
+    const asignacion = await AsignacionExpediente.findByPk(req.params.id, { attributes: ['id', 'id_usuario'] });
+    if (!asignacion || !puedeVerAsignacion(asignacion, req.user)) {
+      return res.status(404).json({ mensaje: 'Asignación no encontrada' });
+    }
     const historial = await HistorialAsignacion.findAll({
       where: { id_asignacion: req.params.id },
       include: [{ model: Usuario, as: 'usuario', attributes: ['id', 'nombre', 'apellido', 'usuario'] }],
