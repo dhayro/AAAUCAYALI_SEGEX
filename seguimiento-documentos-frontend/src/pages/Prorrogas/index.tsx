@@ -46,7 +46,7 @@ export default function Prorrogas() {
   const [historial, setHistorial] = useState<Prorroga | null>(null);
 
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
-  const [filters, setFilters] = useState({ cut: "", estado_prorroga: "" });
+  const [filters, setFilters] = useState({ cut: "", estado_prorroga: "PENDIENTE" });
   const [totalCount, setTotalCount] = useState(0);
 
   const fetchProrrogas = useCallback(async () => {
