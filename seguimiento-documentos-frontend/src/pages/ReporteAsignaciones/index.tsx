@@ -2,6 +2,7 @@ import PageMeta from "@/components/common/PageMeta";
 import DatePickerLima from "@/components/form/DatePickerLima";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
+import SearchableSelect from "@/components/form/SearchableSelect";
 import { formatFecha, formatFechaHora } from "@/components/expedientes/format";
 import { DownloadIcon } from "@/icons";
 import api from "@/utils/api";
@@ -89,10 +90,11 @@ export default function ReporteAsignaciones() {
   const [totales, setTotales] = useState<Totales>(TOTALES_VACIOS);
   const [cargando, setCargando] = useState(false);
   const [generado, setGenerado] = useState(false);
+  const [usuarios, setUsuarios] = useState<{ id: number; nombre: string; apellido?: string; usuario: string; cargo?: string | null }[]>([]);
   const [pagina, setPagina] = useState({ pageIndex: 0, pageSize: 10 });
   const [filtros, setFiltros] = useState(() => {
     const hoy = hoyYMD();
-    return { desde: `${hoy.slice(0, 8)}01`, hasta: hoy, cut: "", estado: "" };
+    return { desde: `${hoy.slice(0, 8)}01`, hasta: hoy, cut: "", estado: "", usuario: "" as number | "" };
   });
 
   const generar = useCallback(async () => {
@@ -103,6 +105,7 @@ export default function ReporteAsignaciones() {
       const params: Record<string, string> = { desde: filtros.desde, hasta: filtros.hasta };
       if (filtros.cut.trim()) params.cut = filtros.cut.trim();
       if (filtros.estado) params.estado_respuesta = filtros.estado;
+      if (filtros.usuario !== "") params.id_usuario = String(filtros.usuario);
       const res = await api.get("/reportes/asignaciones", { params });
       setFilas(res.data.filas || []);
       setTotales(res.data.totales || TOTALES_VACIOS);
@@ -115,7 +118,19 @@ export default function ReporteAsignaciones() {
     }
   }, [filtros]);
 
+  const fetchUsuarios = useCallback(async (filtro = "") => {
+    try {
+      const params: Record<string, string | number> = { limit: 10 };
+      if (filtro) params.filtro = filtro;
+      const res = await api.get("/usuarios/select", { params });
+      setUsuarios(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      setUsuarios([]);
+    }
+  }, []);
+
   useEffect(() => {
+    fetchUsuarios();
     generar();
   }, []);
 
@@ -197,7 +212,7 @@ export default function ReporteAsignaciones() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 rounded-lg bg-gray-50 p-4 dark:bg-gray-800 md:grid-cols-5">
+        <div className="grid grid-cols-1 gap-4 rounded-lg bg-gray-50 p-4 dark:bg-gray-800 md:grid-cols-6">
           <DatePickerLima label="Asignadas desde" value={filtros.desde} onChange={(d) => setFiltros({ ...filtros, desde: d })} placeholder="DD/MM/YYYY" />
           <DatePickerLima label="Asignadas hasta" value={filtros.hasta} onChange={(d) => setFiltros({ ...filtros, hasta: d })} placeholder="DD/MM/YYYY" />
           <div>
@@ -217,6 +232,41 @@ export default function ReporteAsignaciones() {
                 </option>
               ))}
             </select>
+          </div>
+          <div>
+            <Label>Asignado a</Label>
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <SearchableSelect
+                  value={filtros.usuario}
+                  onChange={(valor) => {
+                    setFiltros({ ...filtros, usuario: Number(valor) });
+                  }}
+                  options={usuarios.map((u) => ({
+                    id: u.id,
+                    nombre: u.cargo ? `${u.nombre} ${u.apellido ?? ""} (${u.cargo})` : `${u.nombre} ${u.apellido ?? ""}`,
+                  }))}
+                  onSearch={(termino) => fetchUsuarios(termino)}
+                  placeholder="Todos · buscar persona"
+                  selectedLabel={
+                    filtros.usuario !== ""
+                      ? (() => {
+                          const u = usuarios.find((x) => x.id === filtros.usuario);
+                          return u ? `${u.nombre} ${u.apellido ?? ""}` : "";
+                        })()
+                      : ""
+                  }
+                />
+              </div>
+              {filtros.usuario !== "" && (
+                <button
+                  onClick={() => setFiltros({ ...filtros, usuario: "" })}
+                  className="shrink-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+                >
+                  Quitar
+                </button>
+              )}
+            </div>
           </div>
           <div className="flex items-end">
             <button
