@@ -118,7 +118,7 @@ export default function ReporteLlamadas() {
     } finally {
       setCargando(false);
     }
-  }, [filtros]);
+  }, [filtros, atiende]);
 
   // Carga inicial con el mes actual; luego el reporte se genera con el botón o al cambiar CUT o situación.
   const fetchUsuarios = useCallback(async (filtro = "") => {
