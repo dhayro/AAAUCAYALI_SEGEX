@@ -688,14 +688,6 @@ export default function AsignacionExpediente() {
                             <div className="mt-1 text-xs text-gray-500">
                               {a.respuesta.total} · última {formatFechaHora(a.respuesta.ultima_respuesta)}
                             </div>
-                            {a.respuesta.estado === "OBSERVADA" && a.respuesta.evaluacion?.observacion && (
-                              <div
-                                className="mx-auto mt-1 max-w-[14rem] truncate text-xs font-medium text-amber-700 dark:text-amber-300"
-                                title={a.respuesta.evaluacion.observacion}
-                              >
-                                Observación: {a.respuesta.evaluacion.observacion}
-                              </div>
-                            )}
                           </>
                         ) : (
                           <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${ESTADO_RESPUESTA.SIN_RESPUESTA.clases}`}>
