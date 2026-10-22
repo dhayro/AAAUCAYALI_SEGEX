@@ -8,6 +8,9 @@ export default defineConfig({
     port: 3003,
     strictPort: false,
   },
+  preview: {
+    allowedHosts: ["segex-aaau.mmmcontratistasgenerales.com"],
+  },
   resolve: {
     alias: {
       "@": "/src",
