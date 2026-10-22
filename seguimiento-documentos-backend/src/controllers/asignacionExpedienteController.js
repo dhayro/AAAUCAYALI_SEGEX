@@ -131,6 +131,14 @@ exports.crear = async (req, res) => {
       id_usuario_creador: req.user.id,
       id_usuario_modificador: req.user.id,
     });
+    await HistorialAsignacion.create({
+      id_asignacion: nueva.id,
+      tipo: 'ASIGNACION_CREADA',
+      plazo: plazo,
+      fecha_evento: hoyLima(),
+      observacion: 'Asignación creada de forma individual',
+      id_usuario: req.user.id,
+    });
 
     res.status(201).json(await obtenerConRelaciones(nueva.id));
   } catch (error) {
@@ -243,13 +251,24 @@ exports.cargaMasiva = async (req, res) => {
 
     await sequelize.transaction(async (t) => {
       for (const v of validas) {
-        await AsignacionExpediente.create(
+        const creada = await AsignacionExpediente.create(
           {
             ...v,
             id_expediente: null,
             estado: true,
             id_usuario_creador: req.user.id,
             id_usuario_modificador: req.user.id,
+          },
+          { transaction: t }
+        );
+        await HistorialAsignacion.create(
+          {
+            id_asignacion: creada.id,
+            tipo: 'ASIGNACION_CREADA',
+            plazo: v.plazo_atencion,
+            fecha_evento: hoyLima(),
+            observacion: 'Asignación creada por carga masiva desde Excel',
+            id_usuario: req.user.id,
           },
           { transaction: t }
         );
