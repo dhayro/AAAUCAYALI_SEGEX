@@ -1,4 +1,5 @@
 import { CloseIcon } from "@/icons";
+import { createPortal } from "react-dom";
 
 type Props = {
   titulo: string;
@@ -8,8 +9,9 @@ type Props = {
   onClose: () => void;
 };
 
+// Se monta en document.body para quedar por encima de las ventanas que lo abren (trazabilidad, respuestas, llamadas).
 export default function VisorArchivoModal({ titulo, url, cargando, error, onClose }: Props) {
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[1000000] flex items-center justify-center bg-gray-900/60 p-4">
       <div className="flex h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-gray-800">
         <div className="flex items-center gap-3 bg-brand-600 px-5 py-3 text-white">
@@ -45,6 +47,7 @@ export default function VisorArchivoModal({ titulo, url, cargando, error, onClos
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
