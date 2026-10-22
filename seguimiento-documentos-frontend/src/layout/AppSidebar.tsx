@@ -23,6 +23,7 @@ type NavItem = {
   path?: string;
   new?: boolean;
   gestoresOnly?: boolean;
+  adminOnly?: boolean;
   cerrarSesion?: boolean;
   target?: string;
   subItems?: {
@@ -44,7 +45,9 @@ const visibleParaPerfil = (items: NavItem[]) => {
       .filter((item) => MENUS_PERSONAL.includes(item.key ?? ""))
       .map((item) => (item.subItems ? { ...item, subItems: item.subItems.filter((sub) => MENUS_PERSONAL.includes(sub.key ?? "")) } : item));
   }
-  return items.filter((item) => !item.gestoresOnly || puedeGestionarAsignaciones());
+  return items.filter(
+    (item) => (!item.gestoresOnly || puedeGestionarAsignaciones()) && (!item.adminOnly || perfilActual() === "admin")
+  );
 };
 
 const navItems: NavItem[] = [
@@ -207,6 +210,13 @@ const othersItems: NavItem[] = [
     name: "Admin Tokens SISGED",
     key: "admin-tokens-sisged",
     path: "/admin-sisged-tokens",
+  },
+  {
+    icon: <TableIcon fontSize={24} />,
+    name: "Sincronizar SISGED",
+    key: "sincronizar-sisged",
+    path: "/sincronizar-sisged",
+    adminOnly: true,
   },
   {
     icon: <LogoutIcon fontSize={24} />,
