@@ -64,7 +64,7 @@ const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
 // CORS configuration
 const corsOptions = {
-  origin: ['http://localhost:3003', 'http://localhost:3004', 'http://localhost:5173'],
+  origin: ['http://localhost:3003', 'http://localhost:3004', 'http://localhost:5173', 'https://segex-aaau.mmmcontratistasgenerales.com'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
