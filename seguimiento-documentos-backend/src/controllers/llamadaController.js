@@ -369,6 +369,16 @@ exports.actualizarLlamada = async (req, res) => {
       }
     }
 
+    // Auditoría: se guarda cada campo que cambió, con su valor anterior y el nuevo. Se calcula antes de actualizar.
+    const etiquetasEdicion = { fecha_llamada: 'Fecha de llamada', nombre_llamante: 'Quien llamó', telefono: 'Teléfono', motivo: 'Motivo' };
+    const textoValor = (campo, valor) => {
+      if (valor === null || valor === undefined || valor === '') return '(vacío)';
+      return campo === 'fecha_llamada' ? new Date(valor).toLocaleString('es-PE', { timeZone: 'America/Lima' }) : String(valor);
+    };
+    const detallesEdicion = Object.keys(etiquetasEdicion)
+      .filter((campo) => cambios[campo] !== undefined && textoValor(campo, cambios[campo]) !== textoValor(campo, llamada[campo]))
+      .map((campo) => `${etiquetasEdicion[campo]}: ${textoValor(campo, llamada[campo])} → ${textoValor(campo, cambios[campo])}`);
+
     await llamada.update(cambios);
 
     for (const p of pendientesAEjecutar) {
@@ -397,11 +407,8 @@ exports.actualizarLlamada = async (req, res) => {
         req.user.id
       );
     }
-    const otrosCambios = Object.keys(cambios).filter(
-      (k) => !['respondido', 'fecha_respuesta', 'id_usuario_modificador'].includes(k)
-    );
-    if (otrosCambios.length > 0) {
-      await registrarHistorial(llamada.id, 'EDICION', `Datos editados: ${otrosCambios.join(', ')}`, req.user.id);
+    if (detallesEdicion.length > 0) {
+      await registrarHistorial(llamada.id, 'EDICION', detallesEdicion.join('\n'), req.user.id);
     }
 
     res.json(await obtenerLlamada(llamada.id));
@@ -523,7 +530,10 @@ exports.actualizarAccionLlamada = async (req, res) => {
       const observacion = textoMayuscula(req.body.observacion);
       if (observacion !== accion.observacion) {
         cambios.observacion = observacion;
-        historial.push(['OBSERVACION', `Observación de ${catalogo.nombre}: ${observacion || '(sin texto)'}`]);
+        historial.push([
+          'OBSERVACION',
+          `Observación de ${catalogo.nombre}: ${accion.observacion || '(sin texto)'} → ${observacion || '(sin texto)'}`,
+        ]);
       }
     }
 
