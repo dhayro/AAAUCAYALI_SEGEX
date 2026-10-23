@@ -31,6 +31,7 @@ interface Prorroga {
   plazo_prorroga?: number | null;
   motivo_prorroga?: string | null;
   estado_prorroga?: string | null;
+  rechazos_previos?: number;
   fecha_vencimiento_prorroga?: string | null;
   asignado?: UsuarioResumen | null;
 }
@@ -54,7 +55,7 @@ export default function Prorrogas() {
   const [masivo, setMasivo] = useState<ModoMasivo | null>(null);
 
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
-  const [filters, setFilters] = useState({ cut: "", estado_prorroga: "PENDIENTE" });
+  const [filters, setFilters] = useState({ cut: "", estado_prorroga: "PENDIENTE", con_rechazo: false });
   const [contadores, setContadores] = useState<Record<string, number>>({});
   const [totalCount, setTotalCount] = useState(0);
 
@@ -69,6 +70,7 @@ export default function Prorrogas() {
       };
       if (filters.cut) params.cut = filters.cut;
       if (filters.estado_prorroga) params.estado_prorroga = filters.estado_prorroga;
+      if (filters.con_rechazo) params.con_rechazo_previo = "true";
 
       const response = await api.get("/asignaciones-expediente", { params });
       setProrrogas(response.data.asignaciones || []);
@@ -93,16 +95,26 @@ export default function Prorrogas() {
     setPagination({ pageIndex: 0, pageSize: 10 });
   };
 
+  // "Con rechazo previo" es un filtro propio: incluye las que fueron rechazadas antes aunque hoy estén pendientes.
   const cambiarEstadoProrroga = (valor: string) => {
-    setFilters((prev) => ({ ...prev, estado_prorroga: valor }));
+    if (valor === "CON_RECHAZO_PREVIO") {
+      setFilters((prev) => ({ ...prev, estado_prorroga: "", con_rechazo: true }));
+    } else {
+      setFilters((prev) => ({ ...prev, estado_prorroga: valor, con_rechazo: false }));
+    }
     setPagination({ pageIndex: 0, pageSize: 10 });
   };
 
   const FILTROS_PRORROGA = [
-    { value: "", texto: "Todas", cantidad: Object.values(contadores).reduce((s, n) => s + n, 0) },
+    {
+      value: "",
+      texto: "Todas",
+      cantidad: (contadores.PENDIENTE ?? 0) + (contadores.ACEPTADA ?? 0) + (contadores.RECHAZADA ?? 0),
+    },
     { value: "PENDIENTE", texto: "Pendientes", cantidad: contadores.PENDIENTE ?? 0 },
     { value: "ACEPTADA", texto: "Aceptadas", cantidad: contadores.ACEPTADA ?? 0 },
     { value: "RECHAZADA", texto: "Rechazadas", cantidad: contadores.RECHAZADA ?? 0 },
+    { value: "CON_RECHAZO_PREVIO", texto: "Con rechazo previo", cantidad: contadores.CON_RECHAZO_PREVIO ?? 0 },
   ];
 
   const selectClass =
@@ -124,7 +136,8 @@ export default function Prorrogas() {
 
         <div className="flex flex-wrap gap-2">
           {FILTROS_PRORROGA.map((f) => {
-            const activo = filters.estado_prorroga === f.value;
+            const activo =
+              f.value === "CON_RECHAZO_PREVIO" ? filters.con_rechazo : !filters.con_rechazo && filters.estado_prorroga === f.value;
             return (
               <button
                 key={f.value || "todas"}
@@ -262,6 +275,13 @@ export default function Prorrogas() {
                           <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${ESTADO_PRORROGA[p.estado_prorroga].clases}`}>
                             {ESTADO_PRORROGA[p.estado_prorroga].texto}
                           </span>
+                        )}
+                        {(p.rechazos_previos ?? 0) > 0 && (
+                          <div className="mt-1">
+                            <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-800 dark:bg-red-900 dark:text-red-100">
+                              Rechazada {p.rechazos_previos} {p.rechazos_previos === 1 ? "vez" : "veces"} antes
+                            </span>
+                          </div>
                         )}
                       </td>
                       <td className="px-6 py-4 text-center text-sm">

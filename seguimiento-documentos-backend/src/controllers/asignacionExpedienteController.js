@@ -74,6 +74,19 @@ exports.obtenerTodas = async (req, res) => {
     if (estado !== undefined && estado !== '') whereClause.estado = parseBoolean(estado);
     // Base sin el filtro de prórroga: permite contar cada estado aunque la lista esté filtrada por uno.
     const whereBase = { ...whereClause };
+    // Rechazos de prórroga guardados en el historial: no se pierden aunque la asignación vuelva a pedir prórroga.
+    const historialRechazos = await HistorialAsignacion.findAll({
+      where: { tipo: 'PRORROGA_RECHAZADA' },
+      attributes: ['id_asignacion'],
+      raw: true,
+    });
+    const rechazosPorAsignacion = {};
+    historialRechazos.forEach((h) => {
+      rechazosPorAsignacion[h.id_asignacion] = (rechazosPorAsignacion[h.id_asignacion] || 0) + 1;
+    });
+    if (parseBoolean(req.query.con_rechazo_previo)) {
+      whereClause.id = { [Op.in]: [0, ...Object.keys(rechazosPorAsignacion).map(Number)] };
+    }
     if (parseBoolean(con_prorroga)) whereClause.estado_prorroga = { [Op.ne]: null };
     if (estado_prorroga) whereClause.estado_prorroga = normalizarTexto(estado_prorroga);
 
@@ -113,12 +126,13 @@ exports.obtenerTodas = async (req, res) => {
 
     const filasProrroga = await AsignacionExpediente.findAll({
       where: whereBase,
-      attributes: ['estado_prorroga'],
+      attributes: ['id', 'estado_prorroga'],
       raw: true,
     });
-    const contadoresProrroga = { PENDIENTE: 0, ACEPTADA: 0, RECHAZADA: 0 };
+    const contadoresProrroga = { PENDIENTE: 0, ACEPTADA: 0, RECHAZADA: 0, CON_RECHAZO_PREVIO: 0 };
     filasProrroga.forEach((f) => {
       if (contadoresProrroga[f.estado_prorroga] !== undefined) contadoresProrroga[f.estado_prorroga] += 1;
+      if (rechazosPorAsignacion[f.id]) contadoresProrroga.CON_RECHAZO_PREVIO += 1;
     });
 
     res.json({
@@ -129,6 +143,7 @@ exports.obtenerTodas = async (req, res) => {
         const evaluacion = r.evaluacion && { ...r.evaluacion, fecha_evaluacion: aLima(r.evaluacion.fecha_evaluacion) };
         return {
           ...a.get({ plain: true }),
+          rechazos_previos: rechazosPorAsignacion[a.id] || 0,
           respuesta: { ...r, estado: estadoDe(a), ultima_respuesta: aLima(r.ultima_respuesta), evaluacion },
         };
       }),
