@@ -148,7 +148,7 @@ export default function Llamadas() {
                   <tr className="border-b bg-gray-50 dark:bg-gray-700">
                     <th className="px-6 py-4 text-center text-sm font-semibold">#</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">CUT</th>
-                    <th className="px-6 py-4 text-start text-sm font-semibold">Conteo</th>
+                    <th className="whitespace-nowrap px-6 py-4 text-start text-sm font-semibold">Conteo</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Fecha y hora</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">Quien llamó o fue atendido</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">Motivo</th>
@@ -188,13 +188,13 @@ export default function Llamadas() {
                           </button>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm">
+                      <td className="whitespace-nowrap px-6 py-4 text-sm">
                         {(l.total_del_cut ?? 1) > 1 ? (
                           (() => {
                             const pres = l.presenciales_del_cut ?? 0;
                             const llam = (l.total_del_cut ?? 1) - pres;
                             return (
-                              <div className="flex flex-wrap gap-1">
+                              <div className="flex gap-1">
                                 {llam > 0 && (
                                   <span
                                     title={`${llam} llamada${llam === 1 ? "" : "s"}`}
