@@ -31,6 +31,9 @@ const nombreCompleto = (u) => (u ? `${u.nombre} ${u.apellido}` : '—');
 const puedeVerLlamada = (llamada, usuario) =>
   esGestor(usuario) || llamada.id_responsable === usuario.id || llamada.id_usuario_creador === usuario.id;
 
+// El monitor muestra todas las llamadas a cualquier usuario con sesión, así que su detalle y archivos son de solo lectura para todos.
+const puedeLeerLlamada = () => true;
+
 const puedeOperarLlamada = (llamada, usuario) =>
   esGestor(usuario) || llamada.id_responsable === usuario.id;
 
@@ -210,12 +213,12 @@ exports.listarLlamadas = async (req, res) => {
 exports.obtenerLlamada = async (req, res) => {
   try {
     const llamada = await LlamadaAdministrado.findByPk(req.params.id);
-    if (!llamada || !puedeVerLlamada(llamada, req.user)) {
+    if (!llamada || !puedeLeerLlamada()) {
       return res.status(404).json({ mensaje: 'Llamada no encontrada' });
     }
     const datos = await obtenerLlamada(llamada.id);
     datos.otras_del_cut = await LlamadaAdministrado.findAll({
-      where: { cut: llamada.cut, id: { [Op.ne]: llamada.id }, ...ambitoDe(req.user) },
+      where: { cut: llamada.cut, id: { [Op.ne]: llamada.id } },
       attributes: ['id', 'fecha_llamada', 'nombre_llamante', 'respondido', 'fecha_respuesta', 'motivo'],
       include: [{ model: Usuario, as: 'responsable', attributes: ['id', 'nombre', 'apellido'] }],
       order: [['fecha_llamada', 'DESC']],
@@ -633,7 +636,7 @@ exports.descargarArchivo = async (req, res) => {
     if (!archivo) return res.status(404).json({ mensaje: 'Archivo no encontrado' });
     const accion = await AccionLlamada.findByPk(archivo.id_accion_llamada);
     const llamada = accion && (await LlamadaAdministrado.findByPk(accion.id_llamada));
-    if (!llamada || !puedeVerLlamada(llamada, req.user)) {
+    if (!llamada || !puedeLeerLlamada()) {
       return res.status(404).json({ mensaje: 'Archivo no encontrado' });
     }
     const ruta = path.join(CARPETA_ARCHIVOS, path.basename(archivo.nombre_guardado));
