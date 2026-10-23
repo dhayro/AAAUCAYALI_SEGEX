@@ -11,6 +11,7 @@ type Props = {
 
 const ETIQUETA_EVENTO: Record<string, string> = {
   ASIGNACION_CREADA: "Asignación creada",
+  ASIGNACION_EDITADA: "Asignación editada",
   SOLICITUD_PRORROGA: "Solicitud de prórroga",
   PRORROGA_ACEPTADA: "Prórroga aceptada",
   PRORROGA_RECHAZADA: "Prórroga rechazada",

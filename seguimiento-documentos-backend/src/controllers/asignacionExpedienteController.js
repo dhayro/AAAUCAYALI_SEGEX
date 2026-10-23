@@ -328,7 +328,41 @@ exports.actualizar = async (req, res) => {
       cambios.fecha_vencimiento_prorroga = sumarDiasCalendario(cambios.fecha_vencimiento, actual.plazo_prorroga);
     }
 
+    // Auditoría: cada campo que cambió queda con su valor anterior y el nuevo. Se calcula antes de actualizar.
+    const detalles = [];
+    const nombreDe = async (id) => {
+      const u = await Usuario.findByPk(id, { attributes: ['nombre', 'apellido'] });
+      return u ? `${u.nombre} ${u.apellido}` : String(id);
+    };
+    const fechaTexto = (valor) => String(valor).slice(0, 10);
+    const textoOpcional = (valor) => (valor === null || valor === undefined || valor === '' ? '(vacío)' : String(valor));
+    if (cambios.id_usuario !== undefined && cambios.id_usuario !== actual.id_usuario) {
+      detalles.push(`Asignado a: ${await nombreDe(actual.id_usuario)} → ${await nombreDe(cambios.id_usuario)}`);
+    }
+    if (fechaTexto(fechaAsignacion) !== fechaTexto(actual.fecha_asignacion)) {
+      detalles.push(`Fecha de asignación: ${fechaTexto(actual.fecha_asignacion)} → ${fechaTexto(fechaAsignacion)}`);
+    }
+    if (Number(plazo) !== Number(actual.plazo_atencion)) {
+      detalles.push(`Plazo: ${actual.plazo_atencion} días → ${plazo} días`);
+    }
+    if (cambios.observacion !== undefined && cambios.observacion !== actual.observacion) {
+      detalles.push(`Observación: ${textoOpcional(actual.observacion)} → ${textoOpcional(cambios.observacion)}`);
+    }
+    if (cambios.numero_orden !== undefined && cambios.numero_orden !== actual.numero_orden) {
+      detalles.push(`Número de orden: ${textoOpcional(actual.numero_orden)} → ${textoOpcional(cambios.numero_orden)}`);
+    }
+
     await actual.update(cambios);
+    if (detalles.length > 0) {
+      await HistorialAsignacion.create({
+        id_asignacion: actual.id,
+        tipo: 'ASIGNACION_EDITADA',
+        plazo,
+        fecha_evento: hoyLima(),
+        observacion: detalles.join(' | '),
+        id_usuario: req.user.id,
+      });
+    }
     res.json(await obtenerConRelaciones(actual.id));
   } catch (error) {
     res.status(400).json({ mensaje: error.message });
