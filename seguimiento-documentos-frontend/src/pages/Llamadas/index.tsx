@@ -191,15 +191,24 @@ export default function Llamadas() {
                       </td>
                       <td className="px-6 py-4 text-sm">
                         {(l.total_del_cut ?? 1) > 1 ? (
-                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800 dark:bg-amber-900 dark:text-amber-100">
-                            {(() => {
-                              const pres = l.presenciales_del_cut ?? 0;
-                              const llam = (l.total_del_cut ?? 1) - pres;
-                              return [llam > 0 && `${llam} llamada${llam === 1 ? "" : "s"}`, pres > 0 && `${pres} presencial${pres === 1 ? "" : "es"}`]
-                                .filter(Boolean)
-                                .join(" · ");
-                            })()}
-                          </span>
+                          (() => {
+                            const pres = l.presenciales_del_cut ?? 0;
+                            const llam = (l.total_del_cut ?? 1) - pres;
+                            return (
+                              <div className="flex flex-wrap gap-1">
+                                {llam > 0 && (
+                                  <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-bold text-sky-800 dark:bg-sky-900 dark:text-sky-100">
+                                    {llam} llamada{llam === 1 ? "" : "s"}
+                                  </span>
+                                )}
+                                {pres > 0 && (
+                                  <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-bold text-violet-800 dark:bg-violet-900 dark:text-violet-100">
+                                    {pres} presencial{pres === 1 ? "" : "es"}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })()
                         ) : (
                           <span className="text-gray-400">—</span>
                         )}
