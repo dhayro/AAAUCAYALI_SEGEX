@@ -204,7 +204,10 @@ exports.listarLlamadas = async (req, res) => {
     });
 
     const conteo = await conteoPorCut(rows.map((r) => r.cut), req.user);
-    const llamadas = rows.map((r) => ({ ...r.get({ plain: true }), total_del_cut: conteo[r.cut] || 1 }));
+    const llamadas = rows.map((r) => {
+      const c = conteo[r.cut] || { total: 1, presenciales: 0 };
+      return { ...r.get({ plain: true }), total_del_cut: c.total, presenciales_del_cut: c.presenciales };
+    });
     res.json({ llamadas, totalLlamadas: count, totalPaginas: Math.ceil(count / limit), paginaActual: page });
   } catch (error) {
     res.status(500).json({ mensaje: error.message });
@@ -288,16 +291,19 @@ const ambitoDe = (usuario) =>
   esGestor(usuario) ? {} : { [Op.or]: [{ id_responsable: usuario.id }, { id_usuario_creador: usuario.id }] };
 
 // Cuántas llamadas visibles tiene cada CUT, para avisar de reincidencias.
+// Por CUT: cuántos registros tiene en total y cuántos son atenciones presenciales.
 const conteoPorCut = async (cuts, usuario) => {
   const conteo = {};
   if (!cuts.length) return conteo;
   const filas = await LlamadaAdministrado.findAll({
-    attributes: ['cut'],
+    attributes: ['cut', 'tipo_atencion'],
     where: { cut: { [Op.in]: cuts }, ...ambitoDe(usuario) },
     raw: true,
   });
   filas.forEach((f) => {
-    conteo[f.cut] = (conteo[f.cut] || 0) + 1;
+    const c = (conteo[f.cut] = conteo[f.cut] || { total: 0, presenciales: 0 });
+    c.total += 1;
+    if (f.tipo_atencion === 'PRESENCIAL') c.presenciales += 1;
   });
   return conteo;
 };
