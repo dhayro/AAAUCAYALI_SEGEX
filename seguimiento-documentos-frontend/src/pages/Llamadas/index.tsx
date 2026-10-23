@@ -146,7 +146,7 @@ export default function Llamadas() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b bg-gray-50 dark:bg-gray-700">
-                    <th className="px-6 py-4 text-start text-sm font-semibold">#</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold">#</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">CUT</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">Conteo</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Fecha y hora</th>
@@ -165,7 +165,7 @@ export default function Llamadas() {
                       key={l.id}
                       className={`border-b border-l-4 hover:bg-gray-50 dark:hover:bg-gray-700 ${colorUsuario(l.responsable?.id).borde}`}
                     >
-                      <td className="px-6 py-4 text-sm">
+                      <td className="px-6 py-4 text-center text-sm">
                         <div>{pagination.pageIndex * pagination.pageSize + index + 1}</div>
                         <span
                           className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-bold ${
