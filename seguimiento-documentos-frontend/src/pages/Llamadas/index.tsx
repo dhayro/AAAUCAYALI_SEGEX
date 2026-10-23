@@ -18,7 +18,7 @@ interface Llamada {
   nombre_llamante: string;
   tipo_atencion?: "LLAMADA" | "PRESENCIAL";
   puede_editar_datos?: boolean;
-  puede_anular?: boolean;
+  puede_eliminar?: boolean;
   presenciales_del_cut?: number;
   telefono?: string | null;
   motivo: string;
@@ -287,7 +287,7 @@ export default function Llamadas() {
                               Editar
                             </button>
                           )}
-                          {l.puede_anular && (
+                          {l.puede_eliminar && (
                             <button
                               onClick={() => {
                                 setDetalleAccion("anular");
@@ -295,7 +295,7 @@ export default function Llamadas() {
                               }}
                               className="rounded border border-red-300 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-300 dark:hover:bg-gray-700"
                             >
-                              Anular
+                              Eliminar
                             </button>
                           )}
                         </div>

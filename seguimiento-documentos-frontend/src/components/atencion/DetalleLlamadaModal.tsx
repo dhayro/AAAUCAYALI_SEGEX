@@ -36,6 +36,7 @@ const TIPO_ANTECEDENTE: Record<string, string> = {
   ARCHIVO_SUBIDO: "Archivo subido",
   ARCHIVO_ELIMINADO: "Archivo eliminado",
   ARCHIVO_EDITADO: "Descripción de archivo editada",
+  ANULADA: "Registro eliminado",
 };
 
 // Color por tipo de evento para diferenciarlos a simple vista.
@@ -141,13 +142,7 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
   const accionesEjecutadas = (llamada?.acciones || []).some((a: any) => a.estado === "EJECUTADO");
   const esSuya = !!llamada && (gestiona || llamada.id_usuario_creador === usuarioId || llamada.id_responsable === usuarioId);
   const puedeEditarDatos = !soloLectura && !!llamada && !llamada.respondido && !accionesEjecutadas && esSuya;
-  const puedeAnular =
-    !soloLectura &&
-    !!llamada &&
-    !llamada.respondido &&
-    (llamada.acciones || []).length === 0 &&
-    (llamada.antecedentes || []).length <= 1 &&
-    (gestiona || llamada.id_usuario_creador === usuarioId);
+  const puedeAnular = !soloLectura && !!llamada && !llamada.respondido && !accionesEjecutadas && (gestiona || llamada.id_usuario_creador === usuarioId);
 
   const abrirEditarDatos = () => {
     setDatosForm({
@@ -183,15 +178,15 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
   };
 
   const confirmarAnular = async () => {
-    if (!motivoAnular.trim()) return toast.error("Escriba el motivo de la anulación");
+    if (!motivoAnular.trim()) return toast.error("Escriba el motivo de la eliminación");
     setAnulando(true);
     try {
       await api.post(`/atenciones/llamadas/${llamadaId}/anular`, { motivo: motivoAnular });
-      toast.success("Registro anulado");
+      toast.success("Registro eliminado");
       onCambio();
       onClose();
     } catch (error: any) {
-      toast.error(error.response?.data?.mensaje || "No se pudo anular el registro");
+      toast.error(error.response?.data?.mensaje || "No se pudo eliminar el registro");
       setAnulando(false);
     }
   };
@@ -521,7 +516,7 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
                         onClick={() => setAnularAbierto(true)}
                         className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 dark:border-red-700 dark:bg-gray-800 dark:text-red-300"
                       >
-                        Anular registro
+                        Eliminar registro
                       </button>
                     )}
                     {editandoDatos && (
@@ -581,9 +576,9 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
                 {anularAbierto && (
                   <div className="fixed inset-0 z-[1000001] flex items-center justify-center bg-black/50 p-4">
                     <div className="w-full max-w-md space-y-4 rounded-lg bg-white p-6 shadow-2xl dark:bg-gray-800">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Anular registro</h3>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Eliminar registro</h3>
                       <p className="text-sm text-gray-600 dark:text-gray-300">
-                        El registro sale de las listas, el monitor y el calendario, pero queda visible en el historial del CUT marcado como anulado.
+                        El registro sale de las listas, el monitor y el calendario, pero queda visible en el historial del CUT marcado como eliminado.
                       </p>
                       <textarea
                         rows={3}
@@ -604,7 +599,7 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
                           disabled={anulando}
                           className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
                         >
-                          {anulando ? "Anulando..." : "Anular"}
+                          {anulando ? "Eliminando..." : "Eliminar"}
                         </button>
                       </div>
                     </div>

@@ -207,7 +207,6 @@ exports.listarLlamadas = async (req, res) => {
     // Para cada fila: si se puede editar sus datos o anularla (mismas reglas que el detalle).
     const ids = rows.map((r) => r.id);
     const accionesPorLlamada = {};
-    const historialPorLlamada = {};
     if (ids.length) {
       const acciones = await AccionLlamada.findAll({ attributes: ['id_llamada', 'estado'], where: { id_llamada: { [Op.in]: ids } }, raw: true });
       acciones.forEach((a) => {
@@ -215,24 +214,19 @@ exports.listarLlamadas = async (req, res) => {
         c.total += 1;
         if (a.estado === 'EJECUTADO') c.ejecutadas += 1;
       });
-      const historial = await HistorialLlamada.findAll({ attributes: ['id_llamada'], where: { id_llamada: { [Op.in]: ids } }, raw: true });
-      historial.forEach((h) => {
-        historialPorLlamada[h.id_llamada] = (historialPorLlamada[h.id_llamada] || 0) + 1;
-      });
     }
     const llamadas = rows.map((r) => {
       const c = conteo[r.cut] || { total: 1, presenciales: 0 };
       const acc = accionesPorLlamada[r.id] || { total: 0, ejecutadas: 0 };
-      const cambios = historialPorLlamada[r.id] || 0;
       const esSuya = esGestor(req.user) || r.id_responsable === req.user.id || r.id_usuario_creador === req.user.id;
       const puedeEditarDatos = !r.respondido && acc.ejecutadas === 0 && esSuya;
-      const puedeAnular = !r.respondido && acc.total === 0 && cambios <= 1 && (esGestor(req.user) || r.id_usuario_creador === req.user.id);
+      const puedeEliminar = !r.respondido && acc.ejecutadas === 0 && (esGestor(req.user) || r.id_usuario_creador === req.user.id);
       return {
         ...r.get({ plain: true }),
         total_del_cut: c.total,
         presenciales_del_cut: c.presenciales,
         puede_editar_datos: puedeEditarDatos,
-        puede_anular: puedeAnular,
+        puede_eliminar: puedeEliminar,
       };
     });
     res.json({ llamadas, totalLlamadas: count, totalPaginas: Math.ceil(count / limit), paginaActual: page });
@@ -524,14 +518,13 @@ exports.anularLlamada = async (req, res) => {
     const motivo = textoMayuscula(req.body.motivo);
     if (!motivo) throw errorConEstado('Indique el motivo de la anulación');
     if (llamada.respondido) throw errorConEstado('La llamada está respondida: no se puede anular');
-    const acciones = await AccionLlamada.count({ where: { id_llamada: llamada.id } });
-    const cambios = await HistorialLlamada.count({ where: { id_llamada: llamada.id } });
-    if (acciones > 0 || cambios > 1) {
-      throw errorConEstado('La llamada ya tiene gestión o cambios registrados: no se puede anular, solo editar');
+    const ejecutadas = await AccionLlamada.count({ where: { id_llamada: llamada.id, estado: 'EJECUTADO' } });
+    if (ejecutadas > 0) {
+      throw errorConEstado('La llamada ya tiene acciones ejecutadas: no se puede eliminar');
     }
     await llamada.update({ anulada: true, motivo_anulacion: motivo, id_usuario_modificador: req.user.id });
     await registrarHistorial(llamada.id, 'ANULADA', `Registro anulado por error: ${motivo}`, req.user.id);
-    res.json({ mensaje: 'Registro anulado' });
+    res.json({ mensaje: 'Registro eliminado' });
   } catch (error) {
     res.status(error.status || 400).json({ mensaje: error.message });
   }
