@@ -197,13 +197,19 @@ export default function Llamadas() {
                             return (
                               <div className="flex flex-wrap gap-1">
                                 {llam > 0 && (
-                                  <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-bold text-sky-800 dark:bg-sky-900 dark:text-sky-100">
-                                    {llam} llamada{llam === 1 ? "" : "s"}
+                                  <span
+                                    title={`${llam} llamada${llam === 1 ? "" : "s"}`}
+                                    className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-bold text-sky-800 dark:bg-sky-900 dark:text-sky-100"
+                                  >
+                                    {llam} llam.
                                   </span>
                                 )}
                                 {pres > 0 && (
-                                  <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-bold text-violet-800 dark:bg-violet-900 dark:text-violet-100">
-                                    {pres} presencial{pres === 1 ? "" : "es"}
+                                  <span
+                                    title={`${pres} presencial${pres === 1 ? "" : "es"}`}
+                                    className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-bold text-violet-800 dark:bg-violet-900 dark:text-violet-100"
+                                  >
+                                    {pres} pres.
                                   </span>
                                 )}
                               </div>
