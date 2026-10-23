@@ -9,6 +9,7 @@ import BarChart from "./pages/Charts/BarChart";
 import LineChart from "./pages/Charts/LineChart";
 import Home from "./pages/Inicio";
 import MonitorLlamadas from "./pages/MonitorLlamadas";
+import CalendarioLlamadasPagina from "./pages/CalendarioLlamadas";
 import FormElements from "./pages/Forms/FormElements";
 import Blank from "./pages/OtherPage/Blank";
 import NotFound from "./pages/OtherPage/NotFound";
@@ -75,6 +76,16 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <MonitorLlamadas />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Calendario de llamadas a pantalla completa, sin menús */}
+          <Route
+            path="/calendario-llamadas"
+            element={
+              <ProtectedRoute>
+                <CalendarioLlamadasPagina />
               </ProtectedRoute>
             }
           />

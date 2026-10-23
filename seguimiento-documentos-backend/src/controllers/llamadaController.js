@@ -210,6 +210,50 @@ exports.listarLlamadas = async (req, res) => {
   }
 };
 
+// Llamadas con plazo dentro de un rango de fechas, para el calendario. Lectura para cualquier usuario con sesión.
+// Cada llamada cae en el día de su plazo; su situación (respondida, vencida, por vencer o en plazo) va aparte.
+exports.calendario = async (req, res) => {
+  try {
+    const desde = String(req.query.desde || '').slice(0, 10);
+    const hasta = String(req.query.hasta || '').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(desde) || !/^\d{4}-\d{2}-\d{2}$/.test(hasta)) {
+      return res.status(400).json({ mensaje: 'Indique el rango de fechas (desde y hasta)' });
+    }
+    const llamadas = await LlamadaAdministrado.findAll({
+      where: { fecha_respuesta: { [Op.between]: [desde, hasta] } },
+      attributes: ['id', 'cut', 'nombre_llamante', 'motivo', 'fecha_llamada', 'fecha_respuesta', 'respondido'],
+      include: [{ model: Usuario, as: 'responsable', attributes: ['nombre', 'apellido'], required: false }],
+      order: [['fecha_respuesta', 'ASC'], ['id', 'ASC']],
+    });
+    const hoy = hoyLima();
+    const diasHasta = (fecha) =>
+      Math.round((Date.parse(`${String(fecha).slice(0, 10)}T00:00:00Z`) - Date.parse(`${hoy}T00:00:00Z`)) / 86400000);
+
+    res.json(
+      llamadas.map((l) => {
+        const dias = diasHasta(l.fecha_respuesta);
+        let situacion = 'EN_PLAZO';
+        if (l.respondido) situacion = 'RESPONDIDA';
+        else if (dias < 0) situacion = 'VENCIDA';
+        else if (dias <= 5) situacion = 'POR_VENCER';
+        return {
+          id: l.id,
+          cut: l.cut,
+          nombre_llamante: l.nombre_llamante,
+          motivo: l.motivo,
+          fecha_llamada: l.fecha_llamada,
+          fecha_respuesta: l.fecha_respuesta,
+          respondido: l.respondido,
+          situacion,
+          responsable: l.responsable ? `${l.responsable.nombre} ${l.responsable.apellido}` : '',
+        };
+      })
+    );
+  } catch (error) {
+    res.status(500).json({ mensaje: error.message });
+  }
+};
+
 exports.obtenerLlamada = async (req, res) => {
   try {
     const llamada = await LlamadaAdministrado.findByPk(req.params.id);
