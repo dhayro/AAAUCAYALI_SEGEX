@@ -9,6 +9,7 @@ const HistorialLlamada = require('../models/HistorialLlamada');
 const Expediente = require('../models/Expediente');
 const Usuario = require('../models/Usuario');
 const { hoyLima, sumarDiasCalendario } = require('../utils/fechas');
+const { aLima } = require('../services/estadoRespuestaService');
 
 const CARPETA_ARCHIVOS = path.join(__dirname, '../../uploads/atenciones');
 fs.mkdirSync(CARPETA_ARCHIVOS, { recursive: true });
@@ -219,8 +220,13 @@ exports.calendario = async (req, res) => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(desde) || !/^\d{4}-\d{2}-\d{2}$/.test(hasta)) {
       return res.status(400).json({ mensaje: 'Indique el rango de fechas (desde y hasta)' });
     }
+    // 'llamada': se ubica en el día en que se recibió la llamada. 'plazo' (por defecto): en el día de su plazo de respuesta.
+    const porLlamada = req.query.campo === 'llamada';
+    const rango = porLlamada
+      ? { fecha_llamada: { [Op.between]: [`${desde} 00:00:00`, `${hasta} 23:59:59`] } }
+      : { fecha_respuesta: { [Op.between]: [desde, hasta] } };
     const llamadas = await LlamadaAdministrado.findAll({
-      where: { fecha_respuesta: { [Op.between]: [desde, hasta] } },
+      where: rango,
       attributes: ['id', 'cut', 'nombre_llamante', 'motivo', 'fecha_llamada', 'fecha_respuesta', 'respondido'],
       include: [{ model: Usuario, as: 'responsable', attributes: ['nombre', 'apellido'], required: false }],
       order: [['fecha_respuesta', 'ASC'], ['id', 'ASC']],
@@ -236,13 +242,16 @@ exports.calendario = async (req, res) => {
         if (l.respondido) situacion = 'RESPONDIDA';
         else if (dias < 0) situacion = 'VENCIDA';
         else if (dias <= 5) situacion = 'POR_VENCER';
+        const fechaLlamadaLima = aLima(l.fecha_llamada);
         return {
           id: l.id,
           cut: l.cut,
           nombre_llamante: l.nombre_llamante,
           motivo: l.motivo,
-          fecha_llamada: l.fecha_llamada,
+          fecha_llamada: fechaLlamadaLima,
           fecha_respuesta: l.fecha_respuesta,
+          // Día en que se muestra la llamada en el calendario, según el criterio elegido.
+          dia: porLlamada ? fechaLlamadaLima.slice(0, 10) : String(l.fecha_respuesta).slice(0, 10),
           respondido: l.respondido,
           situacion,
           responsable: l.responsable ? `${l.responsable.nombre} ${l.responsable.apellido}` : '',

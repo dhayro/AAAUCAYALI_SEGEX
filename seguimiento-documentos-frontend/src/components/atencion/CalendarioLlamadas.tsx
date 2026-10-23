@@ -8,6 +8,8 @@ interface LlamadaCalendario {
   nombre_llamante: string;
   motivo: string;
   fecha_respuesta: string;
+  fecha_llamada: string;
+  dia: string;
   respondido: boolean;
   situacion: "RESPONDIDA" | "VENCIDA" | "POR_VENCER" | "EN_PLAZO";
   responsable: string;
@@ -31,11 +33,13 @@ const hoyYMD = () =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 
 type Props = {
+  // 'llamada': cada llamada cae en el día en que se recibió. 'plazo': cae en el día de su plazo de respuesta.
+  campo: "llamada" | "plazo";
   onVerDetalle: (id: number) => void;
 };
 
 // Calendario mensual de llamadas: cada llamada cae en el día de su plazo y su color muestra su situación.
-export default function CalendarioLlamadas({ onVerDetalle }: Props) {
+export default function CalendarioLlamadas({ campo, onVerDetalle }: Props) {
   const hoy = hoyYMD();
   const [anio, setAnio] = useState(Number(hoy.slice(0, 4)));
   const [mes, setMes] = useState(Number(hoy.slice(5, 7)));
@@ -49,7 +53,7 @@ export default function CalendarioLlamadas({ onVerDetalle }: Props) {
     setCargando(true);
     try {
       const res = await api.get("/atenciones/calendario", {
-        params: { desde: ymd(anio, mes, 1), hasta: ymd(anio, mes, diasDelMes) },
+        params: { desde: ymd(anio, mes, 1), hasta: ymd(anio, mes, diasDelMes), campo },
       });
       setLlamadas(res.data || []);
     } catch {
@@ -57,7 +61,7 @@ export default function CalendarioLlamadas({ onVerDetalle }: Props) {
     } finally {
       setCargando(false);
     }
-  }, [anio, mes, diasDelMes]);
+  }, [anio, mes, diasDelMes, campo]);
 
   useEffect(() => {
     cargar();
@@ -65,8 +69,7 @@ export default function CalendarioLlamadas({ onVerDetalle }: Props) {
 
   const porDia = new Map<string, LlamadaCalendario[]>();
   llamadas.forEach((l) => {
-    const dia = String(l.fecha_respuesta).slice(0, 10);
-    porDia.set(dia, [...(porDia.get(dia) || []), l]);
+    porDia.set(l.dia, [...(porDia.get(l.dia) || []), l]);
   });
 
   const conteos = { VENCIDA: 0, POR_VENCER: 0, EN_PLAZO: 0, RESPONDIDA: 0 };
