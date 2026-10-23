@@ -103,6 +103,17 @@ const ESTADO_PRORROGA: Record<string, { texto: string; clases: string }> = {
 };
 
 
+// Filtros por estado de respuesta, con el mismo orden y nombres que en Evaluación de Respuestas.
+const FILTROS_ESTADO_RESPUESTA = [
+  { value: "", texto: "Todas" },
+  { value: "SIN_RESPUESTA", texto: "Sin respuesta" },
+  { value: "POR_EVALUAR", texto: "Por evaluar" },
+  { value: "RESPONDIDA", texto: "Respondidas" },
+  { value: "OBSERVADA", texto: "Observadas" },
+  { value: "CERRADA", texto: "Cerradas" },
+  { value: "REASIGNADA", texto: "Reasignadas" },
+];
+
 const ESTADO_RESPUESTA: Record<string, { texto: string; clases: string }> = {
   REASIGNADA: { texto: "Reasignada", clases: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100" },
   SIN_RESPUESTA: { texto: "Sin respuesta", clases: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200" },
@@ -183,7 +194,12 @@ export default function AsignacionExpediente() {
   const gestiona = puedeGestionarAsignaciones();
 
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
-  const [filters, setFilters] = useState<{ cut: string; id_usuario: number | "" }>({ cut: "", id_usuario: "" });
+  const [filters, setFilters] = useState<{ cut: string; id_usuario: number | ""; estado_respuesta: string }>({
+    cut: "",
+    id_usuario: "",
+    estado_respuesta: "",
+  });
+  const [contadores, setContadores] = useState<Record<string, number>>({});
   const [asignadoNombre, setAsignadoNombre] = useState("");
   const [totalCount, setTotalCount] = useState(0);
 
@@ -197,9 +213,11 @@ export default function AsignacionExpediente() {
       };
       if (filters.cut) params.cut = filters.cut;
       if (filters.id_usuario !== "") params.id_usuario = filters.id_usuario;
+      if (filters.estado_respuesta) params.estado_respuesta = filters.estado_respuesta;
 
       const response = await api.get("/asignaciones-expediente", { params });
       setAsignaciones(response.data.asignaciones || []);
+      setContadores(response.data.contadores || {});
       setTotalCount(response.data.totalAsignaciones || 0);
       setSeleccion([]);
     } catch (error) {
@@ -503,6 +521,11 @@ export default function AsignacionExpediente() {
     setPagination({ pageIndex: 0, pageSize: 10 });
   };
 
+  const handleEstadoRespuestaChange = (valor: string) => {
+    setFilters((prev) => ({ ...prev, estado_respuesta: valor }));
+    setPagination({ pageIndex: 0, pageSize: 10 });
+  };
+
   const handleAsignadoChange = (valor: string | number) => {
     const usuario = usuarios.find((u) => u.id === Number(valor));
     setAsignadoNombre(usuario ? etiquetaUsuario(usuario.nombre, usuario.cargo) : "");
@@ -562,7 +585,27 @@ export default function AsignacionExpediente() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 gap-4 rounded-lg bg-gray-50 p-4 md:grid-cols-2 dark:bg-gray-800">
+        <div className="flex flex-wrap gap-2">
+          {FILTROS_ESTADO_RESPUESTA.map((f) => {
+            const activo = filters.estado_respuesta === f.value;
+            const cantidad = f.value ? contadores[f.value] ?? 0 : Object.values(contadores).reduce((s, n) => s + n, 0);
+            return (
+              <button
+                key={f.value || "todas"}
+                onClick={() => handleEstadoRespuestaChange(f.value)}
+                className={`rounded-full px-4 py-1.5 text-sm font-semibold ${
+                  activo
+                    ? "bg-brand-600 text-white"
+                    : "bg-white text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:ring-gray-600 dark:hover:bg-gray-700"
+                }`}
+              >
+                {f.texto} · {cantidad}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 rounded-lg bg-gray-50 p-4 md:grid-cols-3 dark:bg-gray-800">
           <div>
             <Label>Buscar por CUT</Label>
             <Input
@@ -595,6 +638,20 @@ export default function AsignacionExpediente() {
                 </button>
               )}
             </div>
+          </div>
+          <div>
+            <Label>Estado</Label>
+            <select
+              value={filters.estado_respuesta}
+              onChange={(e) => handleEstadoRespuestaChange(e.target.value)}
+              className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700"
+            >
+              {FILTROS_ESTADO_RESPUESTA.map((f) => (
+                <option key={f.value || "todas"} value={f.value}>
+                  {f.texto}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 

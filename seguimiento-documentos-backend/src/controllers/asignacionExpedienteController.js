@@ -42,6 +42,7 @@ const includes = [
 const obtenerConRelaciones = (id) => AsignacionExpediente.findByPk(id, { include: includes });
 
 const PERFILES_VER_TODAS = ['admin', 'jefe', 'secretaria'];
+const ESTADOS_LISTADO = ['SIN_RESPUESTA', 'POR_EVALUAR', 'RESPONDIDA', 'OBSERVADA', 'CERRADA', 'REASIGNADA'];
 const puedeVerTodas = (usuario) => PERFILES_VER_TODAS.includes(usuario.perfil);
 // Incluye la cadena de reasignaciones: el dueño actual ve lo que subió el anterior.
 const puedeVerAsignacion = (asignacion, usuario) => puedeVerCadena(asignacion, usuario);
@@ -71,28 +72,46 @@ exports.obtenerTodas = async (req, res) => {
 
     // Vencimiento vigente (la prórroga aceptada reemplaza al vencimiento original). Más urgente primero; sin fecha al final.
     const vencimientoVigenteSql = "(CASE WHEN estado_prorroga = 'ACEPTADA' THEN fecha_vencimiento_prorroga ELSE fecha_vencimiento END)";
-    const { count, rows } = await AsignacionExpediente.findAndCountAll({
+    const orden = [
+      [sequelize.literal(`${vencimientoVigenteSql} IS NULL`), 'ASC'],
+      [sequelize.literal(vencimientoVigenteSql), 'ASC'],
+      ['id', 'ASC'],
+    ];
+
+    // El estado de respuesta se calcula, así que se revisan todas las filas que cumplen los filtros:
+    // así los contadores son reales y el filtro de estado funciona antes de paginar.
+    const todas = await AsignacionExpediente.findAll({
       where: whereClause,
-      include: includes,
-      limit,
-      offset,
-      order: [
-        [sequelize.literal(`${vencimientoVigenteSql} IS NULL`), 'ASC'],
-        [sequelize.literal(vencimientoVigenteSql), 'ASC'],
-        ['id', 'ASC'],
-      ],
+      attributes: ['id', 'motivo_cierre'],
+      order: orden,
+      raw: true,
+    });
+    const resumen = await resumenPorAsignacion(todas.map((a) => a.id));
+    // Una asignación reasignada se muestra como tal, aunque tenga respuestas (su cumplimiento ya quedó cerrado).
+    const estadoDe = (a) => (a.motivo_cierre ? 'REASIGNADA' : resumen.get(a.id).estado);
+    const contadores = Object.fromEntries(ESTADOS_LISTADO.map((e) => [e, 0]));
+    todas.forEach((a) => {
+      contadores[estadoDe(a)] += 1;
     });
 
-    const resumen = await resumenPorAsignacion(rows.map((a) => a.id));
+    const filtroRespuesta = normalizarTexto(req.query.estado_respuesta);
+    const filtradas = filtroRespuesta ? todas.filter((a) => estadoDe(a) === filtroRespuesta) : todas;
+    const count = filtradas.length;
+    const idsPagina = filtradas.slice(offset, offset + limit).map((a) => a.id);
+    const rows = idsPagina.length
+      ? await AsignacionExpediente.findAll({ where: { id: idsPagina }, include: includes, order: orden })
+      : [];
+    const posicion = new Map(idsPagina.map((id, i) => [id, i]));
+    rows.sort((x, y) => posicion.get(x.id) - posicion.get(y.id));
+
     res.json({
+      contadores,
       asignaciones: rows.map((a) => {
         const r = resumen.get(a.id);
         const evaluacion = r.evaluacion && { ...r.evaluacion, fecha_evaluacion: aLima(r.evaluacion.fecha_evaluacion) };
-        // Una asignación reasignada se muestra como tal, aunque tenga respuestas (su cumplimiento ya quedó cerrado).
-        const estado = a.motivo_cierre ? 'REASIGNADA' : r.estado;
         return {
           ...a.get({ plain: true }),
-          respuesta: { ...r, estado, ultima_respuesta: aLima(r.ultima_respuesta), evaluacion },
+          respuesta: { ...r, estado: estadoDe(a), ultima_respuesta: aLima(r.ultima_respuesta), evaluacion },
         };
       }),
       totalAsignaciones: count,
