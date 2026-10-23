@@ -1,5 +1,5 @@
 import PageMeta from "@/components/common/PageMeta";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
@@ -88,16 +88,6 @@ const diasEntre = (fecha: string, hoy: string) =>
 const vencimientoVigente = (a: Asignacion) =>
   a.estado_prorroga === "ACEPTADA" ? a.fecha_vencimiento_prorroga : a.fecha_vencimiento;
 
-// Ordena por vencimiento vigente: la más urgente primero. Sin fecha, al final.
-const porUrgencia = (a: Asignacion, b: Asignacion) => {
-  const va = vencimientoVigente(a);
-  const vb = vencimientoVigente(b);
-  if (!va && !vb) return 0;
-  if (!va) return 1;
-  if (!vb) return -1;
-  return va.localeCompare(vb);
-};
-
 const puedeProrrogar = (a: Asignacion) => {
   if (a.estado_prorroga === "PENDIENTE" || a.estado_prorroga === "ACEPTADA") return false;
   if (a.respuesta?.estado === "CERRADA") return false;
@@ -157,7 +147,6 @@ const aFechaYMD = (valor: any) => {
 
 export default function AsignacionExpediente() {
   const [asignaciones, setAsignaciones] = useState<Asignacion[]>([]);
-  const asignacionesPorUrgencia = useMemo(() => [...asignaciones].sort(porUrgencia), [asignaciones]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -968,7 +957,7 @@ export default function AsignacionExpediente() {
                   </tr>
                 </thead>
                 <tbody>
-                  {asignacionesPorUrgencia.map((a, index) => (
+                  {asignaciones.map((a, index) => (
                     <tr key={a.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700">
                       <td className="px-4 py-4 text-center">
                         {gestiona && puedeProrrogar(a) && (

@@ -68,12 +68,18 @@ exports.obtenerTodas = async (req, res) => {
     if (parseBoolean(con_prorroga)) whereClause.estado_prorroga = { [Op.ne]: null };
     if (estado_prorroga) whereClause.estado_prorroga = normalizarTexto(estado_prorroga);
 
+    // Vencimiento vigente (la prórroga aceptada reemplaza al vencimiento original). Más urgente primero; sin fecha al final.
+    const vencimientoVigenteSql = "(CASE WHEN estado_prorroga = 'ACEPTADA' THEN fecha_vencimiento_prorroga ELSE fecha_vencimiento END)";
     const { count, rows } = await AsignacionExpediente.findAndCountAll({
       where: whereClause,
       include: includes,
       limit,
       offset,
-      order: [['id', 'ASC']],
+      order: [
+        [sequelize.literal(`${vencimientoVigenteSql} IS NULL`), 'ASC'],
+        [sequelize.literal(vencimientoVigenteSql), 'ASC'],
+        ['id', 'ASC'],
+      ],
     });
 
     const resumen = await resumenPorAsignacion(rows.map((a) => a.id));
