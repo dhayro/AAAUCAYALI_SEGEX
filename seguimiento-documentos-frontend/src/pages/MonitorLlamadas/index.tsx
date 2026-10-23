@@ -187,6 +187,7 @@ export default function MonitorLlamadas() {
   const [busqueda, setBusqueda] = useState("");
   const [busquedaAplicada, setBusquedaAplicada] = useState("");
   const [responsable, setResponsable] = useState<number | "">("");
+  const [tipo, setTipo] = useState<"" | "LLAMADA" | "PRESENCIAL">("");
   const [responsableNombre, setResponsableNombre] = useState("");
   const [usuarios, setUsuarios] = useState<UsuarioOpcion[]>([]);
 
@@ -217,7 +218,7 @@ export default function MonitorLlamadas() {
 
   const cargar = useCallback(async () => {
     try {
-      const clave = `${busquedaAplicada}|${responsable}`;
+      const clave = `${busquedaAplicada}|${responsable}|${tipo}`;
       if (filtroActual.current !== clave) {
         // Al cambiar el filtro la lista cambia por completo: no se avisa como llamadas nuevas.
         filtroActual.current = clave;
@@ -227,6 +228,7 @@ export default function MonitorLlamadas() {
       const params: Record<string, string> = {};
       if (busquedaAplicada) params.q = busquedaAplicada;
       if (responsable !== "") params.responsable = String(responsable);
+      if (tipo) params.tipo = tipo;
       const res = await api.get("/dashboard/monitor-llamadas", { params });
       const lista: LlamadaMonitor[] = res.data.llamadas || [];
       const ids = new Set(lista.map((l) => l.id));
@@ -251,7 +253,7 @@ export default function MonitorLlamadas() {
     } finally {
       setCargando(false);
     }
-  }, [busquedaAplicada, responsable]);
+  }, [busquedaAplicada, responsable, tipo]);
 
   useEffect(() => {
     cargar();
@@ -275,7 +277,7 @@ export default function MonitorLlamadas() {
     };
   }, []);
 
-  const filtrando = busquedaAplicada !== "" || responsable !== "";
+  const filtrando = busquedaAplicada !== "" || responsable !== "" || tipo !== "";
   const ahora = Date.now();
 
   return (
@@ -365,6 +367,28 @@ export default function MonitorLlamadas() {
                 Quitar
               </button>
             )}
+          </div>
+          <div className="inline-flex shrink-0 self-start rounded-xl border border-gray-300 bg-white p-1 dark:border-gray-600 dark:bg-gray-800">
+            {(
+              [
+                { value: "", texto: "Todas" },
+                { value: "LLAMADA", texto: "Llamadas" },
+                { value: "PRESENCIAL", texto: "Presenciales" },
+              ] as const
+            ).map((op) => (
+              <button
+                key={op.value || "todas"}
+                type="button"
+                onClick={() => setTipo(op.value)}
+                className={`rounded-lg px-3 py-2 text-sm font-semibold ${
+                  tipo === op.value
+                    ? "bg-brand-600 text-white"
+                    : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
+                }`}
+              >
+                {op.texto}
+              </button>
+            ))}
           </div>
         </section>
 

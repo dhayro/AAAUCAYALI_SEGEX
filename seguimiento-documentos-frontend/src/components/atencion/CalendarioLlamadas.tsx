@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
 import api from "@/utils/api";
+import { ChatBubbleIcon, UserCircleIcon } from "@/icons";
 
 interface LlamadaCalendario {
   id: number;
@@ -172,11 +173,15 @@ export default function CalendarioLlamadas({ campo, onVerDetalle }: Props) {
                           l.tipo_atencion === "PRESENCIAL" ? "border-dashed" : ""
                         }`}
                       >
-                        <div className="truncate font-bold">{l.cut}</div>
-                        <div className="truncate">
-                          {l.tipo_atencion === "PRESENCIAL" && <span className="font-bold">Presencial · </span>}
-                          {l.nombre_llamante}
+                        <div className="flex items-center gap-1 truncate font-bold">
+                          {l.tipo_atencion === "PRESENCIAL" ? (
+                            <UserCircleIcon className="h-3.5 w-3.5 shrink-0" />
+                          ) : (
+                            <ChatBubbleIcon className="h-3.5 w-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{l.cut}</span>
                         </div>
+                        <div className="truncate">{l.nombre_llamante}</div>
                         {l.responsable && <div className="truncate opacity-75">{l.responsable}</div>}
                       </button>
                     ))}

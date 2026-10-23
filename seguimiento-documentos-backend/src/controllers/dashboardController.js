@@ -154,9 +154,10 @@ exports.monitorLlamadas = async (req, res) => {
     // Monitor general: muestra todas las llamadas pendientes a cualquier usuario con sesión.
     const gestor = true;
     const hoy = hoyLima();
-    const { q, responsable } = req.query;
+    const { q, responsable, tipo } = req.query;
     const condiciones = [];
     if (!gestor) condiciones.push({ [Op.or]: [{ id_responsable: req.user.id }, { id_usuario_creador: req.user.id }] });
+    if (tipo === 'LLAMADA' || tipo === 'PRESENCIAL') condiciones.push({ tipo_atencion: tipo });
     if (q && String(q).trim()) {
       const like = { [Op.like]: `%${String(q).trim().toUpperCase()}%` };
       condiciones.push({ [Op.or]: [{ cut: like }, { nombre_llamante: like }] });
