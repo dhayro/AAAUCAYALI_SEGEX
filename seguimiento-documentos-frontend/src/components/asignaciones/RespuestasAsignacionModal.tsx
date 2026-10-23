@@ -26,7 +26,7 @@ type Props = {
 };
 
 type Archivo = { id: number; descripcion: string; nombre_original: string; mimetype?: string; fecha_subida: string };
-type Respuesta = { id: number; texto: string; fecha_creacion: string; id_usuario: number; usuario?: any; archivos: Archivo[] };
+type Respuesta = { id: number; id_asignacion: number; texto: string; fecha_creacion: string; id_usuario: number; usuario?: any; archivos: Archivo[] };
 
 const nombre = (u?: { nombre: string; apellido: string } | null) => (u ? `${u.nombre} ${u.apellido}` : "—");
 const esPdf = (a: Archivo) => (a.mimetype || "").includes("pdf") || a.nombre_original.toLowerCase().endsWith(".pdf");
@@ -285,6 +285,11 @@ export default function RespuestasAsignacionModal({
                       {nombre(r.usuario)}
                     </span>
                     <span className="text-gray-500">{formatFechaHora(r.fecha_creacion)}</span>
+                    {r.id_asignacion !== asignacion.id && (
+                      <span className="rounded-full bg-red-100 px-2.5 py-0.5 font-semibold text-red-800 dark:bg-red-900 dark:text-red-100">
+                        Asignación reasignada (anterior)
+                      </span>
+                    )}
                   </div>
                   <div className="whitespace-pre-wrap break-words text-sm text-gray-900 dark:text-white">{r.texto}</div>
 

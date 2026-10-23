@@ -6,6 +6,7 @@ const Usuario = require('../models/Usuario');
 const Cargo = require('../models/Cargo');
 const { hoyLima, esFechaValida, sumarDiasCalendario } = require('../utils/fechas');
 const { resumenPorAsignacion, aLima } = require('../services/estadoRespuestaService');
+const { cabezaDeCadena, puedeVerCadena } = require('../services/cadenaAsignacionService');
 
 const parseBoolean = (value) => value === true || value === 'true' || value === 1 || value === '1';
 
@@ -42,8 +43,8 @@ const obtenerConRelaciones = (id) => AsignacionExpediente.findByPk(id, { include
 
 const PERFILES_VER_TODAS = ['admin', 'jefe', 'secretaria'];
 const puedeVerTodas = (usuario) => PERFILES_VER_TODAS.includes(usuario.perfil);
-const puedeVerAsignacion = (asignacion, usuario) =>
-  puedeVerTodas(usuario) || asignacion.id_usuario === usuario.id;
+// Incluye la cadena de reasignaciones: el dueño actual ve lo que subió el anterior.
+const puedeVerAsignacion = (asignacion, usuario) => puedeVerCadena(asignacion, usuario);
 
 const validarUsuario = async (valor) => {
   const id = parseInt(valor, 10);
@@ -87,9 +88,11 @@ exports.obtenerTodas = async (req, res) => {
       asignaciones: rows.map((a) => {
         const r = resumen.get(a.id);
         const evaluacion = r.evaluacion && { ...r.evaluacion, fecha_evaluacion: aLima(r.evaluacion.fecha_evaluacion) };
+        // Una asignación reasignada se muestra como tal, aunque tenga respuestas (su cumplimiento ya quedó cerrado).
+        const estado = a.motivo_cierre ? 'REASIGNADA' : r.estado;
         return {
           ...a.get({ plain: true }),
-          respuesta: { ...r, ultima_respuesta: aLima(r.ultima_respuesta), evaluacion },
+          respuesta: { ...r, estado, ultima_respuesta: aLima(r.ultima_respuesta), evaluacion },
         };
       }),
       totalAsignaciones: count,
@@ -104,7 +107,7 @@ exports.obtenerTodas = async (req, res) => {
 exports.obtenerPorId = async (req, res) => {
   try {
     const asignacion = await obtenerConRelaciones(req.params.id);
-    if (!asignacion || !puedeVerAsignacion(asignacion, req.user)) {
+    if (!asignacion || !(await puedeVerAsignacion(asignacion, req.user))) {
       return res.status(404).json({ mensaje: 'Asignación no encontrada' });
     }
     res.json(asignacion);
@@ -514,10 +517,90 @@ exports.prorrogarMasivo = accionMasiva(solicitarProrroga);
 exports.aceptarProrrogaMasivo = accionMasiva(aceptarProrrogaPendiente);
 exports.rechazarProrrogaMasivo = accionMasiva(rechazarProrrogaPendiente);
 
+// Reasigna la asignación a otro usuario. La fila actual se cierra para su dueño (cumplimiento hasta su última respuesta)
+// y la nueva continúa la misma asignación para el nuevo usuario, con su plazo contado desde hoy.
+exports.reasignar = async (req, res) => {
+  try {
+    const actual = await AsignacionExpediente.findByPk(req.params.id);
+    if (!actual) return res.status(404).json({ mensaje: 'Asignación no encontrada' });
+    if (actual.motivo_cierre || actual.id_asignacion_siguiente) {
+      throw errorConEstado('Esta asignación ya fue reasignada');
+    }
+    if (!actual.estado) throw errorConEstado('La asignación está inactiva');
+
+    const nuevoUsuario = await validarUsuario(req.body.id_usuario);
+    if (nuevoUsuario === actual.id_usuario) throw errorConEstado('La asignación ya está a cargo de ese usuario');
+    const plazo = parsePlazo(req.body.plazo_atencion);
+    const observacion = normalizarTexto(req.body.observacion);
+
+    const anterior = await Usuario.findByPk(actual.id_usuario, { attributes: ['nombre', 'apellido'] });
+    const nuevo = await Usuario.findByPk(nuevoUsuario, { attributes: ['nombre', 'apellido'] });
+    const nombreAnterior = nombreDeUsuario(anterior);
+    const nombreNuevo = nombreDeUsuario(nuevo);
+    const resumen = await resumenPorAsignacion([actual.id]);
+    const ultimaActividad = resumen.get(actual.id).ultima_respuesta;
+    const cierreAnterior = ultimaActividad ? aLima(ultimaActividad) : 'sin respuestas';
+    const fechaNueva = hoyLima();
+
+    const nueva = await sequelize.transaction(async (t) => {
+      const creada = await AsignacionExpediente.create(
+        {
+          cut: actual.cut,
+          id_expediente: actual.id_expediente,
+          id_usuario: nuevoUsuario,
+          fecha_asignacion: fechaNueva,
+          plazo_atencion: plazo,
+          fecha_vencimiento: sumarDiasCalendario(fechaNueva, plazo),
+          observacion,
+          numero_orden: actual.numero_orden,
+          estado: true,
+          id_asignacion_anterior: actual.id,
+          id_usuario_creador: req.user.id,
+          id_usuario_modificador: req.user.id,
+        },
+        { transaction: t }
+      );
+      await actual.update(
+        { motivo_cierre: 'REASIGNADA', id_asignacion_siguiente: creada.id, id_usuario_modificador: req.user.id },
+        { transaction: t }
+      );
+      await HistorialAsignacion.create(
+        {
+          id_asignacion: actual.id,
+          tipo: 'REASIGNADA',
+          plazo: actual.plazo_atencion,
+          fecha_evento: fechaNueva,
+          observacion: `Reasignada a ${nombreNuevo}. Cumplimiento de ${nombreAnterior} hasta su última actividad: ${cierreAnterior}`,
+          id_usuario: req.user.id,
+        },
+        { transaction: t }
+      );
+      await HistorialAsignacion.create(
+        {
+          id_asignacion: creada.id,
+          tipo: 'REASIGNACION_RECIBIDA',
+          plazo,
+          fecha_evento: fechaNueva,
+          observacion: `Continúa la asignación #${actual.id} de ${nombreAnterior}. Plazo de ${plazo} días para ${nombreNuevo} desde ${fechaNueva}`,
+          id_usuario: req.user.id,
+        },
+        { transaction: t }
+      );
+      return creada;
+    });
+
+    res.status(201).json(await obtenerConRelaciones(nueva.id));
+  } catch (error) {
+    res.status(error.status || 400).json({ mensaje: error.message });
+  }
+};
+
+const nombreDeUsuario = (u) => (u ? `${u.nombre} ${u.apellido}` : '—');
+
 exports.obtenerHistorial = async (req, res) => {
   try {
     const asignacion = await AsignacionExpediente.findByPk(req.params.id, { attributes: ['id', 'id_usuario'] });
-    if (!asignacion || !puedeVerAsignacion(asignacion, req.user)) {
+    if (!asignacion || !(await puedeVerAsignacion(asignacion, req.user))) {
       return res.status(404).json({ mensaje: 'Asignación no encontrada' });
     }
     const historial = await HistorialAsignacion.findAll({

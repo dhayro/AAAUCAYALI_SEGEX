@@ -162,6 +162,8 @@ router.put('/:id', authenticateToken, isSecretariaOrAbove, controller.actualizar
  */
 // El dueño de la asignación también puede pedir prórroga; el controlador verifica que sea él o un gestor.
 router.patch('/:id/prorroga', authenticateToken, controller.prorrogar);
+// Reasignar a otro usuario: mantiene la misma asignación; el anterior queda cerrado con su última actividad.
+router.post('/:id/reasignar', authenticateToken, isSecretariaOrAbove, controller.reasignar);
 router.patch('/:id/prorroga/aceptar', authenticateToken, isSecretariaOrAbove, controller.aceptarProrroga);
 router.patch('/:id/prorroga/rechazar', authenticateToken, isSecretariaOrAbove, controller.rechazarProrroga);
 router.get('/:id/historial', authenticateToken, controller.obtenerHistorial);

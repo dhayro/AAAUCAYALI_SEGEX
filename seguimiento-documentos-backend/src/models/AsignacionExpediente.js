@@ -72,6 +72,20 @@ const AsignacionExpediente = sequelize.define('AsignacionExpediente', {
   id_usuario_modificador: {
     type: DataTypes.INTEGER,
   },
+  // Cadena de reasignaciones: la asignación nueva apunta a la anterior, y la anterior a la siguiente.
+  id_asignacion_anterior: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  id_asignacion_siguiente: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  // 'REASIGNADA' cuando la asignación pasó a otro usuario; su cumplimiento se mide hasta su última respuesta.
+  motivo_cierre: {
+    type: DataTypes.STRING(20),
+    allowNull: true,
+  },
 }, {
   tableName: 'asignaciones_expedientes',
   timestamps: true,

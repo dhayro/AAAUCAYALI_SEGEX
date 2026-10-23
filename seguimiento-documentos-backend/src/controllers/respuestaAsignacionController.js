@@ -6,13 +6,17 @@ const ArchivoRespuestaAsignacion = require('../models/ArchivoRespuestaAsignacion
 const Usuario = require('../models/Usuario');
 const { registrarEvento } = require('../services/historialAsignacionService');
 const { resumenPorAsignacion } = require('../services/estadoRespuestaService');
+const { puedeVerCadena, idsDeCadena } = require('../services/cadenaAsignacionService');
 
 const CARPETA_ARCHIVOS = path.join(__dirname, '../../uploads/asignaciones');
 fs.mkdirSync(CARPETA_ARCHIVOS, { recursive: true });
 
 const PERFILES_GESTION = ['admin', 'jefe', 'secretaria'];
 const esGestor = (usuario) => PERFILES_GESTION.includes(usuario.perfil);
-const puedeVer = (asignacion, usuario) => esGestor(usuario) || asignacion.id_usuario === usuario.id;
+// Ver la cadena completa de reasignaciones: el dueño actual ve lo que subió el anterior.
+const puedeVer = (asignacion, usuario) => puedeVerCadena(asignacion, usuario);
+const reasignada = (asignacion) => Boolean(asignacion.motivo_cierre);
+const errorReasignada = () => errorConEstado('Esta asignación fue reasignada: solo puede consultarse, no modificarse');
 const puedeOperar = (asignacion, usuario) => esGestor(usuario) || asignacion.id_usuario === usuario.id;
 
 const textoMayuscula = (valor) => {
@@ -32,9 +36,10 @@ const includesRespuesta = [
   },
 ];
 
-const listarRespuestasDe = (idAsignacion) =>
+// Respuestas de todas las filas de la cadena, para que el usuario actual vea también lo que subió el anterior.
+const listarRespuestasDe = (idsAsignacion) =>
   RespuestaAsignacion.findAll({
-    where: { id_asignacion: idAsignacion },
+    where: { id_asignacion: idsAsignacion },
     include: includesRespuesta,
     order: [['id', 'ASC']],
   });
@@ -43,11 +48,11 @@ const respuestaCompleta = (id) => RespuestaAsignacion.findByPk(id, { include: in
 
 exports.listarRespuestas = async (req, res) => {
   try {
-    const asignacion = await AsignacionExpediente.findByPk(req.params.id, { attributes: ['id', 'id_usuario'] });
-    if (!asignacion || !puedeVer(asignacion, req.user)) {
+    const asignacion = await AsignacionExpediente.findByPk(req.params.id, { attributes: ['id', 'id_usuario', 'motivo_cierre', 'id_asignacion_siguiente'] });
+    if (!asignacion || !(await puedeVer(asignacion, req.user))) {
       return res.status(404).json({ mensaje: 'Asignación no encontrada' });
     }
-    res.json(await listarRespuestasDe(asignacion.id));
+    res.json(await listarRespuestasDe(await idsDeCadena(asignacion)));
   } catch (error) {
     res.status(500).json({ mensaje: error.message });
   }
@@ -55,10 +60,11 @@ exports.listarRespuestas = async (req, res) => {
 
 exports.crearRespuesta = async (req, res) => {
   try {
-    const asignacion = await AsignacionExpediente.findByPk(req.params.id, { attributes: ['id', 'id_usuario'] });
-    if (!asignacion || !puedeVer(asignacion, req.user)) {
+    const asignacion = await AsignacionExpediente.findByPk(req.params.id, { attributes: ['id', 'id_usuario', 'motivo_cierre', 'id_asignacion_siguiente'] });
+    if (!asignacion || !(await puedeVer(asignacion, req.user))) {
       return res.status(404).json({ mensaje: 'Asignación no encontrada' });
     }
+    if (reasignada(asignacion)) throw errorReasignada();
     if (!puedeOperar(asignacion, req.user)) {
       return res.status(403).json({ mensaje: 'Solo el usuario asignado puede registrar respuestas' });
     }
@@ -67,7 +73,7 @@ exports.crearRespuesta = async (req, res) => {
 
     await RespuestaAsignacion.create({ id_asignacion: asignacion.id, texto, id_usuario: req.user.id });
     await registrarEvento(asignacion.id, req.user.id, 'RESPUESTA_REGISTRADA', texto);
-    res.status(201).json(await listarRespuestasDe(asignacion.id));
+    res.status(201).json(await listarRespuestasDe(await idsDeCadena(asignacion)));
   } catch (error) {
     res.status(error.status || 400).json({ mensaje: error.message });
   }
@@ -75,10 +81,11 @@ exports.crearRespuesta = async (req, res) => {
 
 exports.enviarRevision = async (req, res) => {
   try {
-    const asignacion = await AsignacionExpediente.findByPk(req.params.id, { attributes: ['id', 'id_usuario'] });
-    if (!asignacion || !puedeVer(asignacion, req.user)) {
+    const asignacion = await AsignacionExpediente.findByPk(req.params.id, { attributes: ['id', 'id_usuario', 'motivo_cierre', 'id_asignacion_siguiente'] });
+    if (!asignacion || !(await puedeVer(asignacion, req.user))) {
       return res.status(404).json({ mensaje: 'Asignación no encontrada' });
     }
+    if (reasignada(asignacion)) throw errorReasignada();
     if (!puedeOperar(asignacion, req.user)) {
       return res.status(403).json({ mensaje: 'Solo el usuario asignado puede enviar la respuesta a evaluación' });
     }
@@ -98,7 +105,7 @@ exports.enviarRevision = async (req, res) => {
 const respuestaDeArchivo = async (id) => {
   const respuesta = await RespuestaAsignacion.findByPk(id);
   if (!respuesta) return { respuesta: null, asignacion: null };
-  const asignacion = await AsignacionExpediente.findByPk(respuesta.id_asignacion, { attributes: ['id', 'id_usuario'] });
+  const asignacion = await AsignacionExpediente.findByPk(respuesta.id_asignacion, { attributes: ['id', 'id_usuario', 'motivo_cierre', 'id_asignacion_siguiente'] });
   return { respuesta, asignacion };
 };
 
@@ -112,9 +119,10 @@ exports.subirArchivo = async (req, res) => {
     if (!descripcion) throw errorConEstado('Describa qué contiene el archivo antes de subirlo');
 
     const { respuesta, asignacion } = await respuestaDeArchivo(req.params.id);
-    if (!respuesta || !asignacion || !puedeVer(asignacion, req.user)) {
+    if (!respuesta || !asignacion || !(await puedeVer(asignacion, req.user))) {
       throw errorConEstado('Respuesta no encontrada', 404);
     }
+    if (reasignada(asignacion)) throw errorReasignada();
     if (!puedeOperar(asignacion, req.user)) {
       throw errorConEstado('Solo el usuario asignado puede subir archivos', 403);
     }
@@ -141,9 +149,10 @@ exports.eliminarArchivo = async (req, res) => {
     const archivo = await ArchivoRespuestaAsignacion.findByPk(req.params.id);
     if (!archivo) return res.status(404).json({ mensaje: 'Archivo no encontrado' });
     const { respuesta, asignacion } = await respuestaDeArchivo(archivo.id_respuesta);
-    if (!respuesta || !asignacion || !puedeVer(asignacion, req.user)) {
+    if (!respuesta || !asignacion || !(await puedeVer(asignacion, req.user))) {
       return res.status(404).json({ mensaje: 'Archivo no encontrado' });
     }
+    if (reasignada(asignacion)) throw errorReasignada();
     if (!puedeOperar(asignacion, req.user)) {
       return res.status(403).json({ mensaje: 'Solo el usuario asignado puede eliminar archivos' });
     }
@@ -163,9 +172,10 @@ exports.editarArchivo = async (req, res) => {
     const archivo = await ArchivoRespuestaAsignacion.findByPk(req.params.id);
     if (!archivo) return res.status(404).json({ mensaje: 'Archivo no encontrado' });
     const { respuesta, asignacion } = await respuestaDeArchivo(archivo.id_respuesta);
-    if (!respuesta || !asignacion || !puedeVer(asignacion, req.user)) {
+    if (!respuesta || !asignacion || !(await puedeVer(asignacion, req.user))) {
       return res.status(404).json({ mensaje: 'Archivo no encontrado' });
     }
+    if (reasignada(asignacion)) throw errorReasignada();
     if (!puedeOperar(asignacion, req.user)) {
       return res.status(403).json({ mensaje: 'Solo el usuario asignado puede editar archivos' });
     }
@@ -190,9 +200,10 @@ exports.reemplazarArchivo = async (req, res) => {
     const archivo = await ArchivoRespuestaAsignacion.findByPk(req.params.id);
     if (!archivo) throw errorConEstado('Archivo no encontrado', 404);
     const { respuesta, asignacion } = await respuestaDeArchivo(archivo.id_respuesta);
-    if (!respuesta || !asignacion || !puedeVer(asignacion, req.user)) {
+    if (!respuesta || !asignacion || !(await puedeVer(asignacion, req.user))) {
       throw errorConEstado('Archivo no encontrado', 404);
     }
+    if (reasignada(asignacion)) throw errorReasignada();
     if (!puedeOperar(asignacion, req.user)) {
       throw errorConEstado('Solo el usuario asignado puede reemplazar archivos', 403);
     }
@@ -224,7 +235,7 @@ exports.descargarArchivo = async (req, res) => {
     const archivo = await ArchivoRespuestaAsignacion.findByPk(req.params.id);
     if (!archivo) return res.status(404).json({ mensaje: 'Archivo no encontrado' });
     const { respuesta, asignacion } = await respuestaDeArchivo(archivo.id_respuesta);
-    if (!respuesta || !asignacion || !puedeVer(asignacion, req.user)) {
+    if (!respuesta || !asignacion || !(await puedeVer(asignacion, req.user))) {
       return res.status(404).json({ mensaje: 'Archivo no encontrado' });
     }
     const ruta = path.join(CARPETA_ARCHIVOS, path.basename(archivo.nombre_guardado));

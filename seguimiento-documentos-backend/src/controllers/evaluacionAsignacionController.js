@@ -63,7 +63,8 @@ exports.listar = async (req, res) => {
     const ids = [...new Set(conRespuesta.map((r) => r.id_asignacion))];
     if (!ids.length) return res.json({ contadores, filas: [] });
 
-    const where = { id: { [Op.in]: ids }, estado: true };
+    // Las asignaciones reasignadas ya no se evalúan: la evaluación la hace la fila vigente.
+    const where = { id: { [Op.in]: ids }, estado: true, motivo_cierre: null };
     if (cut) where.cut = { [Op.like]: `%${cut}%` };
     const asignaciones = await AsignacionExpediente.findAll({
       where,
@@ -86,6 +87,7 @@ exports.evaluar = async (req, res) => {
   try {
     const asignacion = await AsignacionExpediente.findByPk(req.params.id, { include: includeAsignado });
     if (!asignacion) throw errorConEstado('Asignación no encontrada', 404);
+    if (asignacion.motivo_cierre) throw errorConEstado('Esta asignación fue reasignada: evalúe la asignación vigente');
 
     const resumen = await resumenPorAsignacion([asignacion.id]);
     const actual = resumen.get(asignacion.id);

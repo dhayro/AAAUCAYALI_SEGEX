@@ -7,6 +7,7 @@ import RespuestasAsignacionModal from "@/components/asignaciones/RespuestasAsign
 import { formatFecha, formatFechaHora } from "@/components/expedientes/format";
 import { CloseIcon, ChatBubbleIcon, ClipboardCheckIcon } from "@/icons";
 import BotonAccion from "@/components/common/BotonAccion";
+import SearchableSelect from "@/components/form/SearchableSelect";
 import api from "@/utils/api";
 
 interface Evaluacion {
@@ -76,10 +77,12 @@ export default function EvaluacionRespuestas() {
   const [filtroEstado, setFiltroEstado] = useState("POR_EVALUAR");
   const [respuestasDe, setRespuestasDe] = useState<FilaEvaluable | null>(null);
   const [evaluando, setEvaluando] = useState<FilaEvaluable | null>(null);
-  const [formEvaluacion, setFormEvaluacion] = useState<{ resultado: "APROBADA" | "OBSERVADA"; observacion: string }>({
+  const [formEvaluacion, setFormEvaluacion] = useState<{ resultado: "APROBADA" | "OBSERVADA" | "REASIGNADA"; observacion: string }>({
     resultado: "APROBADA",
     observacion: "",
   });
+  const [reasignacion, setReasignacion] = useState<{ id_usuario: number | ""; dias: string }>({ id_usuario: "", dias: "" });
+  const [usuariosReasig, setUsuariosReasig] = useState<{ id: number; nombre: string; cargo?: string | null }[]>([]);
   const [enviando, setEnviando] = useState(false);
   const [contadores, setContadores] = useState<Record<FilaEvaluable["estado"], number>>(CONTADORES_VACIOS);
 
@@ -106,8 +109,19 @@ export default function EvaluacionRespuestas() {
 
   const filasVisibles = filas;
 
+  const buscarUsuariosReasig = useCallback(async (filtro = "") => {
+    try {
+      const res = await api.get("/usuarios/select", { params: filtro ? { filtro } : {} });
+      setUsuariosReasig(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      setUsuariosReasig([]);
+    }
+  }, []);
+
   const abrirEvaluacion = (fila: FilaEvaluable) => {
     setFormEvaluacion({ resultado: "APROBADA", observacion: "" });
+    setReasignacion({ id_usuario: "", dias: "" });
+    buscarUsuariosReasig();
     setEvaluando(fila);
   };
 
@@ -118,15 +132,29 @@ export default function EvaluacionRespuestas() {
       toast.error("Describa qué debe corregir o completar la respuesta");
       return;
     }
+    if (formEvaluacion.resultado === "REASIGNADA") {
+      if (!reasignacion.id_usuario) return toast.error("Elija el usuario al que se reasigna");
+      if (!Number(reasignacion.dias) || Number(reasignacion.dias) < 1) return toast.error("Indique los días de plazo del nuevo usuario");
+    }
     setEnviando(true);
     try {
-      await api.post(`/evaluaciones-asignacion/${evaluando.id}`, formEvaluacion);
-      await fetchFilas();
-      toast.success(
-        formEvaluacion.resultado === "APROBADA"
-          ? "Asignación cerrada"
-          : "Respuesta observada, el usuario deberá responder de nuevo"
-      );
+      if (formEvaluacion.resultado === "REASIGNADA") {
+        await api.post(`/asignaciones-expediente/${evaluando.id}/reasignar`, {
+          id_usuario: reasignacion.id_usuario,
+          plazo_atencion: Number(reasignacion.dias),
+          observacion: formEvaluacion.observacion,
+        });
+        await fetchFilas();
+        toast.success("Asignación reasignada: el nuevo usuario tiene su plazo desde hoy");
+      } else {
+        await api.post(`/evaluaciones-asignacion/${evaluando.id}`, formEvaluacion);
+        await fetchFilas();
+        toast.success(
+          formEvaluacion.resultado === "APROBADA"
+            ? "Asignación cerrada"
+            : "Respuesta observada, el usuario deberá responder de nuevo"
+        );
+      }
       setEvaluando(null);
     } catch (error: any) {
       toast.error(error.response?.data?.mensaje || "No se pudo registrar la evaluación");
@@ -286,6 +314,13 @@ export default function EvaluacionRespuestas() {
                 Atiende <strong>{nombre(evaluando.asignado)}</strong>. Última respuesta:{" "}
                 <strong>{formatFechaHora(evaluando.ultima_respuesta)}</strong> ({formatoTiempo(evaluando.tiempo_respuesta_horas)} desde la asignación).
               </p>
+              <button
+                type="button"
+                onClick={() => setRespuestasDe(evaluando)}
+                className="rounded-lg border border-brand-600 px-3 py-1.5 text-sm font-semibold text-brand-600 hover:bg-brand-50 dark:border-brand-400 dark:text-brand-400"
+              >
+                Ver respuestas y archivos
+              </button>
 
               <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 dark:border-gray-600">
                 <input
@@ -317,6 +352,48 @@ export default function EvaluacionRespuestas() {
                 </div>
               </label>
 
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 dark:border-gray-600">
+                <input
+                  type="radio"
+                  name="resultado"
+                  value="REASIGNADA"
+                  checked={formEvaluacion.resultado === "REASIGNADA"}
+                  onChange={() => setFormEvaluacion({ ...formEvaluacion, resultado: "REASIGNADA" })}
+                  className="mt-1"
+                />
+                <div>
+                  <div className="font-semibold text-gray-900 dark:text-white">Reasignar a otro usuario</div>
+                  <div className="text-xs text-gray-500">
+                    El cumplimiento de este usuario queda hasta su última respuesta. La asignación continúa para el nuevo usuario.
+                  </div>
+                </div>
+              </label>
+
+              {formEvaluacion.resultado === "REASIGNADA" && (
+                <div className="space-y-3 rounded-lg border border-amber-300 bg-amber-50 p-3 dark:border-amber-700 dark:bg-amber-900/20">
+                  <div>
+                    <Label>Nuevo usuario *</Label>
+                    <SearchableSelect
+                      value={reasignacion.id_usuario}
+                      onChange={(valor) => setReasignacion({ ...reasignacion, id_usuario: valor === "" ? "" : Number(valor) })}
+                      options={usuariosReasig.map((u) => ({ id: u.id, nombre: u.cargo ? `${u.nombre} (${u.cargo})` : u.nombre }))}
+                      onSearch={(termino) => buscarUsuariosReasig(termino)}
+                      placeholder="Buscar usuario..."
+                    />
+                  </div>
+                  <div>
+                    <Label>Días de plazo para el nuevo usuario *</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={reasignacion.dias}
+                      onChange={(e) => setReasignacion({ ...reasignacion, dias: e.target.value })}
+                      placeholder="Ej: 5"
+                    />
+                  </div>
+                </div>
+              )}
+
               <div>
                 <Label>
                   {formEvaluacion.resultado === "OBSERVADA" ? "Qué debe corregir o completar *" : "Observación"}
@@ -335,7 +412,7 @@ export default function EvaluacionRespuestas() {
                   disabled={enviando}
                   className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
                 >
-                  {enviando ? "Guardando..." : "Guardar evaluación"}
+                  {enviando ? "Guardando..." : formEvaluacion.resultado === "REASIGNADA" ? "Reasignar asignación" : "Guardar evaluación"}
                 </button>
                 <button
                   type="button"

@@ -12,6 +12,8 @@ type Props = {
 const ETIQUETA_EVENTO: Record<string, string> = {
   ASIGNACION_CREADA: "Asignación creada",
   ASIGNACION_EDITADA: "Asignación editada",
+  REASIGNADA: "Asignación reasignada",
+  REASIGNACION_RECIBIDA: "Reasignación recibida",
   SOLICITUD_PRORROGA: "Solicitud de prórroga",
   PRORROGA_ACEPTADA: "Prórroga aceptada",
   PRORROGA_RECHAZADA: "Prórroga rechazada",
@@ -29,6 +31,8 @@ const ETIQUETA_EVENTO: Record<string, string> = {
 const COLOR_EVENTO: Record<string, string> = {
   ASIGNACION_CREADA: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100",
   ASIGNACION_EDITADA: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100",
+  REASIGNADA: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100",
+  REASIGNACION_RECIBIDA: "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-100",
   SOLICITUD_PRORROGA: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100",
   PRORROGA_ACEPTADA: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100",
   PRORROGA_RECHAZADA: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100",

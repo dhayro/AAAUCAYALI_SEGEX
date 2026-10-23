@@ -90,7 +90,7 @@ const vencimientoVigente = (a: Asignacion) =>
 
 const puedeProrrogar = (a: Asignacion) => {
   if (a.estado_prorroga === "PENDIENTE" || a.estado_prorroga === "ACEPTADA") return false;
-  if (a.respuesta?.estado === "CERRADA") return false;
+  if (a.respuesta?.estado === "CERRADA" || a.respuesta?.estado === "REASIGNADA") return false;
   // Ventana: desde 5 días antes del vencimiento, y solo mientras el plazo no haya vencido.
   const dias = diasEntre(a.fecha_vencimiento, hoyLima());
   return dias >= 0 && dias <= DIAS_PARA_PRORROGA;
@@ -104,6 +104,7 @@ const ESTADO_PRORROGA: Record<string, { texto: string; clases: string }> = {
 
 
 const ESTADO_RESPUESTA: Record<string, { texto: string; clases: string }> = {
+  REASIGNADA: { texto: "Reasignada", clases: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100" },
   SIN_RESPUESTA: { texto: "Sin respuesta", clases: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200" },
   POR_EVALUAR: { texto: "Por evaluar", clases: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100" },
   RESPONDIDA: { texto: "Respondida", clases: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-100" },
