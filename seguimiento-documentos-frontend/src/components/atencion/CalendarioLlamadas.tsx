@@ -10,6 +10,7 @@ interface LlamadaCalendario {
   fecha_respuesta: string;
   fecha_llamada: string;
   dia: string;
+  tipo_atencion?: "LLAMADA" | "PRESENCIAL";
   respondido: boolean;
   situacion: "RESPONDIDA" | "VENCIDA" | "POR_VENCER" | "EN_PLAZO";
   responsable: string;
@@ -167,10 +168,15 @@ export default function CalendarioLlamadas({ campo, onVerDetalle }: Props) {
                         key={l.id}
                         onClick={() => onVerDetalle(l.id)}
                         title={`${l.cut} · ${l.nombre_llamante} · ${l.motivo}`}
-                        className={`block w-full rounded border px-1.5 py-1 text-left text-[11px] leading-tight hover:opacity-80 ${SITUACION[l.situacion].clases}`}
+                        className={`block w-full rounded border px-1.5 py-1 text-left text-[11px] leading-tight hover:opacity-80 ${SITUACION[l.situacion].clases} ${
+                          l.tipo_atencion === "PRESENCIAL" ? "border-dashed" : ""
+                        }`}
                       >
                         <div className="truncate font-bold">{l.cut}</div>
-                        <div className="truncate">{l.nombre_llamante}</div>
+                        <div className="truncate">
+                          {l.tipo_atencion === "PRESENCIAL" && <span className="font-bold">Presencial · </span>}
+                          {l.nombre_llamante}
+                        </div>
                         {l.responsable && <div className="truncate opacity-75">{l.responsable}</div>}
                       </button>
                     ))}

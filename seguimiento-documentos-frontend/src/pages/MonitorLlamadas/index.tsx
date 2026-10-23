@@ -14,6 +14,7 @@ interface LlamadaMonitor {
   id: number;
   cut: string;
   nombre_llamante: string;
+  tipo_atencion?: "LLAMADA" | "PRESENCIAL";
   telefono?: string | null;
   motivo: string;
   fecha_llamada: string;
@@ -137,8 +138,19 @@ function TarjetaLlamada({
       </div>
 
       <div className="mt-4 text-sm">
-        <div className="font-semibold text-gray-900 dark:text-white">{l.nombre_llamante}</div>
-        <div className="text-gray-500 dark:text-gray-400">{l.telefono || "Sin teléfono"}</div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-semibold text-gray-900 dark:text-white">{l.nombre_llamante}</span>
+          <span
+            className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+              l.tipo_atencion === "PRESENCIAL"
+                ? "bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-100"
+                : "bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-100"
+            }`}
+          >
+            {l.tipo_atencion === "PRESENCIAL" ? "Presencial" : "Llamada"}
+          </span>
+        </div>
+        <div className="text-gray-500 dark:text-gray-400">{l.telefono || (l.tipo_atencion === "PRESENCIAL" ? "Atención en persona" : "Sin teléfono")}</div>
         <p className="mt-2 line-clamp-2 text-gray-700 dark:text-gray-300">{l.motivo}</p>
         <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">Llamó: {formatFechaHora(l.fecha_llamada)}</div>
       </div>

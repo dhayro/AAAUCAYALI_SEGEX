@@ -34,6 +34,9 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
   const [seleccionadas, setSeleccionadas] = useState<Record<number, string>>({});
   const [previas, setPrevias] = useState<any[]>([]);
   const [modoPlazo, setModoPlazo] = useState<"dias" | "fecha">("dias");
+  // LLAMADA o PRESENCIAL: la atención en persona usa el mismo registro y flujo, solo cambia el tipo.
+  const [tipo, setTipo] = useState<"LLAMADA" | "PRESENCIAL">("LLAMADA");
+  const presencial = tipo === "PRESENCIAL";
   const [form, setForm] = useState({
     cut: "",
     fecha_llamada: ahoraLocal(),
@@ -103,6 +106,7 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
       cut: form.cut,
       fecha_llamada: new Date(form.fecha_llamada).toISOString(),
       nombre_llamante: form.nombre_llamante,
+      tipo_atencion: tipo,
       telefono: form.telefono,
       motivo: form.motivo,
       fecha_respuesta:
@@ -138,13 +142,36 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
     <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/50 p-4">
       <form onSubmit={enviar} className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-2xl dark:bg-gray-800">
         <div className="flex items-center justify-between border-b p-5 dark:border-gray-700">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Registrar llamada</h2>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            {presencial ? "Registrar atención presencial" : "Registrar llamada"}
+          </h2>
           <button type="button" onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:text-gray-400">
             <CloseIcon className="h-6 w-6" />
           </button>
         </div>
 
         <div className="space-y-4 overflow-y-auto p-5">
+          <div className="inline-flex rounded-lg border border-gray-300 p-1 dark:border-gray-600">
+            {(
+              [
+                { value: "LLAMADA", texto: "Llamada" },
+                { value: "PRESENCIAL", texto: "Atención presencial" },
+              ] as const
+            ).map((op) => (
+              <button
+                key={op.value}
+                type="button"
+                onClick={() => setTipo(op.value)}
+                className={`rounded-md px-4 py-1.5 text-sm font-semibold ${
+                  tipo === op.value
+                    ? "bg-brand-600 text-white"
+                    : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
+                }`}
+              >
+                {op.texto}
+              </button>
+            ))}
+          </div>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
               <Label>CUT *</Label>
@@ -179,7 +206,7 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
               )}
             </div>
             <div>
-              <Label>Fecha y hora de la llamada *</Label>
+              <Label>{presencial ? "Fecha y hora de la atención *" : "Fecha y hora de la llamada *"}</Label>
               <input
                 type="datetime-local"
                 value={form.fecha_llamada}
@@ -188,7 +215,7 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
               />
             </div>
             <div>
-              <Label>Nombre de quien llama *</Label>
+              <Label>{presencial ? "Nombre de quien fue atendido *" : "Nombre de quien llama *"}</Label>
               <Input value={form.nombre_llamante} onChange={(e) => setForm({ ...form, nombre_llamante: e.target.value })} />
             </div>
             <div>
@@ -314,7 +341,7 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
             disabled={enviando}
             className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            {enviando ? "Guardando..." : "Registrar llamada"}
+            {enviando ? "Guardando..." : presencial ? "Registrar atención" : "Registrar llamada"}
           </button>
           <button
             type="button"
