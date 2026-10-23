@@ -148,6 +148,8 @@ export default function Llamadas() {
                   <tr className="border-b bg-gray-50 dark:bg-gray-700">
                     <th className="px-6 py-4 text-start text-sm font-semibold">#</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">CUT</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold">Tipo</th>
+                    <th className="px-6 py-4 text-start text-sm font-semibold">Registros del CUT</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Fecha y hora</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">Quien llamó o fue atendido</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">Motivo</th>
@@ -175,8 +177,10 @@ export default function Llamadas() {
                             {l.cut}
                           </button>
                         </div>
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-center text-sm">
                         <span
-                          className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                          className={`rounded-full px-2.5 py-1 text-xs font-bold ${
                             l.tipo_atencion === "PRESENCIAL"
                               ? "bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-100"
                               : "bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-100"
@@ -184,19 +188,21 @@ export default function Llamadas() {
                         >
                           {l.tipo_atencion === "PRESENCIAL" ? "Presencial" : "Llamada"}
                         </span>
-                        <div className="mt-1 flex items-center gap-2">
-                          {(l.total_del_cut ?? 1) > 1 && (
-                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800 dark:bg-amber-900 dark:text-amber-100">
-                              {(() => {
-                                const pres = l.presenciales_del_cut ?? 0;
-                                const llam = (l.total_del_cut ?? 1) - pres;
-                                return [llam > 0 && `${llam} llamada${llam === 1 ? "" : "s"}`, pres > 0 && `${pres} presencial${pres === 1 ? "" : "es"}`]
-                                  .filter(Boolean)
-                                  .join(" · ");
-                              })()}
-                            </span>
-                          )}
-                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm">
+                        {(l.total_del_cut ?? 1) > 1 ? (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800 dark:bg-amber-900 dark:text-amber-100">
+                            {(() => {
+                              const pres = l.presenciales_del_cut ?? 0;
+                              const llam = (l.total_del_cut ?? 1) - pres;
+                              return [llam > 0 && `${llam} llamada${llam === 1 ? "" : "s"}`, pres > 0 && `${pres} presencial${pres === 1 ? "" : "es"}`]
+                                .filter(Boolean)
+                                .join(" · ");
+                            })()}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-center text-sm">{formatFechaHora(l.fecha_llamada)}</td>
                       <td className="px-6 py-4 text-sm">
