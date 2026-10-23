@@ -65,6 +65,20 @@ exports.crear = async (req, res) => {
     await usuarioExistente(req.params.id);
     const datos = datosValidos(req.body);
     const creado = await sequelize.transaction(async (t) => {
+      // Un registro vigente que empieza en esa fecha o después no se puede cerrar automáticamente: se debe corregir a mano.
+      const conflicto = await UsuarioSisged.findOne({
+        where: {
+          id_usuario: req.params.id,
+          fecha_inicio: { [Op.gte]: datos.fecha_inicio },
+          [Op.or]: [{ fecha_fin: null }, { fecha_fin: { [Op.gte]: datos.fecha_inicio } }],
+        },
+        transaction: t,
+      });
+      if (conflicto) {
+        throw errorConEstado(
+          `Ya hay un usuario de SISGED vigente que empieza el ${conflicto.fecha_inicio}. Corrija o quite ese registro antes de agregar otro desde esa fecha`
+        );
+      }
       // El usuario de SISGED anterior que sigue abierto termina el día antes de que empiece el nuevo.
       const abiertos = await UsuarioSisged.findAll({
         where: {
