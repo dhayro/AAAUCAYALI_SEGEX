@@ -190,14 +190,16 @@ exports.monitorLlamadas = async (req, res) => {
     const ambito = gestor ? {} : { [Op.or]: [{ id_responsable: req.user.id }, { id_usuario_creador: req.user.id }] };
     const cuts = [...new Set(llamadas.map((l) => l.cut))];
     const porCut = {};
+    const presencialesPorCut = {};
     if (cuts.length) {
       const delCut = await LlamadaAdministrado.findAll({
-        attributes: ['cut'],
+        attributes: ['cut', 'tipo_atencion'],
         where: { cut: { [Op.in]: cuts }, ...ambito },
         raw: true,
       });
       delCut.forEach((f) => {
         porCut[f.cut] = (porCut[f.cut] || 0) + 1;
+        if (f.tipo_atencion === 'PRESENCIAL') presencialesPorCut[f.cut] = (presencialesPorCut[f.cut] || 0) + 1;
       });
     }
 
@@ -217,6 +219,7 @@ exports.monitorLlamadas = async (req, res) => {
           responsable: plain.responsable,
           acciones_pendientes: accionesPorLlamada[l.id] || 0,
           total_del_cut: porCut[l.cut] || 1,
+          presenciales_del_cut: presencialesPorCut[l.cut] || 0,
         };
       })
       .sort((a, b) => {
