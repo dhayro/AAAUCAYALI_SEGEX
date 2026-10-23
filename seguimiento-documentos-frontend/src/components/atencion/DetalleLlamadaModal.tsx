@@ -379,16 +379,28 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
                   {(llamada.otras_del_cut || []).length > 0 && (
                     <div className="md:col-span-3">
                       <div className="text-xs text-gray-500">
-                        Otras llamadas de este CUT ({llamada.otras_del_cut.length})
+                        Otros registros de este CUT ({llamada.otras_del_cut.length})
                       </div>
                       <ul className="mt-1 space-y-1">
-                        {llamada.otras_del_cut.map((o: any) => (
-                          <li key={o.id} className="rounded-lg bg-amber-50 p-2 text-sm dark:bg-amber-900/30">
-                            <span className="font-semibold">{formatFechaHora(o.fecha_llamada)}</span> · llamó{" "}
-                            <span className="font-semibold">{o.nombre_llamante}</span> ·{" "}
-                            {o.respondido ? "Respondida" : "Sin respuesta"} · {nombre(o.responsable)} — {o.motivo}
-                          </li>
-                        ))}
+                        {llamada.otras_del_cut.map((o: any) => {
+                          const presencial = o.tipo_atencion === "PRESENCIAL";
+                          return (
+                            <li key={o.id} className="rounded-lg bg-amber-50 p-2 text-sm dark:bg-amber-900/30">
+                              <span
+                                className={`mr-2 rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                                  presencial
+                                    ? "bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-100"
+                                    : "bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-100"
+                                }`}
+                              >
+                                {presencial ? "Presencial" : "Llamada"}
+                              </span>
+                              <span className="font-semibold">{formatFechaHora(o.fecha_llamada)}</span> ·{" "}
+                              {presencial ? "atendido" : "llamó"} <span className="font-semibold">{o.nombre_llamante}</span> ·{" "}
+                              {o.respondido ? "Respondida" : "Sin respuesta"} · {nombre(o.responsable)} — {o.motivo}
+                            </li>
+                          );
+                        })}
                       </ul>
                     </div>
                   )}
