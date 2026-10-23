@@ -12,7 +12,7 @@ import RespuestasAsignacionModal from "@/components/asignaciones/RespuestasAsign
 import { formatFecha, formatFechaHora } from "@/components/expedientes/format";
 import api from "@/utils/api";
 import * as XLSX from "xlsx";
-import { puedeGestionarAsignaciones } from "@/utils/sesion";
+import { puedeGestionarAsignaciones, usuarioActualId } from "@/utils/sesion";
 import { PencilIcon, TrashBinIcon, PlusIcon, CloseIcon, CalendarPlusIcon, ChatBubbleIcon, HistoryIcon } from "@/icons";
 import BotonAccion from "@/components/common/BotonAccion";
 
@@ -1032,7 +1032,7 @@ export default function AsignacionExpediente() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-3">
-                          {gestiona && puedeProrrogar(a) && (
+                          {(gestiona || a.id_usuario === usuarioActualId()) && puedeProrrogar(a) && (
                             <BotonAccion
                               etiqueta="Solicitar prórroga"
                               icono={<CalendarPlusIcon />}

@@ -160,7 +160,8 @@ router.put('/:id', authenticateToken, isSecretariaOrAbove, controller.actualizar
  *       404:
  *         description: No encontrada
  */
-router.patch('/:id/prorroga', authenticateToken, isSecretariaOrAbove, controller.prorrogar);
+// El dueño de la asignación también puede pedir prórroga; el controlador verifica que sea él o un gestor.
+router.patch('/:id/prorroga', authenticateToken, controller.prorrogar);
 router.patch('/:id/prorroga/aceptar', authenticateToken, isSecretariaOrAbove, controller.aceptarProrroga);
 router.patch('/:id/prorroga/rechazar', authenticateToken, isSecretariaOrAbove, controller.rechazarProrroga);
 router.get('/:id/historial', authenticateToken, controller.obtenerHistorial);

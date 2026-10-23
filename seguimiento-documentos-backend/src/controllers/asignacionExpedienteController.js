@@ -455,7 +455,14 @@ const accionMasiva = (accion) => async (req, res) => {
   res.json({ total: ids.length, ok, errores });
 };
 
-exports.prorrogar = accionIndividual(solicitarProrroga);
+const prorrogarIndividual = accionIndividual(solicitarProrroga);
+exports.prorrogar = async (req, res) => {
+  const actual = await AsignacionExpediente.findByPk(req.params.id, { attributes: ['id', 'id_usuario'] });
+  if (actual && !puedeVerTodas(req.user) && actual.id_usuario !== req.user.id) {
+    return res.status(403).json({ mensaje: 'Solo el usuario asignado o un gestor puede solicitar la prórroga' });
+  }
+  return prorrogarIndividual(req, res);
+};
 exports.aceptarProrroga = accionIndividual(aceptarProrrogaPendiente);
 exports.rechazarProrroga = accionIndividual(rechazarProrrogaPendiente);
 exports.prorrogarMasivo = accionMasiva(solicitarProrroga);
