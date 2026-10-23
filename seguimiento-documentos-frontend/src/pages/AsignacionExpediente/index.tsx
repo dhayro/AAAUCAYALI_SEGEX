@@ -180,7 +180,8 @@ export default function AsignacionExpediente() {
   const gestiona = puedeGestionarAsignaciones();
 
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
-  const [filters, setFilters] = useState({ cut: "" });
+  const [filters, setFilters] = useState<{ cut: string; id_usuario: number | "" }>({ cut: "", id_usuario: "" });
+  const [asignadoNombre, setAsignadoNombre] = useState("");
   const [totalCount, setTotalCount] = useState(0);
 
   const fetchAsignaciones = useCallback(async () => {
@@ -192,6 +193,7 @@ export default function AsignacionExpediente() {
         estado: "true",
       };
       if (filters.cut) params.cut = filters.cut;
+      if (filters.id_usuario !== "") params.id_usuario = filters.id_usuario;
 
       const response = await api.get("/asignaciones-expediente", { params });
       setAsignaciones(response.data.asignaciones || []);
@@ -212,7 +214,7 @@ export default function AsignacionExpediente() {
   const fetchUsuarios = useCallback(async (filtro = "") => {
     setLoadingUsuarios(true);
     try {
-      const params: any = { limit: 10 };
+      const params: any = {};
       if (filtro) params.filtro = filtro;
       const res = await api.get("/usuarios/select", { params });
       setUsuarios(Array.isArray(res.data) ? res.data : []);
@@ -226,6 +228,11 @@ export default function AsignacionExpediente() {
   useEffect(() => {
     if (showModal) fetchUsuarios();
   }, [showModal, fetchUsuarios]);
+
+  // Lista de usuarios para el filtro "Asignado a".
+  useEffect(() => {
+    fetchUsuarios();
+  }, [fetchUsuarios]);
 
   // Mientras se escribe el CUT, muestra si ya está asignado a alguien.
   useEffect(() => {
@@ -493,6 +500,13 @@ export default function AsignacionExpediente() {
     setPagination({ pageIndex: 0, pageSize: 10 });
   };
 
+  const handleAsignadoChange = (valor: string | number) => {
+    const usuario = usuarios.find((u) => u.id === Number(valor));
+    setAsignadoNombre(usuario ? etiquetaUsuario(usuario.nombre, usuario.cargo) : "");
+    setFilters((prev) => ({ ...prev, id_usuario: valor === "" ? "" : Number(valor) }));
+    setPagination({ pageIndex: 0, pageSize: 10 });
+  };
+
   return (
     <>
       <PageMeta
@@ -545,14 +559,40 @@ export default function AsignacionExpediente() {
           )}
         </div>
 
-        <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
-          <Label>Buscar por CUT</Label>
-          <Input
-            name="cut"
-            value={filters.cut}
-            onChange={handleFilterChange}
-            placeholder="Ej: 101183-2025"
-          />
+        <div className="grid grid-cols-1 gap-4 rounded-lg bg-gray-50 p-4 md:grid-cols-2 dark:bg-gray-800">
+          <div>
+            <Label>Buscar por CUT</Label>
+            <Input
+              name="cut"
+              value={filters.cut}
+              onChange={handleFilterChange}
+              placeholder="Ej: 101183-2025"
+            />
+          </div>
+          <div>
+            <Label>Asignado a</Label>
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <SearchableSelect
+                  value={filters.id_usuario}
+                  onChange={handleAsignadoChange}
+                  options={usuarios.map((u) => ({ id: u.id, nombre: etiquetaUsuario(u.nombre, u.cargo) }))}
+                  onSearch={(termino) => fetchUsuarios(termino)}
+                  isLoading={loadingUsuarios}
+                  placeholder="Buscar persona..."
+                  selectedLabel={asignadoNombre}
+                />
+              </div>
+              {filters.id_usuario !== "" && (
+                <button
+                  onClick={() => handleAsignadoChange("")}
+                  className="shrink-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+                >
+                  Quitar
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Modal crear / editar */}
