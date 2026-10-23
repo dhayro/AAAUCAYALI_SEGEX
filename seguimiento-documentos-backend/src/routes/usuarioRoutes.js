@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const usuarioController = require('../controllers/usuarioController');
+const usuarioSisgedController = require('../controllers/usuarioSisgedController');
 const authController = require('../controllers/authController');
 const { authenticateToken, isAdmin, isJefeOrAdmin } = require('../middleware/auth');
 
@@ -571,6 +572,12 @@ router.get('/:id', authenticateToken, usuarioController.obtenerUsuarioPorId);
  *         description: Usuario no encontrado
  */
 router.patch('/:id/cambiar-perfil', authenticateToken, isAdmin, usuarioController.cambiarPerfilUsuario);
+
+// Usuarios de SISGED asociados a un usuario del sistema, con su vigencia.
+router.get('/:id/sisged', authenticateToken, isAdmin, usuarioSisgedController.listar);
+router.post('/:id/sisged', authenticateToken, isAdmin, usuarioSisgedController.crear);
+router.put('/:id/sisged/:sid', authenticateToken, isAdmin, usuarioSisgedController.actualizar);
+router.delete('/:id/sisged/:sid', authenticateToken, isAdmin, usuarioSisgedController.eliminar);
 
 /**
  * @swagger
