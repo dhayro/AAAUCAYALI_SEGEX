@@ -65,31 +65,20 @@ exports.crear = async (req, res) => {
     await usuarioExistente(req.params.id);
     const datos = datosValidos(req.body);
     const creado = await sequelize.transaction(async (t) => {
-      // Un registro vigente que empieza en esa fecha o después no se puede cerrar automáticamente: se debe corregir a mano.
-      const conflicto = await UsuarioSisged.findOne({
-        where: {
-          id_usuario: req.params.id,
-          fecha_inicio: { [Op.gte]: datos.fecha_inicio },
-          [Op.or]: [{ fecha_fin: null }, { fecha_fin: { [Op.gte]: datos.fecha_inicio } }],
-        },
-        transaction: t,
-      });
-      if (conflicto) {
+      const existentes = await UsuarioSisged.findAll({ where: { id_usuario: req.params.id }, transaction: t });
+      const sinFin = '9999-12-31';
+      for (const r of existentes) {
+        // Solo choca si los periodos se cruzan; los periodos anteriores que no se cruzan se pueden registrar.
+        const seCruzan = (r.fecha_fin || sinFin) >= datos.fecha_inicio && (datos.fecha_fin || sinFin) >= r.fecha_inicio;
+        if (!seCruzan) continue;
+        // Un usuario abierto que empezó antes termina el día antes de que empiece el nuevo.
+        if (!r.fecha_fin && r.fecha_inicio < datos.fecha_inicio) {
+          await r.update({ fecha_fin: diaAnterior(datos.fecha_inicio) }, { transaction: t });
+          continue;
+        }
         throw errorConEstado(
-          `Ya hay un usuario de SISGED vigente que empieza el ${conflicto.fecha_inicio}. Corrija o quite ese registro antes de agregar otro desde esa fecha`
+          `Las fechas se cruzan con el usuario de SISGED "${r.usuario_sisged}" (${r.fecha_inicio} a ${r.fecha_fin || 'sin fin'}). Ajuste las fechas`
         );
-      }
-      // El usuario de SISGED anterior que sigue abierto termina el día antes de que empiece el nuevo.
-      const abiertos = await UsuarioSisged.findAll({
-        where: {
-          id_usuario: req.params.id,
-          fecha_inicio: { [Op.lt]: datos.fecha_inicio },
-          [Op.or]: [{ fecha_fin: null }, { fecha_fin: { [Op.gte]: datos.fecha_inicio } }],
-        },
-        transaction: t,
-      });
-      for (const anterior of abiertos) {
-        await anterior.update({ fecha_fin: diaAnterior(datos.fecha_inicio) }, { transaction: t });
       }
       return UsuarioSisged.create({ ...datos, id_usuario: req.params.id }, { transaction: t });
     });
