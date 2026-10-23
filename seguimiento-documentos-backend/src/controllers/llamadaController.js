@@ -277,7 +277,7 @@ exports.crearLlamada = async (req, res) => {
     if (isNaN(fechaLlamada)) throw errorConEstado('La fecha de la llamada no es válida');
 
     let idResponsable = req.user.id;
-    if (req.body.id_responsable !== undefined && esGestor(req.user)) {
+    if (req.body.id_responsable !== undefined && req.body.id_responsable !== null && req.body.id_responsable !== '') {
       idResponsable = parseInt(req.body.id_responsable, 10);
       const existe = await Usuario.findByPk(idResponsable, { attributes: ['id'] });
       if (!existe) throw errorConEstado('El usuario responsable no existe');

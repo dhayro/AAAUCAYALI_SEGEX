@@ -6,7 +6,7 @@ import { fechaLegible, limiteDesde } from "@/components/atencion/plazo";
 import DatePickerLima from "@/components/form/DatePickerLima";
 import SearchableSelect from "@/components/form/SearchableSelect";
 import api from "@/utils/api";
-import { puedeGestionarAsignaciones } from "@/utils/sesion";
+import { nombreActual, usuarioActualId } from "@/utils/sesion";
 import ExpedienteDetalleModal from "@/components/expedientes/ExpedienteDetalleModal";
 import { CloseIcon, SearchIcon } from "@/icons";
 import { formatFechaHora } from "@/components/expedientes/format";
@@ -26,7 +26,6 @@ const ahoraLocal = () => {
 };
 
 export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) {
-  const gestiona = puedeGestionarAsignaciones();
   const [catalogo, setCatalogo] = useState<AccionCatalogo[]>([]);
   const [usuarios, setUsuarios] = useState<UsuarioSelect[]>([]);
   const [cargandoUsuarios, setCargandoUsuarios] = useState(false);
@@ -44,7 +43,8 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
     plazo_dias: "",
     fecha_limite: "",
     respondido: false,
-    id_responsable: "",
+    // Por defecto, la llamada queda a cargo del usuario logueado.
+    id_responsable: String(usuarioActualId() ?? ""),
   });
 
   // Busca llamadas anteriores del mismo CUT mientras se escribe.
@@ -72,7 +72,7 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
   const buscarUsuarios = async (filtro = "") => {
     setCargandoUsuarios(true);
     try {
-      const params: any = { limit: 10 };
+      const params: any = {};
       if (filtro) params.filtro = filtro;
       const res = await api.get("/usuarios/select", { params });
       setUsuarios(Array.isArray(res.data) ? res.data : []);
@@ -82,8 +82,8 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
   };
 
   useEffect(() => {
-    if (gestiona) buscarUsuarios();
-  }, [gestiona]);
+    buscarUsuarios();
+  }, []);
 
   const enviar = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,7 +110,7 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
       respondido: form.respondido && acciones.length > 0,
       acciones,
     };
-    if (gestiona && form.id_responsable) payload.id_responsable = Number(form.id_responsable);
+    if (form.id_responsable) payload.id_responsable = Number(form.id_responsable);
 
     setEnviando(true);
     try {
@@ -266,19 +266,18 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
             </div>
           </div>
 
-          {gestiona && (
-            <div>
-              <Label>Usuario que atiende</Label>
-              <SearchableSelect
-                value={form.id_responsable ? Number(form.id_responsable) : ""}
-                onChange={(value) => setForm({ ...form, id_responsable: String(value) })}
-                options={usuarios.map((u) => ({ id: u.id, nombre: u.cargo ? `${u.nombre} (${u.cargo})` : u.nombre }))}
-                onSearch={(term) => buscarUsuarios(term)}
-                isLoading={cargandoUsuarios}
-                placeholder="Por defecto, usted mismo"
-              />
-            </div>
-          )}
+          <div>
+            <Label>Usuario que atiende</Label>
+            <SearchableSelect
+              value={form.id_responsable ? Number(form.id_responsable) : ""}
+              onChange={(value) => setForm({ ...form, id_responsable: String(value) })}
+              options={usuarios.map((u) => ({ id: u.id, nombre: u.cargo ? `${u.nombre} (${u.cargo})` : u.nombre }))}
+              onSearch={(term) => buscarUsuarios(term)}
+              isLoading={cargandoUsuarios}
+              selectedLabel={Number(form.id_responsable) === usuarioActualId() ? nombreActual() : undefined}
+              placeholder="Buscar usuario..."
+            />
+          </div>
 
           <div>
             <Label>Acciones a realizar</Label>
