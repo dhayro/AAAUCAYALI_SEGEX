@@ -103,7 +103,7 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
   }, [cargar, gestiona]);
 
   const buscarUsuarios = async (filtro = "") => {
-    const params: any = { limit: 10 };
+    const params: any = {};
     if (filtro) params.filtro = filtro;
     const res = await api.get("/usuarios/select", { params });
     setUsuarios(res.data || []);
