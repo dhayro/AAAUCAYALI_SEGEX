@@ -391,7 +391,11 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
                         <button
                           onClick={cambiarRespondido}
                           disabled={!llamada.respondido && (llamada.acciones || []).length === 0}
-                          className="text-xs text-brand-600 underline disabled:text-gray-400 disabled:no-underline dark:text-brand-400"
+                          className={`rounded-lg px-4 py-2 text-sm font-semibold shadow-sm disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500 dark:disabled:bg-gray-700 ${
+                            llamada.respondido
+                              ? "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                              : "bg-green-600 text-white hover:bg-green-700"
+                          }`}
                         >
                           {llamada.respondido ? "Marcar como no respondida" : "Marcar como respondida"}
                         </button>
