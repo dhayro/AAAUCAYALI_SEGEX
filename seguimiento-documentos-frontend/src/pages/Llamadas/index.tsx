@@ -148,6 +148,7 @@ export default function Llamadas() {
                     <th className="px-6 py-4 text-start text-sm font-semibold">#</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">CUT</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Fecha y hora</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold">Tipo</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">Quien llama</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">Motivo</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Plazo de respuesta</th>
@@ -181,19 +182,19 @@ export default function Llamadas() {
                         </div>
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-center text-sm">{formatFechaHora(l.fecha_llamada)}</td>
+                      <td className="whitespace-nowrap px-6 py-4 text-center text-sm">
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+                            l.tipo_atencion === "PRESENCIAL"
+                              ? "bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-100"
+                              : "bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-100"
+                          }`}
+                        >
+                          {l.tipo_atencion === "PRESENCIAL" ? "Presencial" : "Llamada"}
+                        </span>
+                      </td>
                       <td className="px-6 py-4 text-sm">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span>{l.nombre_llamante}</span>
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
-                              l.tipo_atencion === "PRESENCIAL"
-                                ? "bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-100"
-                                : "bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-100"
-                            }`}
-                          >
-                            {l.tipo_atencion === "PRESENCIAL" ? "Presencial" : "Llamada"}
-                          </span>
-                        </div>
+                        <div>{l.nombre_llamante}</div>
                         <div className="text-xs text-gray-500">
                           {l.telefono || (l.tipo_atencion === "PRESENCIAL" ? "Atención en persona" : "Sin teléfono")}
                         </div>
