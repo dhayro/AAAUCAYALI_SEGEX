@@ -42,7 +42,8 @@ exports.resumen = async (req, res) => {
     const gestor = esGestor(req.user);
     const hoy = hoyLima();
 
-    const whereAsignaciones = { estado: true };
+    // Las asignaciones reasignadas ya no son pendientes de su dueño anterior; su cumplimiento queda en los reportes.
+    const whereAsignaciones = { estado: true, motivo_cierre: null };
     if (!gestor) whereAsignaciones.id_usuario = req.user.id;
     const asignaciones = await AsignacionExpediente.findAll({
       where: whereAsignaciones,
