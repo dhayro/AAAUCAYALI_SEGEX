@@ -58,9 +58,19 @@ export default function MovimientosModal({ titulo, rows, cargando, error, onClos
                 {rows.map((m, index) => (
                   <tr key={index} className="align-top hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td className="px-3 py-2 text-center font-bold text-brand-600">{index + 1}</td>
-                    <td className="max-w-[10rem] px-3 py-2 text-gray-700 dark:text-gray-200">{m.DESC_OFICINA_ENVIA || "—"}</td>
+                    <td className="max-w-[10rem] px-3 py-2 text-gray-700 dark:text-gray-200">
+                      {m.DESC_OFICINA_ENVIA || "—"}
+                      {m.USUARIO_ENVIA_LOCAL && (
+                        <div className="mt-1 text-xs font-semibold text-brand-700 dark:text-brand-300">{m.USUARIO_ENVIA_LOCAL}</div>
+                      )}
+                    </td>
                     <td className="whitespace-nowrap px-3 py-2 text-center">{m.STR_FEC_INICIO || "—"}</td>
-                    <td className="max-w-[10rem] px-3 py-2 text-gray-700 dark:text-gray-200">{m.DESC_OFICINA_RECIBE || "—"}</td>
+                    <td className="max-w-[10rem] px-3 py-2 text-gray-700 dark:text-gray-200">
+                      {m.DESC_OFICINA_RECIBE || "—"}
+                      {m.USUARIO_RECIBE_LOCAL && (
+                        <div className="mt-1 text-xs font-semibold text-brand-700 dark:text-brand-300">{m.USUARIO_RECIBE_LOCAL}</div>
+                      )}
+                    </td>
                     <td className="whitespace-nowrap px-3 py-2 text-center">{m.STR_FEC_FIN || "—"}</td>
                     <td className="px-3 py-2 font-semibold text-gray-900 dark:text-white">{m.MOVIMIENTO || "—"}</td>
                     <td className="max-w-[12rem] px-3 py-2 text-gray-700 dark:text-gray-200">{m.NRO_DOCUMENTO || "—"}</td>

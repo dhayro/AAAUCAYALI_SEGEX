@@ -2,6 +2,7 @@ const SISGED_BASE_URL = 'https://sisgedpiloto.ana.gob.pe/apiRestSG/api/SISGED';
 const sisgedSyncService = require('../services/sisgedSyncService');
 const postmanUpdateService = require('../services/postmanUpdateService');
 const { guardarTrazabilidad } = require('../services/trazabilidadService');
+const { agregarUsuariosLocales } = require('../services/usuarioSisgedMapeoService');
 
 // Obtener token: primero de BD, luego de Postman
 async function obtenerTokenOptimizado() {
@@ -297,12 +298,14 @@ exports.sincronizarConParametros = async (req, res) => {
         const guardados = await guardarTrazabilidad(params?.NRO_CUT, datos);
         console.log('[SYNC-PARAMS] Trazabilidad guardada:', guardados, 'documentos');
       }
-      console.log('[SYNC-PARAMS] ✅ Completado:', datos?.length || 0, 'registros');
+      // En los movimientos se agrega el usuario del sistema que corresponde a quien envía y a quien recibe.
+      const datosFinales = endpoint === 'movimientos' ? await agregarUsuariosLocales(datos) : datos;
+      console.log('[SYNC-PARAMS] ✅ Completado:', datosFinales?.length || 0, 'registros');
       res.status(200).json({
         success: true,
         message: 'Parámetros actualizados en Postman y datos obtenidos',
-        total: datos.length,
-        data: datos
+        total: datosFinales.length,
+        data: datosFinales
       });
     }
   } catch (error) {
