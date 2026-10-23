@@ -337,12 +337,23 @@ exports.actualizar = async (req, res) => {
 
 const errorConEstado = (mensaje) => Object.assign(new Error(mensaje), { status: 400 });
 
+const DIAS_PARA_PRORROGA = 5;
+const diasHastaVencimiento = (fecha) =>
+  Math.round((Date.parse(`${String(fecha).slice(0, 10)}T00:00:00Z`) - Date.parse(`${hoyLima()}T00:00:00Z`)) / 86400000);
+
 const solicitarProrroga = async (actual, datos, userId) => {
   if (actual.estado_prorroga === 'PENDIENTE') {
     throw errorConEstado('Ya hay una prórroga pendiente de aceptación');
   }
   if (actual.estado_prorroga === 'ACEPTADA') {
     throw errorConEstado('La asignación ya tiene una prórroga aceptada');
+  }
+  const diasRestantes = diasHastaVencimiento(actual.fecha_vencimiento);
+  if (diasRestantes < 0) {
+    throw errorConEstado('El plazo ya venció: no se puede solicitar prórroga');
+  }
+  if (diasRestantes > DIAS_PARA_PRORROGA) {
+    throw errorConEstado(`La prórroga se puede solicitar desde ${DIAS_PARA_PRORROGA} días antes del vencimiento`);
   }
 
   const plazo = parsePlazo(datos.plazo_prorroga);

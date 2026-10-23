@@ -91,7 +91,9 @@ const vencimientoVigente = (a: Asignacion) =>
 const puedeProrrogar = (a: Asignacion) => {
   if (a.estado_prorroga === "PENDIENTE" || a.estado_prorroga === "ACEPTADA") return false;
   if (a.respuesta?.estado === "CERRADA") return false;
-  return diasEntre(a.fecha_vencimiento, hoyLima()) <= DIAS_PARA_PRORROGA;
+  // Ventana: desde 5 días antes del vencimiento, y solo mientras el plazo no haya vencido.
+  const dias = diasEntre(a.fecha_vencimiento, hoyLima());
+  return dias >= 0 && dias <= DIAS_PARA_PRORROGA;
 };
 
 const ESTADO_PRORROGA: Record<string, { texto: string; clases: string }> = {
