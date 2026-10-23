@@ -7,6 +7,7 @@ import DatePickerLima from "@/components/form/DatePickerLima";
 import SearchableSelect from "@/components/form/SearchableSelect";
 import api from "@/utils/api";
 import { PencilIcon, TrashBinIcon, PlusIcon, CloseIcon } from "@/icons";
+import UsuariosSisgedModal from "@/components/usuarios/UsuariosSisgedModal";
 
 const formatDateForInput = (date: string | undefined): string => {
   if (!date) return "";
@@ -106,6 +107,7 @@ export default function Usuarios() {
   const [showEstadoModal, setShowEstadoModal] = useState(false);
   const [estadoUserId, setEstadoUserId] = useState<number | null>(null);
   const [estadoNuevo, setEstadoNuevo] = useState<boolean | null>(null);
+  const [sisgedUser, setSisgedUser] = useState<Usuario | null>(null);
 
   const [pagination, setPagination] = useState({
     pageIndex: 0,
@@ -626,6 +628,14 @@ export default function Usuarios() {
         )}
 
         {/* Modal Restablecer Contraseña */}
+        {sisgedUser && (
+          <UsuariosSisgedModal
+            usuarioId={sisgedUser.id}
+            nombreUsuario={sisgedUser.usuario}
+            onClose={() => setSisgedUser(null)}
+          />
+        )}
+
         {showResetModal && (
           <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/50 p-4">
             <div className="w-full max-w-md rounded-lg bg-white shadow-2xl dark:bg-gray-800">
@@ -827,6 +837,13 @@ export default function Usuarios() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => setSisgedUser(user)}
+                            className="rounded border border-indigo-600 px-2 py-0.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 dark:border-indigo-400 dark:text-indigo-400"
+                            title="Usuarios de SISGED"
+                          >
+                            SISGED
+                          </button>
                           <button
                             onClick={() => handleEdit(user)}
                             className="text-green-600 hover:text-green-800 dark:text-green-400 p-1"
