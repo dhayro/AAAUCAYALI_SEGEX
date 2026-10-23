@@ -197,7 +197,7 @@ export default function AsignacionExpediente() {
   const [filters, setFilters] = useState<{ cut: string; id_usuario: number | ""; estado_respuesta: string }>({
     cut: "",
     id_usuario: "",
-    estado_respuesta: "",
+    estado_respuesta: "SIN_RESPUESTA",
   });
   const [contadores, setContadores] = useState<Record<string, number>>({});
   const [asignadoNombre, setAsignadoNombre] = useState("");
