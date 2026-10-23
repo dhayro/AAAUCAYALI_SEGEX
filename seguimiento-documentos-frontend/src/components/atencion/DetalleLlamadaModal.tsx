@@ -184,10 +184,10 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
     if (!nuevoResponsable) return toast.error("Seleccione el usuario que atenderá");
     const elegido = usuarios.find((u) => String(u.id) === nuevoResponsable);
     setConfirmar({
-      titulo: "Reasignar llamada",
+      titulo: llamada?.tipo_atencion === "PRESENCIAL" ? "Reasignar atención" : "Reasignar llamada",
       mensaje: (
         <>
-          La llamada pasará a <strong>{elegido?.nombre ?? "el usuario seleccionado"}</strong>. Quien atiende cambiará
+          El registro pasará a <strong>{elegido?.nombre ?? "el usuario seleccionado"}</strong>. Quien atiende cambiará
           desde ahora.
         </>
       ),
@@ -330,7 +330,9 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
       <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-gray-900/50 p-4">
         <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-gray-800">
           <div className="flex items-center gap-3 bg-brand-600 px-5 py-3 text-white">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-white/70">Llamada</span>
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-white/70">
+              {llamada?.tipo_atencion === "PRESENCIAL" ? "Atención presencial" : "Llamada"}
+            </span>
             <h2 className="text-lg font-bold">{llamada?.cut || "…"}</h2>
             <button onClick={onClose} className="ml-auto rounded-full p-1 text-white/80 hover:bg-white/20 hover:text-white">
               <CloseIcon className="h-5 w-5" />
@@ -350,7 +352,9 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
                   <div>
                     <div className="text-xs text-gray-500">Quien llama</div>
                     <div className="font-semibold">{llamada.nombre_llamante}</div>
-                    <div className="text-xs text-gray-500">{llamada.telefono || "Sin teléfono"}</div>
+                    <div className="text-xs text-gray-500">
+                      {llamada.telefono || (llamada.tipo_atencion === "PRESENCIAL" ? "Atención en persona" : "Sin teléfono")}
+                    </div>
                   </div>
                   <div>
                     <div className="text-xs text-gray-500">Plazo de respuesta</div>

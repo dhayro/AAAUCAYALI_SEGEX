@@ -92,10 +92,14 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
     e.preventDefault();
     if (!form.cut.trim()) return toast.error("El CUT es obligatorio");
     if (modoPlazo === "fecha" && form.fecha_limite && form.fecha_limite < form.fecha_llamada.slice(0, 10)) {
-      return toast.error("La fecha límite no puede ser anterior a la llamada");
+      return toast.error(`La fecha límite no puede ser anterior a ${presencial ? "la atención" : "la llamada"}`);
     }
-    if (!form.nombre_llamante.trim()) return toast.error("Escribe el nombre de quien llama");
-    if (!form.motivo.trim()) return toast.error("Escribe el motivo de la llamada");
+    if (!form.nombre_llamante.trim()) {
+      return toast.error(presencial ? "Escribe el nombre de quien fue atendido" : "Escribe el nombre de quien llama");
+    }
+    if (!form.motivo.trim()) {
+      return toast.error(presencial ? "Escribe el motivo de la atención" : "Escribe el motivo de la llamada");
+    }
 
     const acciones = Object.entries(seleccionadas).map(([id, observacion]) => ({
       id_accion: Number(id),
@@ -119,10 +123,10 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
     setEnviando(true);
     try {
       await api.post("/atenciones/llamadas", payload);
-      toast.success("Llamada registrada");
+      toast.success(presencial ? "Atención presencial registrada" : "Llamada registrada");
       onRegistrada();
     } catch (error: any) {
-      toast.error(error.response?.data?.mensaje || "No se pudo registrar la llamada");
+      toast.error(error.response?.data?.mensaje || (presencial ? "No se pudo registrar la atención" : "No se pudo registrar la llamada"));
     } finally {
       setEnviando(false);
     }
@@ -191,13 +195,13 @@ export default function RegistrarLlamadaModal({ onClose, onRegistrada }: Props) 
               {previas.length > 0 && (
                 <div className="mt-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs dark:border-amber-700 dark:bg-amber-900/30">
                   <div className="font-semibold text-amber-900 dark:text-amber-100">
-                    Este CUT ya tiene {previas.length} llamada{previas.length === 1 ? "" : "s"} registrada
-                    {previas.length === 1 ? "" : "s"}
+                    Este CUT ya tiene {previas.length} registro{previas.length === 1 ? "" : "s"} previo{previas.length === 1 ? "" : "s"}
                   </div>
                   <ul className="mt-1 space-y-1 text-amber-900 dark:text-amber-100">
                     {previas.map((p) => (
                       <li key={p.id}>
-                        {formatFechaHora(p.fecha_llamada)} · llamó {p.nombre_llamante} · {p.respondido ? "Respondida" : "Sin respuesta"} ·{" "}
+                        {formatFechaHora(p.fecha_llamada)} · {p.tipo_atencion === "PRESENCIAL" ? "atendido" : "llamó"} {p.nombre_llamante} ·{" "}
+                        {p.respondido ? "Respondida" : "Sin respuesta"} ·{" "}
                         {p.responsable ? `${p.responsable.nombre} ${p.responsable.apellido}` : "Sin responsable"} — {p.motivo}
                       </li>
                     ))}

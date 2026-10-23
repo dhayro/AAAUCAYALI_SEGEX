@@ -273,7 +273,7 @@ exports.obtenerLlamada = async (req, res) => {
     const datos = await obtenerLlamada(llamada.id);
     datos.otras_del_cut = await LlamadaAdministrado.findAll({
       where: { cut: llamada.cut, id: { [Op.ne]: llamada.id } },
-      attributes: ['id', 'fecha_llamada', 'nombre_llamante', 'respondido', 'fecha_respuesta', 'motivo'],
+      attributes: ['id', 'fecha_llamada', 'nombre_llamante', 'tipo_atencion', 'respondido', 'fecha_respuesta', 'motivo'],
       include: [{ model: Usuario, as: 'responsable', attributes: ['id', 'nombre', 'apellido'] }],
       order: [['fecha_llamada', 'DESC']],
     });
@@ -308,7 +308,7 @@ exports.llamadasDelCut = async (req, res) => {
     const cut = textoMayuscula(req.params.cut);
     const llamadas = await LlamadaAdministrado.findAll({
       where: { cut, ...ambitoDe(req.user) },
-      attributes: ['id', 'fecha_llamada', 'nombre_llamante', 'respondido', 'fecha_respuesta', 'motivo'],
+      attributes: ['id', 'fecha_llamada', 'nombre_llamante', 'tipo_atencion', 'respondido', 'fecha_respuesta', 'motivo'],
       include: [{ model: Usuario, as: 'responsable', attributes: ['id', 'nombre', 'apellido'] }],
       order: [['fecha_llamada', 'DESC']],
     });
