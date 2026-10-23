@@ -118,13 +118,6 @@ export default function CalendarioLlamadas({ campo, onVerDetalle }: Props) {
             Hoy
           </button>
         </div>
-        <div className="flex flex-wrap gap-2 text-xs font-semibold">
-          {(Object.keys(SITUACION) as LlamadaCalendario["situacion"][]).map((s) => (
-            <span key={s} className={`rounded-full border px-2.5 py-1 ${SITUACION[s].clases}`}>
-              {SITUACION[s].texto} · {conteos[s]}
-            </span>
-          ))}
-        </div>
       </div>
 
       <div className="overflow-x-auto rounded-lg bg-white shadow dark:bg-gray-800">
@@ -151,8 +144,15 @@ export default function CalendarioLlamadas({ campo, onVerDetalle }: Props) {
                   key={fecha}
                   className={`flex min-h-[7rem] flex-col border-b border-r p-1.5 dark:border-gray-700 ${esHoy ? "bg-brand-50 dark:bg-brand-900/20" : ""}`}
                 >
-                  <div className={`mb-1 text-xs font-bold ${esHoy ? "text-brand-700 dark:text-brand-300" : "text-gray-600 dark:text-gray-300"}`}>
-                    {dia}
+                  <div className="mb-1 flex items-center justify-between gap-1">
+                    <span className={`text-xs font-bold ${esHoy ? "text-brand-700 dark:text-brand-300" : "text-gray-600 dark:text-gray-300"}`}>
+                      {dia}
+                    </span>
+                    {lista.length > 0 && (
+                      <span className="rounded-full bg-gray-200 px-1.5 py-0.5 text-[10px] font-bold text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+                        {lista.length} {lista.length === 1 ? "llamada" : "llamadas"}
+                      </span>
+                    )}
                   </div>
                   <div className="max-h-32 space-y-1 overflow-y-auto">
                     {lista.map((l) => (
@@ -173,6 +173,16 @@ export default function CalendarioLlamadas({ campo, onVerDetalle }: Props) {
             })}
           </div>
         )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 rounded-lg bg-white p-3 text-xs font-semibold shadow dark:bg-gray-800">
+        <span className="mr-1 text-gray-500 dark:text-gray-400">Leyenda:</span>
+        {(Object.keys(SITUACION) as LlamadaCalendario["situacion"][]).map((s) => (
+          <span key={s} className={`rounded-full border px-2.5 py-1 ${SITUACION[s].clases}`}>
+            {SITUACION[s].texto} · {conteos[s]} en el mes
+          </span>
+        ))}
+        <span className="ml-auto text-gray-500 dark:text-gray-400">El número junto al día indica cuántas llamadas hay ese día.</span>
       </div>
     </div>
   );
