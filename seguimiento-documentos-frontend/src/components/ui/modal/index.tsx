@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 
 interface ModalProps {
   isOpen: boolean;
@@ -53,8 +54,9 @@ export const Modal: React.FC<ModalProps> = ({
     ? "w-full h-full"
     : "relative w-full rounded-3xl bg-white  dark:bg-gray-900";
 
-  return (
-    <div className="modal fixed inset-0 z-99999 flex items-center justify-center overflow-y-auto">
+  // Se monta en document.body y por encima de cualquier otra ventana, incluido el visor de archivos.
+  return createPortal(
+    <div className="modal fixed inset-0 z-[1000002] flex items-center justify-center overflow-y-auto">
       {!isFullscreen && (
         <div
           className="fixed inset-0 h-full w-full bg-gray-400/50 backdrop-blur-[32px]"
@@ -89,6 +91,7 @@ export const Modal: React.FC<ModalProps> = ({
         )}
         <div>{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
