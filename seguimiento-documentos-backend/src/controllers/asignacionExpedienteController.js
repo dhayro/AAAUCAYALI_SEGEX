@@ -43,6 +43,11 @@ const obtenerConRelaciones = (id) => AsignacionExpediente.findByPk(id, { include
 
 const PERFILES_VER_TODAS = ['admin', 'jefe', 'secretaria'];
 const ESTADOS_LISTADO = ['SIN_RESPUESTA', 'POR_EVALUAR', 'RESPONDIDA', 'OBSERVADA', 'CERRADA', 'REASIGNADA'];
+
+// Estado de la asignación: una vez que tiene respuestas (o fue reasignada), ya no se edita ni se desactiva.
+const estadoActual = async (asignacion) =>
+  asignacion.motivo_cierre ? 'REASIGNADA' : (await resumenPorAsignacion([asignacion.id])).get(asignacion.id).estado;
+const mensajeNoEditable = 'No se puede modificar una asignación que ya tiene respuestas, está reasignada o cerrada';
 const puedeVerTodas = (usuario) => PERFILES_VER_TODAS.includes(usuario.perfil);
 // Incluye la cadena de reasignaciones: el dueño actual ve lo que subió el anterior.
 const puedeVerAsignacion = (asignacion, usuario) => puedeVerCadena(asignacion, usuario);
@@ -329,6 +334,9 @@ exports.actualizar = async (req, res) => {
     const actual = await AsignacionExpediente.findByPk(req.params.id);
     if (!actual) {
       return res.status(404).json({ mensaje: 'Asignación no encontrada' });
+    }
+    if ((await estadoActual(actual)) !== 'SIN_RESPUESTA') {
+      return res.status(400).json({ mensaje: mensajeNoEditable });
     }
 
     const cambios = { id_usuario_modificador: req.user.id };
@@ -638,6 +646,9 @@ exports.eliminar = async (req, res) => {
     const actual = await AsignacionExpediente.findByPk(req.params.id);
     if (!actual) {
       return res.status(404).json({ mensaje: 'Asignación no encontrada' });
+    }
+    if ((await estadoActual(actual)) !== 'SIN_RESPUESTA') {
+      return res.status(400).json({ mensaje: mensajeNoEditable });
     }
     await actual.update({ estado: false, id_usuario_modificador: req.user.id });
     res.json({ mensaje: 'Asignación desactivada exitosamente' });

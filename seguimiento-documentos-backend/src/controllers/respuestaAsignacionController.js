@@ -16,6 +16,10 @@ const esGestor = (usuario) => PERFILES_GESTION.includes(usuario.perfil);
 // Ver la cadena completa de reasignaciones: el dueño actual ve lo que subió el anterior.
 const puedeVer = (asignacion, usuario) => puedeVerCadena(asignacion, usuario);
 const reasignada = (asignacion) => Boolean(asignacion.motivo_cierre);
+// Una asignación cerrada (respuesta aprobada) ya no admite respuestas ni cambios en sus archivos.
+const cerrada = async (asignacion) =>
+  (await resumenPorAsignacion([asignacion.id])).get(asignacion.id).estado === 'CERRADA';
+const errorCerrada = () => errorConEstado('La asignación está cerrada: no admite nuevas respuestas ni cambios en archivos');
 const errorReasignada = () => errorConEstado('Esta asignación fue reasignada: solo puede consultarse, no modificarse');
 const puedeOperar = (asignacion, usuario) => esGestor(usuario) || asignacion.id_usuario === usuario.id;
 
@@ -65,6 +69,7 @@ exports.crearRespuesta = async (req, res) => {
       return res.status(404).json({ mensaje: 'Asignación no encontrada' });
     }
     if (reasignada(asignacion)) throw errorReasignada();
+    if (await cerrada(asignacion)) throw errorCerrada();
     if (!puedeOperar(asignacion, req.user)) {
       return res.status(403).json({ mensaje: 'Solo el usuario asignado puede registrar respuestas' });
     }
@@ -86,6 +91,7 @@ exports.enviarRevision = async (req, res) => {
       return res.status(404).json({ mensaje: 'Asignación no encontrada' });
     }
     if (reasignada(asignacion)) throw errorReasignada();
+    if (await cerrada(asignacion)) throw errorCerrada();
     if (!puedeOperar(asignacion, req.user)) {
       return res.status(403).json({ mensaje: 'Solo el usuario asignado puede enviar la respuesta a evaluación' });
     }
@@ -123,6 +129,7 @@ exports.subirArchivo = async (req, res) => {
       throw errorConEstado('Respuesta no encontrada', 404);
     }
     if (reasignada(asignacion)) throw errorReasignada();
+    if (await cerrada(asignacion)) throw errorCerrada();
     if (!puedeOperar(asignacion, req.user)) {
       throw errorConEstado('Solo el usuario asignado puede subir archivos', 403);
     }
@@ -153,6 +160,7 @@ exports.eliminarArchivo = async (req, res) => {
       return res.status(404).json({ mensaje: 'Archivo no encontrado' });
     }
     if (reasignada(asignacion)) throw errorReasignada();
+    if (await cerrada(asignacion)) throw errorCerrada();
     if (!puedeOperar(asignacion, req.user)) {
       return res.status(403).json({ mensaje: 'Solo el usuario asignado puede eliminar archivos' });
     }
@@ -176,6 +184,7 @@ exports.editarArchivo = async (req, res) => {
       return res.status(404).json({ mensaje: 'Archivo no encontrado' });
     }
     if (reasignada(asignacion)) throw errorReasignada();
+    if (await cerrada(asignacion)) throw errorCerrada();
     if (!puedeOperar(asignacion, req.user)) {
       return res.status(403).json({ mensaje: 'Solo el usuario asignado puede editar archivos' });
     }
@@ -204,6 +213,7 @@ exports.reemplazarArchivo = async (req, res) => {
       throw errorConEstado('Archivo no encontrado', 404);
     }
     if (reasignada(asignacion)) throw errorReasignada();
+    if (await cerrada(asignacion)) throw errorCerrada();
     if (!puedeOperar(asignacion, req.user)) {
       throw errorConEstado('Solo el usuario asignado puede reemplazar archivos', 403);
     }

@@ -854,6 +854,7 @@ export default function AsignacionExpediente() {
             asignacion={respuestasTarget}
             ultimaEvaluacion={respuestasTarget.respuesta?.evaluacion ?? null}
             estadoRespuesta={respuestasTarget.respuesta?.estado ?? null}
+            soloLectura={["CERRADA", "REASIGNADA"].includes(respuestasTarget.respuesta?.estado ?? "")}
             onCambio={fetchAsignaciones}
             onClose={() => setRespuestasTarget(null)}
           />
@@ -1151,7 +1152,7 @@ export default function AsignacionExpediente() {
                             icono={<HistoryIcon />}
                             onClick={() => handleOpenHistorial(a)}
                           />
-                          {gestiona && (
+                          {gestiona && (a.respuesta?.estado ?? "SIN_RESPUESTA") === "SIN_RESPUESTA" && (
                             <>
                               <BotonAccion
                                 etiqueta="Editar"
