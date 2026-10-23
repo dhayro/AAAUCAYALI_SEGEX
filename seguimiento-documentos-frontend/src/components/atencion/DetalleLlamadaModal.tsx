@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import SearchableSelect from "@/components/form/SearchableSelect";
 import Input from "@/components/form/input/InputField";
@@ -16,6 +16,8 @@ type Props = {
   onClose: () => void;
   onCambio: () => void;
   soloLectura?: boolean;
+  // Al abrir desde la tabla: entra directo a editar los datos o a anular el registro.
+  accionInicial?: "editar" | "anular";
 };
 
 const nombre = (u?: { nombre: string; apellido: string } | null) => (u ? `${u.nombre} ${u.apellido}` : "—");
@@ -55,7 +57,7 @@ const COLOR_ANTECEDENTE: Record<string, string> = {
 
 const esPdf = (archivo: any) => (archivo.mimetype || "").includes("pdf") || archivo.nombre_original?.toLowerCase().endsWith(".pdf");
 
-export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, soloLectura = false }: Props) {
+export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, soloLectura = false, accionInicial }: Props) {
   // En solo lectura no se muestra ningún control que cambie la llamada.
   const gestiona = !soloLectura && puedeGestionarAsignaciones();
   const usuarioId = usuarioActualId();
@@ -156,6 +158,14 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
     });
     setEditandoDatos(true);
   };
+
+  const accionAplicada = useRef(false);
+  useEffect(() => {
+    if (!llamada || accionAplicada.current || !accionInicial) return;
+    accionAplicada.current = true;
+    if (accionInicial === "editar" && puedeEditarDatos) abrirEditarDatos();
+    if (accionInicial === "anular" && puedeAnular) setAnularAbierto(true);
+  }, [llamada, accionInicial, puedeEditarDatos, puedeAnular]);
 
   const guardarDatos = async () => {
     if (!datosForm.nombre_llamante.trim() || !datosForm.motivo.trim()) {

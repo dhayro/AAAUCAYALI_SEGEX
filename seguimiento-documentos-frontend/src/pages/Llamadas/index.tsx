@@ -17,6 +17,8 @@ interface Llamada {
   fecha_llamada: string;
   nombre_llamante: string;
   tipo_atencion?: "LLAMADA" | "PRESENCIAL";
+  puede_editar_datos?: boolean;
+  puede_anular?: boolean;
   presenciales_del_cut?: number;
   telefono?: string | null;
   motivo: string;
@@ -38,6 +40,7 @@ export default function Llamadas() {
   const [loading, setLoading] = useState(true);
   const [registrando, setRegistrando] = useState(false);
   const [detalleId, setDetalleId] = useState<number | null>(null);
+  const [detalleAccion, setDetalleAccion] = useState<"editar" | "anular" | undefined>(undefined);
   const [cutAbierto, setCutAbierto] = useState<string | null>(null);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [filters, setFilters] = useState({ cut: "", respondido: "false", plazo: "" });
@@ -263,12 +266,39 @@ export default function Llamadas() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <button
-                          onClick={() => setDetalleId(l.id)}
-                          className="rounded border border-brand-600 px-2 py-1 text-xs font-semibold text-brand-600 hover:bg-brand-50 dark:border-brand-400 dark:text-brand-400 dark:hover:bg-gray-700"
-                        >
-                          Ver
-                        </button>
+                        <div className="flex flex-wrap items-center justify-center gap-1">
+                          <button
+                            onClick={() => {
+                              setDetalleAccion(undefined);
+                              setDetalleId(l.id);
+                            }}
+                            className="rounded border border-brand-600 px-2 py-1 text-xs font-semibold text-brand-600 hover:bg-brand-50 dark:border-brand-400 dark:text-brand-400 dark:hover:bg-gray-700"
+                          >
+                            Ver
+                          </button>
+                          {l.puede_editar_datos && (
+                            <button
+                              onClick={() => {
+                                setDetalleAccion("editar");
+                                setDetalleId(l.id);
+                              }}
+                              className="rounded border border-gray-400 px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-500 dark:text-gray-200 dark:hover:bg-gray-700"
+                            >
+                              Editar
+                            </button>
+                          )}
+                          {l.puede_anular && (
+                            <button
+                              onClick={() => {
+                                setDetalleAccion("anular");
+                                setDetalleId(l.id);
+                              }}
+                              className="rounded border border-red-300 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-300 dark:hover:bg-gray-700"
+                            >
+                              Anular
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -328,7 +358,15 @@ export default function Llamadas() {
       )}
       {cutAbierto && <ExpedienteDetalleModal cut={cutAbierto} onClose={() => setCutAbierto(null)} />}
       {detalleId !== null && (
-        <DetalleLlamadaModal llamadaId={detalleId} onClose={() => setDetalleId(null)} onCambio={fetchLlamadas} />
+        <DetalleLlamadaModal
+          llamadaId={detalleId}
+          accionInicial={detalleAccion}
+          onClose={() => {
+            setDetalleId(null);
+            setDetalleAccion(undefined);
+          }}
+          onCambio={fetchLlamadas}
+        />
       )}
     </>
   );

@@ -204,9 +204,36 @@ exports.listarLlamadas = async (req, res) => {
     });
 
     const conteo = await conteoPorCut(rows.map((r) => r.cut), req.user);
+    // Para cada fila: si se puede editar sus datos o anularla (mismas reglas que el detalle).
+    const ids = rows.map((r) => r.id);
+    const accionesPorLlamada = {};
+    const historialPorLlamada = {};
+    if (ids.length) {
+      const acciones = await AccionLlamada.findAll({ attributes: ['id_llamada', 'estado'], where: { id_llamada: { [Op.in]: ids } }, raw: true });
+      acciones.forEach((a) => {
+        const c = (accionesPorLlamada[a.id_llamada] = accionesPorLlamada[a.id_llamada] || { total: 0, ejecutadas: 0 });
+        c.total += 1;
+        if (a.estado === 'EJECUTADO') c.ejecutadas += 1;
+      });
+      const historial = await HistorialLlamada.findAll({ attributes: ['id_llamada'], where: { id_llamada: { [Op.in]: ids } }, raw: true });
+      historial.forEach((h) => {
+        historialPorLlamada[h.id_llamada] = (historialPorLlamada[h.id_llamada] || 0) + 1;
+      });
+    }
     const llamadas = rows.map((r) => {
       const c = conteo[r.cut] || { total: 1, presenciales: 0 };
-      return { ...r.get({ plain: true }), total_del_cut: c.total, presenciales_del_cut: c.presenciales };
+      const acc = accionesPorLlamada[r.id] || { total: 0, ejecutadas: 0 };
+      const cambios = historialPorLlamada[r.id] || 0;
+      const esSuya = esGestor(req.user) || r.id_responsable === req.user.id || r.id_usuario_creador === req.user.id;
+      const puedeEditarDatos = !r.respondido && acc.ejecutadas === 0 && esSuya;
+      const puedeAnular = !r.respondido && acc.total === 0 && cambios <= 1 && (esGestor(req.user) || r.id_usuario_creador === req.user.id);
+      return {
+        ...r.get({ plain: true }),
+        total_del_cut: c.total,
+        presenciales_del_cut: c.presenciales,
+        puede_editar_datos: puedeEditarDatos,
+        puede_anular: puedeAnular,
+      };
     });
     res.json({ llamadas, totalLlamadas: count, totalPaginas: Math.ceil(count / limit), paginaActual: page });
   } catch (error) {
