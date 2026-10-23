@@ -148,7 +148,6 @@ export default function Llamadas() {
                   <tr className="border-b bg-gray-50 dark:bg-gray-700">
                     <th className="px-6 py-4 text-start text-sm font-semibold">#</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">CUT</th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold">Tipo</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">Registros del CUT</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Fecha y hora</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">Quien llamó o fue atendido</th>
@@ -166,7 +165,18 @@ export default function Llamadas() {
                       key={l.id}
                       className={`border-b border-l-4 hover:bg-gray-50 dark:hover:bg-gray-700 ${colorUsuario(l.responsable?.id).borde}`}
                     >
-                      <td className="px-6 py-4 text-sm">{pagination.pageIndex * pagination.pageSize + index + 1}</td>
+                      <td className="px-6 py-4 text-sm">
+                        <div>{pagination.pageIndex * pagination.pageSize + index + 1}</div>
+                        <span
+                          className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                            l.tipo_atencion === "PRESENCIAL"
+                              ? "bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-100"
+                              : "bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-100"
+                          }`}
+                        >
+                          {l.tipo_atencion === "PRESENCIAL" ? "Presencial" : "Llamada"}
+                        </span>
+                      </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <button
@@ -177,17 +187,6 @@ export default function Llamadas() {
                             {l.cut}
                           </button>
                         </div>
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-4 text-center text-sm">
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-xs font-bold ${
-                            l.tipo_atencion === "PRESENCIAL"
-                              ? "bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-100"
-                              : "bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-100"
-                          }`}
-                        >
-                          {l.tipo_atencion === "PRESENCIAL" ? "Presencial" : "Llamada"}
-                        </span>
                       </td>
                       <td className="px-6 py-4 text-sm">
                         {(l.total_del_cut ?? 1) > 1 ? (
