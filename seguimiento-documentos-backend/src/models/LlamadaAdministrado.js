@@ -37,6 +37,16 @@ const LlamadaAdministrado = sequelize.define('LlamadaAdministrado', {
     allowNull: false,
     defaultValue: 'LLAMADA',
   },
+  // Registro anulado por error: no aparece en listas, monitor, calendario ni reportes; sí en el historial del CUT.
+  anulada: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  },
+  motivo_anulacion: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
   fecha_respuesta: {
     type: DataTypes.DATEONLY,
     comment: 'Fecha en que se da o se dará respuesta al administrado',
@@ -59,6 +69,7 @@ const LlamadaAdministrado = sequelize.define('LlamadaAdministrado', {
   },
 }, {
   tableName: 'llamadas_administrado',
+  defaultScope: { where: { anulada: false } },
   timestamps: true,
   createdAt: 'fecha_creacion',
   updatedAt: 'fecha_modificacion',

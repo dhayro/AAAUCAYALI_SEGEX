@@ -394,6 +394,14 @@ exports.actualizarLlamada = async (req, res) => {
     if (!puedeOperarLlamada(llamada, req.user) && llamada.id_usuario_creador !== req.user.id) {
       return res.status(403).json({ mensaje: 'No puede modificar esta llamada' });
     }
+    // Los datos de la llamada solo se corrigen mientras no esté respondida ni tenga acciones ejecutadas.
+    const editaDatos = ['fecha_llamada', 'nombre_llamante', 'telefono', 'motivo'].some((c) => req.body[c] !== undefined);
+    if (editaDatos) {
+      const ejecutadas = await AccionLlamada.count({ where: { id_llamada: llamada.id, estado: 'EJECUTADO' } });
+      if (llamada.respondido || ejecutadas > 0) {
+        throw errorConEstado('Los datos no se pueden editar: la llamada ya está respondida o tiene acciones ejecutadas');
+      }
+    }
 
     const respondidoAnterior = llamada.respondido;
     const fechaRespuestaAnterior = llamada.fecha_respuesta;
@@ -475,6 +483,30 @@ exports.actualizarLlamada = async (req, res) => {
     res.json(await obtenerLlamada(llamada.id));
   } catch (error) {
     res.status(400).json({ mensaje: error.message });
+  }
+};
+
+// Anula un registro hecho por error. Solo si nadie lo ha trabajado: no respondido, sin acciones y sin cambios en su historial.
+exports.anularLlamada = async (req, res) => {
+  try {
+    const llamada = await LlamadaAdministrado.findByPk(req.params.id);
+    if (!llamada) return res.status(404).json({ mensaje: 'Llamada no encontrada' });
+    if (!esGestor(req.user) && llamada.id_usuario_creador !== req.user.id) {
+      return res.status(403).json({ mensaje: 'Solo quien registró la llamada o un gestor puede anularla' });
+    }
+    const motivo = textoMayuscula(req.body.motivo);
+    if (!motivo) throw errorConEstado('Indique el motivo de la anulación');
+    if (llamada.respondido) throw errorConEstado('La llamada está respondida: no se puede anular');
+    const acciones = await AccionLlamada.count({ where: { id_llamada: llamada.id } });
+    const cambios = await HistorialLlamada.count({ where: { id_llamada: llamada.id } });
+    if (acciones > 0 || cambios > 1) {
+      throw errorConEstado('La llamada ya tiene gestión o cambios registrados: no se puede anular, solo editar');
+    }
+    await llamada.update({ anulada: true, motivo_anulacion: motivo, id_usuario_modificador: req.user.id });
+    await registrarHistorial(llamada.id, 'ANULADA', `Registro anulado por error: ${motivo}`, req.user.id);
+    res.json({ mensaje: 'Registro anulado' });
+  } catch (error) {
+    res.status(error.status || 400).json({ mensaje: error.message });
   }
 };
 

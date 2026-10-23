@@ -85,6 +85,11 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
   } | null>(null);
   const [procesandoConfirmar, setProcesandoConfirmar] = useState(false);
   const [verAntecedentes, setVerAntecedentes] = useState(false);
+  const [editandoDatos, setEditandoDatos] = useState(false);
+  const [datosForm, setDatosForm] = useState({ fecha_llamada: "", nombre_llamante: "", telefono: "", motivo: "" });
+  const [anularAbierto, setAnularAbierto] = useState(false);
+  const [motivoAnular, setMotivoAnular] = useState("");
+  const [anulando, setAnulando] = useState(false);
   const [editandoArchivo, setEditandoArchivo] = useState<{ id: number; valor: string } | null>(null);
 
   const ejecutarConfirmacion = async () => {
@@ -129,6 +134,57 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
   // Puede marcar la llamada como respondida o no; con la llamada respondida, sus acciones quedan cerradas.
   const puedeMarcar = !soloLectura && llamada && (gestiona || llamada.id_responsable === usuarioId);
   const puedeOperar = puedeMarcar && !llamada?.respondido;
+
+  // Editar datos y anular: solo mientras la llamada no tenga respuesta ni gestión (el servidor también lo valida).
+  const accionesEjecutadas = (llamada?.acciones || []).some((a: any) => a.estado === "EJECUTADO");
+  const esSuya = !!llamada && (gestiona || llamada.id_usuario_creador === usuarioId || llamada.id_responsable === usuarioId);
+  const puedeEditarDatos = !soloLectura && !!llamada && !llamada.respondido && !accionesEjecutadas && esSuya;
+  const puedeAnular =
+    !soloLectura &&
+    !!llamada &&
+    !llamada.respondido &&
+    (llamada.acciones || []).length === 0 &&
+    (llamada.antecedentes || []).length <= 1 &&
+    (gestiona || llamada.id_usuario_creador === usuarioId);
+
+  const abrirEditarDatos = () => {
+    setDatosForm({
+      fecha_llamada: String(llamada.fecha_llamada || "").slice(0, 16).replace(" ", "T"),
+      nombre_llamante: llamada.nombre_llamante || "",
+      telefono: llamada.telefono || "",
+      motivo: llamada.motivo || "",
+    });
+    setEditandoDatos(true);
+  };
+
+  const guardarDatos = async () => {
+    if (!datosForm.nombre_llamante.trim() || !datosForm.motivo.trim()) {
+      return toast.error("El nombre y el motivo son obligatorios");
+    }
+    const ok = await notificar(
+      () =>
+        api.put(`/atenciones/llamadas/${llamadaId}`, {
+          ...datosForm,
+          fecha_llamada: datosForm.fecha_llamada ? new Date(datosForm.fecha_llamada).toISOString() : undefined,
+        }),
+      "Datos actualizados"
+    );
+    if (ok) setEditandoDatos(false);
+  };
+
+  const confirmarAnular = async () => {
+    if (!motivoAnular.trim()) return toast.error("Escriba el motivo de la anulación");
+    setAnulando(true);
+    try {
+      await api.post(`/atenciones/llamadas/${llamadaId}/anular`, { motivo: motivoAnular });
+      toast.success("Registro anulado");
+      onCambio();
+      onClose();
+    } catch (error: any) {
+      toast.error(error.response?.data?.mensaje || "No se pudo anular el registro");
+      setAnulando(false);
+    }
+  };
 
   const notificar = async (fn: () => Promise<any>, ok: string): Promise<boolean> => {
     try {
@@ -439,6 +495,111 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
                     )}
                   </div>
                 </section>
+
+                {(puedeEditarDatos || puedeAnular) && (
+                  <section className="flex flex-wrap items-start gap-3">
+                    {puedeEditarDatos && !editandoDatos && (
+                      <button
+                        onClick={abrirEditarDatos}
+                        className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+                      >
+                        Editar datos
+                      </button>
+                    )}
+                    {puedeAnular && (
+                      <button
+                        onClick={() => setAnularAbierto(true)}
+                        className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 dark:border-red-700 dark:bg-gray-800 dark:text-red-300"
+                      >
+                        Anular registro
+                      </button>
+                    )}
+                    {editandoDatos && (
+                      <div className="w-full space-y-3 rounded-lg bg-gray-50 p-4 dark:bg-gray-700">
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                          <div>
+                            <label className="text-sm font-semibold text-gray-700 dark:text-gray-200">Fecha y hora</label>
+                            <input
+                              type="datetime-local"
+                              value={datosForm.fecha_llamada}
+                              onChange={(e) => setDatosForm({ ...datosForm, fecha_llamada: e.target.value })}
+                              className="mt-1 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-semibold text-gray-700 dark:text-gray-200">Quien llamó o fue atendido</label>
+                            <input
+                              value={datosForm.nombre_llamante}
+                              onChange={(e) => setDatosForm({ ...datosForm, nombre_llamante: e.target.value })}
+                              className="mt-1 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-semibold text-gray-700 dark:text-gray-200">Teléfono</label>
+                            <input
+                              value={datosForm.telefono}
+                              onChange={(e) => setDatosForm({ ...datosForm, telefono: e.target.value })}
+                              className="mt-1 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800"
+                            />
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="text-sm font-semibold text-gray-700 dark:text-gray-200">Motivo</label>
+                            <textarea
+                              rows={3}
+                              value={datosForm.motivo}
+                              onChange={(e) => setDatosForm({ ...datosForm, motivo: e.target.value })}
+                              className="mt-1 w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={guardarDatos} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
+                            Guardar datos
+                          </button>
+                          <button
+                            onClick={() => setEditandoDatos(false)}
+                            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </section>
+                )}
+
+                {anularAbierto && (
+                  <div className="fixed inset-0 z-[1000001] flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-md space-y-4 rounded-lg bg-white p-6 shadow-2xl dark:bg-gray-800">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Anular registro</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
+                        El registro sale de las listas, el monitor y el calendario, pero queda visible en el historial del CUT marcado como anulado.
+                      </p>
+                      <textarea
+                        rows={3}
+                        value={motivoAnular}
+                        onChange={(e) => setMotivoAnular(e.target.value)}
+                        placeholder="Motivo, por ejemplo: registrada por error"
+                        className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700"
+                      />
+                      <div className="flex justify-end gap-3">
+                        <button
+                          onClick={() => setAnularAbierto(false)}
+                          className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          onClick={confirmarAnular}
+                          disabled={anulando}
+                          className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                        >
+                          {anulando ? "Anulando..." : "Anular"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <section className="space-y-3">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">

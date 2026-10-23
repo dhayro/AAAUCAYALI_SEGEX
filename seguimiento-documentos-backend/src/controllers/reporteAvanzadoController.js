@@ -334,7 +334,7 @@ exports.historialCut = async (req, res) => {
       idsAsig.length
         ? EvaluacionAsignacion.findAll({ where: { id_asignacion: { [Op.in]: idsAsig } }, include: [{ model: Usuario, as: 'evaluador', attributes: ['nombre', 'apellido'], required: false }] })
         : [],
-      LlamadaAdministrado.findAll({
+      LlamadaAdministrado.unscoped().findAll({
         where: { cut: cutMayuscula },
         include: [
           { model: Usuario, as: 'responsable', attributes: ['nombre', 'apellido'], required: false },
