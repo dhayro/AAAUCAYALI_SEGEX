@@ -25,6 +25,23 @@ const ETIQUETA_EVENTO: Record<string, string> = {
   EVALUACION_OBSERVADA: "Evaluación: observada",
 };
 
+// Color por tipo de evento para diferenciarlos a simple vista.
+const COLOR_EVENTO: Record<string, string> = {
+  ASIGNACION_CREADA: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100",
+  ASIGNACION_EDITADA: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100",
+  SOLICITUD_PRORROGA: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100",
+  PRORROGA_ACEPTADA: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100",
+  PRORROGA_RECHAZADA: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100",
+  RESPUESTA_REGISTRADA: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-100",
+  RESPUESTA_ENVIADA: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-100",
+  ARCHIVO_SUBIDO: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100",
+  ARCHIVO_EDITADO: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100",
+  ARCHIVO_REEMPLAZADO: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100",
+  ARCHIVO_ELIMINADO: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100",
+  EVALUACION_APROBADA: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100",
+  EVALUACION_OBSERVADA: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100",
+};
+
 export default function HistorialAsignacionModal({ asignacionId, cut, onClose }: Props) {
   const [rows, setRows] = useState<any[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -80,7 +97,15 @@ export default function HistorialAsignacionModal({ asignacionId, cut, onClose }:
                 {rows.map((h) => (
                   <tr key={h.id}>
                     <td className="whitespace-nowrap px-4 py-2">{formatFechaHora(h.fecha_registro ?? h.fecha_evento)}</td>
-                    <td className="px-4 py-2 font-semibold">{ETIQUETA_EVENTO[h.tipo] || h.tipo}</td>
+                    <td className="px-4 py-2">
+                      <span
+                        className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                          COLOR_EVENTO[h.tipo] || "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
+                        }`}
+                      >
+                        {ETIQUETA_EVENTO[h.tipo] || h.tipo}
+                      </span>
+                    </td>
                     <td className="px-4 py-2 text-center">{h.plazo ?? "—"}</td>
                     <td className="px-4 py-2">{h.usuario ? `${h.usuario.nombre} ${h.usuario.apellido}` : "—"}</td>
                     <td className="whitespace-pre-wrap break-words px-4 py-2 text-gray-600 dark:text-gray-300">{h.observacion || "—"}</td>

@@ -36,6 +36,23 @@ const TIPO_ANTECEDENTE: Record<string, string> = {
   ARCHIVO_EDITADO: "Descripción de archivo editada",
 };
 
+// Color por tipo de evento para diferenciarlos a simple vista.
+const COLOR_ANTECEDENTE: Record<string, string> = {
+  REGISTRO: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100",
+  EDICION: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100",
+  PLAZO_CAMBIADO: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100",
+  RESPONDIDO: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100",
+  NO_RESPONDIDO: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100",
+  REASIGNACION: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-100",
+  ACCION_AGREGADA: "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-100",
+  ACCION_EJECUTADA: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100",
+  ACCION_PENDIENTE: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100",
+  OBSERVACION: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-100",
+  ARCHIVO_SUBIDO: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100",
+  ARCHIVO_ELIMINADO: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100",
+  ARCHIVO_EDITADO: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100",
+};
+
 const esPdf = (archivo: any) => (archivo.mimetype || "").includes("pdf") || archivo.nombre_original?.toLowerCase().endsWith(".pdf");
 
 export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, soloLectura = false }: Props) {
@@ -776,7 +793,15 @@ function AntecedentesModal({ cut, antecedentes, onClose }: { cut: string; antece
               <li key={h.id} className={`relative border-l-2 pb-5 pl-5 last:pb-0 ${colorUsuario(h.usuario?.id).borde}`}>
                 <span className={`absolute -left-[7px] top-1 h-3 w-3 rounded-full ${colorUsuario(h.usuario?.id).etiqueta.split(" ")[0]}`} />
                 <div className="text-xs text-gray-500">{formatFechaHora(h.fecha_registro)}</div>
-                <div className="mt-0.5 font-semibold text-gray-900 dark:text-white">{TIPO_ANTECEDENTE[h.tipo] || h.tipo}</div>
+                <div className="mt-0.5">
+                  <span
+                    className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                      COLOR_ANTECEDENTE[h.tipo] || "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
+                    }`}
+                  >
+                    {TIPO_ANTECEDENTE[h.tipo] || h.tipo}
+                  </span>
+                </div>
                 <div
                   className={`mt-0.5 whitespace-pre-wrap break-words text-sm ${
                     h.tipo === "PLAZO_CAMBIADO"
