@@ -55,6 +55,7 @@ const navItems: NavItem[] = [
     icon: <ListIcon fontSize={24} />,
     name: "Maestros",
     key: "maestros",
+    adminOnly: true,
     subItems: [
       {
         name: "Cargos",
