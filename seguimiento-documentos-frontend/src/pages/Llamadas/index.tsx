@@ -148,7 +148,7 @@ export default function Llamadas() {
                   <tr className="border-b bg-gray-50 dark:bg-gray-700">
                     <th className="px-6 py-4 text-start text-sm font-semibold">#</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">CUT</th>
-                    <th className="px-6 py-4 text-start text-sm font-semibold">Registros del CUT</th>
+                    <th className="px-6 py-4 text-start text-sm font-semibold">Conteo</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Fecha y hora</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">Quien llamó o fue atendido</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">Motivo</th>
