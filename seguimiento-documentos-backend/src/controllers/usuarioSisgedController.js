@@ -1,3 +1,5 @@
+const { Op } = require('sequelize');
+const sequelize = require('../config/database');
 const UsuarioSisged = require('../models/UsuarioSisged');
 const Usuario = require('../models/Usuario');
 const { hoyLima } = require('../utils/fechas');
@@ -51,11 +53,32 @@ exports.listar = async (req, res) => {
   }
 };
 
+// Día anterior a una fecha YYYY-MM-DD.
+const diaAnterior = (fecha) => {
+  const d = new Date(`${fecha}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+};
+
 exports.crear = async (req, res) => {
   try {
     await usuarioExistente(req.params.id);
     const datos = datosValidos(req.body);
-    const creado = await UsuarioSisged.create({ ...datos, id_usuario: req.params.id });
+    const creado = await sequelize.transaction(async (t) => {
+      // El usuario de SISGED anterior que sigue abierto termina el día antes de que empiece el nuevo.
+      const abiertos = await UsuarioSisged.findAll({
+        where: {
+          id_usuario: req.params.id,
+          fecha_inicio: { [Op.lt]: datos.fecha_inicio },
+          [Op.or]: [{ fecha_fin: null }, { fecha_fin: { [Op.gte]: datos.fecha_inicio } }],
+        },
+        transaction: t,
+      });
+      for (const anterior of abiertos) {
+        await anterior.update({ fecha_fin: diaAnterior(datos.fecha_inicio) }, { transaction: t });
+      }
+      return UsuarioSisged.create({ ...datos, id_usuario: req.params.id }, { transaction: t });
+    });
     res.status(201).json(aPlano(creado));
   } catch (error) {
     res.status(error.status || 400).json({ mensaje: error.message });
