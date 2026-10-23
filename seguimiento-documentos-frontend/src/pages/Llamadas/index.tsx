@@ -297,17 +297,6 @@ export default function Llamadas() {
                           >
                             Ver
                           </button>
-                          {l.puede_editar_datos && (
-                            <button
-                              onClick={() => {
-                                setDetalleAccion("editar");
-                                setDetalleId(l.id);
-                              }}
-                              className="rounded border border-gray-400 px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-500 dark:text-gray-200 dark:hover:bg-gray-700"
-                            >
-                              Editar
-                            </button>
-                          )}
                           {l.puede_eliminar && (
                             <button
                               onClick={() => {
