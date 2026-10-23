@@ -16,6 +16,7 @@ interface Llamada {
   cut: string;
   fecha_llamada: string;
   nombre_llamante: string;
+  tipo_atencion?: "LLAMADA" | "PRESENCIAL";
   telefono?: string | null;
   motivo: string;
   fecha_respuesta?: string | null;
@@ -181,8 +182,21 @@ export default function Llamadas() {
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-center text-sm">{formatFechaHora(l.fecha_llamada)}</td>
                       <td className="px-6 py-4 text-sm">
-                        <div>{l.nombre_llamante}</div>
-                        <div className="text-xs text-gray-500">{l.telefono || "Sin teléfono"}</div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span>{l.nombre_llamante}</span>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                              l.tipo_atencion === "PRESENCIAL"
+                                ? "bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-100"
+                                : "bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-100"
+                            }`}
+                          >
+                            {l.tipo_atencion === "PRESENCIAL" ? "Presencial" : "Llamada"}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {l.telefono || (l.tipo_atencion === "PRESENCIAL" ? "Atención en persona" : "Sin teléfono")}
+                        </div>
                       </td>
                       <td className="max-w-xs px-6 py-4 text-sm">
                         <div className="line-clamp-2 whitespace-pre-wrap break-words" title={l.motivo}>{l.motivo}</div>
