@@ -93,14 +93,14 @@ export default function Llamadas() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Control de Llamadas</h1>
             <p className="mt-2 text-gray-600 dark:text-gray-400">
-              Registra las llamadas de administrados, sus acciones y el avance de cada una
+              Registra las llamadas y las atenciones presenciales de administrados, sus acciones y el avance de cada una
             </p>
           </div>
           <button
             onClick={() => setRegistrando(true)}
             className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
           >
-            Registrar llamada
+            Registrar llamada o atención
           </button>
         </div>
 
@@ -149,7 +149,7 @@ export default function Llamadas() {
                     <th className="px-6 py-4 text-start text-sm font-semibold">CUT</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Fecha y hora</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Tipo</th>
-                    <th className="px-6 py-4 text-start text-sm font-semibold">Quien llama</th>
+                    <th className="px-6 py-4 text-start text-sm font-semibold">Quien llamó o fue atendido</th>
                     <th className="px-6 py-4 text-start text-sm font-semibold">Motivo</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Plazo de respuesta</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Respondido</th>
@@ -176,7 +176,7 @@ export default function Llamadas() {
                           </button>
                           {(l.total_del_cut ?? 1) > 1 && (
                             <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800 dark:bg-amber-900 dark:text-amber-100">
-                              {l.total_del_cut} llamadas
+                              {l.total_del_cut} registros en el CUT
                             </span>
                           )}
                         </div>
@@ -249,7 +249,7 @@ export default function Llamadas() {
                 </tbody>
               </table>
             ) : (
-              <div className="p-12 text-center text-gray-500">No hay llamadas registradas</div>
+              <div className="p-12 text-center text-gray-500">No hay registros</div>
             )}
           </div>
 
