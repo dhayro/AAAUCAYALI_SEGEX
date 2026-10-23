@@ -44,6 +44,7 @@ const ESTADO: Record<string, { texto: string; clases: string }> = {
   RESPONDIDA: { texto: "Respondida", clases: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-100" },
   OBSERVADA: { texto: "Observada", clases: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100" },
   CERRADA: { texto: "Cerrada", clases: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100" },
+  REASIGNADA: { texto: "Reasignada", clases: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100" },
 };
 
 const FILTRO_ESTADO = [
@@ -53,6 +54,7 @@ const FILTRO_ESTADO = [
   { value: "RESPONDIDA", texto: "Respondidas" },
   { value: "OBSERVADA", texto: "Observadas" },
   { value: "CERRADA", texto: "Cerradas" },
+  { value: "REASIGNADA", texto: "Reasignadas" },
 ];
 
 const TOTALES_VACIOS: Totales = {

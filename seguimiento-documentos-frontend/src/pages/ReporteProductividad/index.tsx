@@ -20,6 +20,7 @@ const columnas: Columna[] = [
   },
   { titulo: "Asignaciones", align: "center", celda: (f) => f.asignaciones, excel: (f) => f.asignaciones },
   { titulo: "Cerradas", align: "center", celda: (f) => f.cerradas, excel: (f) => f.cerradas },
+  { titulo: "Reasignadas", align: "center", celda: (f) => f.reasignadas ?? 0, excel: (f) => f.reasignadas ?? 0 },
   { titulo: "Observadas", align: "center", celda: (f) => f.observadas, excel: (f) => f.observadas },
   { titulo: "Sin respuesta", align: "center", celda: (f) => f.sin_respuesta, excel: (f) => f.sin_respuesta },
   {
@@ -35,6 +36,7 @@ const columnas: Columna[] = [
     excel: (f) => formatoHoras(f.tiempo_promedio_horas),
   },
   { titulo: "Llamadas", align: "center", celda: (f) => f.llamadas, excel: (f) => f.llamadas },
+  { titulo: "Presenciales", align: "center", celda: (f) => f.presenciales ?? 0, excel: (f) => f.presenciales ?? 0 },
   { titulo: "Llamadas respondidas", align: "center", celda: (f) => f.llamadas_respondidas, excel: (f) => f.llamadas_respondidas },
   {
     titulo: "Llamadas vencidas",

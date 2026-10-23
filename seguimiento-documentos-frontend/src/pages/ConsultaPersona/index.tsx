@@ -33,6 +33,7 @@ const ESTADO_ASIG: Record<string, string> = {
   RESPONDIDA: "Respondida",
   OBSERVADA: "Observada",
   CERRADA: "Cerrada",
+  REASIGNADA: "Reasignada",
 };
 
 const SITUACION: Record<string, string> = {
@@ -73,7 +74,24 @@ const COLUMNAS_ASIGNACIONES: Columna[] = [
 const COLUMNAS_LLAMADAS: Columna[] = [
   { titulo: "Fecha", celda: (f) => formatFechaHora(f.fecha_llamada), excel: (f) => formatFechaHora(f.fecha_llamada) },
   { titulo: "CUT", celda: (f) => <span className="font-medium">{f.cut}</span>, excel: (f) => f.cut },
-  { titulo: "Quien llamó", celda: (f) => f.nombre_llamante, excel: (f) => f.nombre_llamante },
+  {
+    titulo: "Quien llamó o fue atendido",
+    celda: (f) => (
+      <span>
+        {f.nombre_llamante}
+        <span
+          className={`ml-2 rounded-full px-2 py-0.5 text-[11px] font-bold ${
+            f.tipo_atencion === "PRESENCIAL"
+              ? "bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-100"
+              : "bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-100"
+          }`}
+        >
+          {f.tipo_atencion === "PRESENCIAL" ? "Presencial" : "Llamada"}
+        </span>
+      </span>
+    ),
+    excel: (f) => `${f.nombre_llamante} (${f.tipo_atencion === "PRESENCIAL" ? "Presencial" : "Llamada"})`,
+  },
   {
     titulo: "Motivo",
     celda: (f) => (

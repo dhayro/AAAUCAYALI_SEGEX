@@ -13,6 +13,7 @@ interface Resumen {
   vencidas: number;
   tiempo_promedio_horas: number | null;
   llamadas: number;
+  presenciales?: number;
   llamadas_respondidas: number;
   llamadas_vencidas: number;
   acciones_pendientes: number;
@@ -33,6 +34,7 @@ interface Llamada {
   fecha_llamada: string;
   cut: string;
   nombre_llamante: string;
+  tipo_atencion?: "LLAMADA" | "PRESENCIAL";
   motivo: string;
   fecha_limite: string | null;
   dias_restantes: number | null;
@@ -85,6 +87,7 @@ const ESTADO_ASIG: Record<string, { texto: string; clases: string }> = {
   RESPONDIDA: { texto: "Respondida", clases: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-100" },
   OBSERVADA: { texto: "Observada", clases: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100" },
   CERRADA: { texto: "Cerrada", clases: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100" },
+  REASIGNADA: { texto: "Reasignada", clases: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100" },
 };
 
 const SITUACION: Record<string, { texto: string; clases: string }> = {
@@ -181,6 +184,7 @@ export default function MiDesempeno() {
             { titulo: "Vencidas", valor: resumen.vencidas, tono: "text-red-600 dark:text-red-400" },
             { titulo: "Tiempo promedio", valor: formatoHoras(resumen.tiempo_promedio_horas), tono: "text-gray-900 dark:text-white" },
             { titulo: "Llamadas respondidas", valor: `${resumen.llamadas_respondidas} de ${resumen.llamadas}`, tono: "text-gray-900 dark:text-white" },
+            { titulo: "Atenciones presenciales", valor: resumen.presenciales ?? 0, tono: "text-violet-600 dark:text-violet-400" },
             { titulo: "Llamadas vencidas", valor: resumen.llamadas_vencidas, tono: "text-red-600 dark:text-red-400" },
             { titulo: "Acciones pendientes", valor: resumen.acciones_pendientes, tono: "text-amber-600 dark:text-amber-400" },
           ]
@@ -358,7 +362,18 @@ export default function MiDesempeno() {
                   <tr key={`${l.cut}-${i}`}>
                     <td className="px-3 py-2 font-medium">{l.cut}</td>
                     <td className="max-w-xs px-3 py-2">
-                      <div>{l.nombre_llamante}</div>
+                      <div>
+                        {l.nombre_llamante}
+                        <span
+                          className={`ml-2 rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                            l.tipo_atencion === "PRESENCIAL"
+                              ? "bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-100"
+                              : "bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-100"
+                          }`}
+                        >
+                          {l.tipo_atencion === "PRESENCIAL" ? "Presencial" : "Llamada"}
+                        </span>
+                      </div>
                       <div className="truncate text-xs text-gray-500" title={l.motivo}>
                         {l.motivo}
                       </div>

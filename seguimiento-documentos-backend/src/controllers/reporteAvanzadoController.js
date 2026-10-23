@@ -68,11 +68,13 @@ exports.productividad = async (req, res) => {
           cargo: usuario?.Cargo?.nombre || usuario?.cargo || '',
           asignaciones: 0,
           cerradas: 0,
+          reasignadas: 0,
           observadas: 0,
           sin_respuesta: 0,
           vencidas: 0,
           tiempos: [],
           llamadas: 0,
+          presenciales: 0,
           llamadas_respondidas: 0,
           llamadas_vencidas: 0,
         });
@@ -84,11 +86,17 @@ exports.productividad = async (req, res) => {
       const p = persona(a.id_usuario, a.get({ plain: true }).asignado);
       const r = resumen.get(a.id);
       p.asignaciones += 1;
-      if (r.estado === ESTADOS.CERRADA) p.cerradas += 1;
-      if (r.estado === ESTADOS.OBSERVADA) p.observadas += 1;
-      if (r.estado === ESTADOS.SIN_RESPUESTA) p.sin_respuesta += 1;
-      const dias = diasEntre(vencimientoVigente(a), hoy);
-      if (r.estado !== ESTADOS.CERRADA && dias < 0) p.vencidas += 1;
+      // Reasignada: cerrada para su dueño anterior, con cumplimiento hasta su última respuesta.
+      if (a.motivo_cierre) {
+        p.cerradas += 1;
+        p.reasignadas += 1;
+      } else {
+        if (r.estado === ESTADOS.CERRADA) p.cerradas += 1;
+        if (r.estado === ESTADOS.OBSERVADA) p.observadas += 1;
+        if (r.estado === ESTADOS.SIN_RESPUESTA) p.sin_respuesta += 1;
+        const dias = diasEntre(vencimientoVigente(a), hoy);
+        if (r.estado !== ESTADOS.CERRADA && dias < 0) p.vencidas += 1;
+      }
       if (r.ultima_respuesta) p.tiempos.push(tiempoRespuestaHoras(a.fecha_asignacion, r.ultima_respuesta));
     });
 
@@ -96,13 +104,14 @@ exports.productividad = async (req, res) => {
     const llamadasWhere = rfh ? { fecha_llamada: rfh } : {};
     const llamadas = await LlamadaAdministrado.findAll({
       where: llamadasWhere,
-      attributes: ['id', 'id_responsable', 'respondido', 'fecha_respuesta'],
+      attributes: ['id', 'id_responsable', 'tipo_atencion', 'respondido', 'fecha_respuesta'],
       include: [{ model: Usuario, as: 'responsable', attributes: ['id', 'nombre', 'apellido'], required: false }],
     });
     llamadas.forEach((l) => {
       if (!l.id_responsable) return;
       const p = persona(l.id_responsable, l.get({ plain: true }).responsable);
       p.llamadas += 1;
+      if (l.tipo_atencion === 'PRESENCIAL') p.presenciales += 1;
       if (l.respondido) p.llamadas_respondidas += 1;
       else if (l.fecha_respuesta && l.fecha_respuesta < hoy) p.llamadas_vencidas += 1;
     });
@@ -114,11 +123,13 @@ exports.productividad = async (req, res) => {
         cargo: p.cargo,
         asignaciones: p.asignaciones,
         cerradas: p.cerradas,
+        reasignadas: p.reasignadas,
         observadas: p.observadas,
         sin_respuesta: p.sin_respuesta,
         vencidas: p.vencidas,
         tiempo_promedio_horas: media(p.tiempos),
         llamadas: p.llamadas,
+        presenciales: p.presenciales,
         llamadas_respondidas: p.llamadas_respondidas,
         llamadas_vencidas: p.llamadas_vencidas,
       }))
@@ -359,7 +370,8 @@ exports.historialCut = async (req, res) => {
     });
     llamadas.forEach((l) => {
       const p = l.get({ plain: true });
-      eventos.push({ fecha: l.fecha_llamada, origen: 'LLAMADA', tipo: 'REGISTRO', detalle: `${p.nombre_llamante}: ${l.motivo}`, usuario: nombreDe(p.creador) });
+      const etiqueta = l.tipo_atencion === 'PRESENCIAL' ? 'Atención presencial' : 'Llamada';
+      eventos.push({ fecha: l.fecha_llamada, origen: 'LLAMADA', tipo: 'REGISTRO', detalle: `${etiqueta} · ${p.nombre_llamante}: ${l.motivo}`, usuario: nombreDe(p.creador) });
     });
     historialLlamadas.forEach((h) => {
       const p = h.get({ plain: true });
@@ -376,7 +388,7 @@ exports.historialCut = async (req, res) => {
           fecha_asignacion: a.fecha_asignacion,
           plazo_atencion: a.plazo_atencion,
           vence: vencimientoVigente(a),
-          estado: a.estado ? 'ACTIVA' : 'INACTIVA',
+          estado: a.motivo_cierre ? 'REASIGNADA' : a.estado ? 'ACTIVA' : 'INACTIVA',
         };
       }),
       llamadas: llamadas.length,
@@ -396,15 +408,20 @@ exports.resumen = async (req, res) => {
 
     const asignaciones = await AsignacionExpediente.findAll({
       where: { estado: true, ...(rf ? { fecha_asignacion: rf } : {}) },
-      attributes: ['id', 'fecha_asignacion', 'fecha_vencimiento', 'fecha_vencimiento_prorroga', 'estado_prorroga'],
+      attributes: ['id', 'fecha_asignacion', 'fecha_vencimiento', 'fecha_vencimiento_prorroga', 'estado_prorroga', 'motivo_cierre'],
     });
     const resumen = await resumenPorAsignacion(asignaciones.map((a) => a.id));
-    const cerradas = asignaciones.filter((a) => resumen.get(a.id).estado === ESTADOS.CERRADA).length;
-    const vencidas = asignaciones.filter((a) => resumen.get(a.id).estado !== ESTADOS.CERRADA && diasEntre(vencimientoVigente(a), hoy) < 0).length;
+    // Reasignada = cerrada para su dueño anterior: cuenta como cerrada y nunca como vencida.
+    const cerradas = asignaciones.filter((a) => a.motivo_cierre || resumen.get(a.id).estado === ESTADOS.CERRADA).length;
+    const reasignadas = asignaciones.filter((a) => a.motivo_cierre).length;
+    const vencidas = asignaciones.filter((a) => !a.motivo_cierre && resumen.get(a.id).estado !== ESTADOS.CERRADA && diasEntre(vencimientoVigente(a), hoy) < 0).length;
 
     const llamadasWhere = rfh ? { fecha_llamada: rfh } : {};
-    const llamadas = await LlamadaAdministrado.findAll({ where: llamadasWhere, attributes: ['id', 'respondido', 'fecha_respuesta'], raw: true });
-    const idsLlamadas = llamadas.map((l) => l.id);
+    const todosRegistros = await LlamadaAdministrado.findAll({ where: llamadasWhere, attributes: ['id', 'respondido', 'fecha_respuesta', 'tipo_atencion'], raw: true });
+    // Las llamadas telefónicas y las atenciones presenciales se cuentan por separado.
+    const llamadas = todosRegistros.filter((l) => l.tipo_atencion !== 'PRESENCIAL');
+    const presenciales = todosRegistros.length - llamadas.length;
+    const idsLlamadas = todosRegistros.map((l) => l.id);
     const acciones = idsLlamadas.length
       ? await AccionLlamada.findAll({ attributes: ['estado'], where: { id_llamada: { [Op.in]: idsLlamadas } }, raw: true })
       : [];
@@ -416,9 +433,11 @@ exports.resumen = async (req, res) => {
     const indicadores = [
       { indicador: 'Asignaciones del periodo', valor: asignaciones.length },
       { indicador: 'Asignaciones cerradas', valor: cerradas },
+      { indicador: 'Asignaciones reasignadas', valor: reasignadas },
       { indicador: 'Asignaciones vencidas (abiertas)', valor: vencidas },
       { indicador: 'Prórrogas solicitadas', valor: prorrogas },
       { indicador: 'Llamadas recibidas', valor: llamadas.length },
+      { indicador: 'Atenciones presenciales', valor: presenciales },
       { indicador: 'Llamadas respondidas', valor: llamadas.filter((l) => l.respondido).length },
       { indicador: 'Llamadas vencidas sin respuesta', valor: llamadas.filter((l) => !l.respondido && l.fecha_respuesta && l.fecha_respuesta < hoy).length },
       { indicador: 'Acciones de llamada ejecutadas', valor: acciones.filter((a) => a.estado === 'EJECUTADO').length },
@@ -443,13 +462,14 @@ exports.miDesempeno = async (req, res) => {
     const resumen = await resumenPorAsignacion(asignaciones.map((a) => a.id));
     const filasAsignaciones = asignaciones.map((a) => {
       const r = resumen.get(a.id);
-      const cerrada = r.estado === ESTADOS.CERRADA;
+      // Reasignada: cerrada para mí con mi última respuesta; se muestra como reasignada.
+      const cerrada = Boolean(a.motivo_cierre) || r.estado === ESTADOS.CERRADA;
       const vence = vencimientoVigente(a);
       return {
         cut: a.cut,
         fecha_asignacion: a.fecha_asignacion,
         vence,
-        estado: r.estado,
+        estado: a.motivo_cierre ? 'REASIGNADA' : r.estado,
         total_respuestas: r.total,
         tiempo_respuesta_horas: r.ultima_respuesta ? tiempoRespuestaHoras(a.fecha_asignacion, r.ultima_respuesta) : null,
         dias_restantes: cerrada ? null : diasEntre(vence, hoy),
@@ -462,7 +482,7 @@ exports.miDesempeno = async (req, res) => {
     if (rfh) whereL.fecha_llamada = rfh;
     const llamadas = await LlamadaAdministrado.findAll({
       where: whereL,
-      attributes: ['id', 'cut', 'nombre_llamante', 'motivo', 'fecha_llamada', 'fecha_respuesta', 'respondido'],
+      attributes: ['id', 'cut', 'nombre_llamante', 'motivo', 'tipo_atencion', 'fecha_llamada', 'fecha_respuesta', 'respondido'],
       order: [['fecha_llamada', 'DESC'], ['id', 'DESC']],
     });
     const idsL = llamadas.map((l) => l.id);
@@ -501,6 +521,7 @@ exports.miDesempeno = async (req, res) => {
       else if (dias !== null) situacion = 'EN_PLAZO';
       return {
         fecha_llamada: aLima(l.fecha_llamada),
+        tipo_atencion: l.tipo_atencion,
         cut: l.cut,
         nombre_llamante: l.nombre_llamante,
         motivo: l.motivo,
@@ -521,7 +542,8 @@ exports.miDesempeno = async (req, res) => {
         observadas: filasAsignaciones.filter((f) => f.estado === ESTADOS.OBSERVADA).length,
         vencidas: filasAsignaciones.filter((f) => !f.cerrada && f.dias_restantes < 0).length,
         tiempo_promedio_horas: tiempos.length ? Math.round((tiempos.reduce((s, h) => s + h, 0) / tiempos.length) * 10) / 10 : null,
-        llamadas: filasLlamadas.length,
+        llamadas: filasLlamadas.filter((f) => f.tipo_atencion !== 'PRESENCIAL').length,
+        presenciales: filasLlamadas.filter((f) => f.tipo_atencion === 'PRESENCIAL').length,
         llamadas_respondidas: filasLlamadas.filter((f) => f.respondido).length,
         llamadas_vencidas: filasLlamadas.filter((f) => f.situacion === 'VENCIDA').length,
         acciones_pendientes: filasLlamadas.reduce((s, f) => s + f.acciones_pendientes, 0),

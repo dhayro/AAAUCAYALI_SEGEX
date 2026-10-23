@@ -14,6 +14,7 @@ interface Fila {
   fecha_llamada: string;
   cut: string;
   nombre_llamante: string;
+  tipo_atencion?: "LLAMADA" | "PRESENCIAL";
   telefono: string;
   motivo: string;
   responsable: string;
@@ -96,7 +97,7 @@ export default function ReporteLlamadas() {
   const [atiende, setAtiende] = useState<number | "">("");
   const [filtros, setFiltros] = useState(() => {
     const hoy = hoyYMD();
-    return { desde: `${hoy.slice(0, 8)}01`, hasta: hoy, cut: "", plazo: "" };
+    return { desde: `${hoy.slice(0, 8)}01`, hasta: hoy, cut: "", plazo: "", tipo: "" };
   });
 
   const generar = useCallback(async () => {
@@ -107,6 +108,7 @@ export default function ReporteLlamadas() {
       const params: Record<string, string> = { desde: filtros.desde, hasta: filtros.hasta };
       if (filtros.cut.trim()) params.cut = filtros.cut.trim();
       if (filtros.plazo) params.plazo = filtros.plazo;
+      if (filtros.tipo) params.tipo = filtros.tipo;
       if (atiende !== "") params.id_responsable = String(atiende);
       const res = await api.get("/reportes/llamadas", { params });
       setFilas(res.data.filas || []);
@@ -149,6 +151,7 @@ export default function ReporteLlamadas() {
       "Fecha de llamada",
       "CUT",
       "Quien llama",
+      "Tipo",
       "Teléfono",
       "Motivo",
       "Atiende",
@@ -164,6 +167,7 @@ export default function ReporteLlamadas() {
       formatFechaHora(f.fecha_llamada),
       f.cut,
       f.nombre_llamante,
+      f.tipo_atencion === "PRESENCIAL" ? "Presencial" : "Llamada",
       f.telefono,
       f.motivo,
       f.responsable,
@@ -211,12 +215,24 @@ export default function ReporteLlamadas() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 rounded-lg bg-gray-50 p-4 dark:bg-gray-800 md:grid-cols-6">
+        <div className="grid grid-cols-1 gap-4 rounded-lg bg-gray-50 p-4 dark:bg-gray-800 md:grid-cols-7">
           <DatePickerLima label="Desde" value={filtros.desde} onChange={(d) => setFiltros({ ...filtros, desde: d })} placeholder="DD/MM/YYYY" />
           <DatePickerLima label="Hasta" value={filtros.hasta} onChange={(d) => setFiltros({ ...filtros, hasta: d })} placeholder="DD/MM/YYYY" />
           <div>
             <Label>Buscar por CUT</Label>
             <Input value={filtros.cut} onChange={(e) => setFiltros({ ...filtros, cut: e.target.value })} placeholder="Ej: 163943-2026" />
+          </div>
+          <div>
+            <Label>Tipo</Label>
+            <select
+              value={filtros.tipo}
+              onChange={(e) => setFiltros({ ...filtros, tipo: e.target.value })}
+              className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700"
+            >
+              <option value="">Todos</option>
+              <option value="LLAMADA">Llamadas</option>
+              <option value="PRESENCIAL">Presenciales</option>
+            </select>
           </div>
           <div>
             <Label>Situación</Label>
@@ -314,8 +330,19 @@ export default function ReporteLlamadas() {
                       <td className="whitespace-nowrap px-3 py-2">{formatFechaHora(f.fecha_llamada)}</td>
                       <td className="px-3 py-2 font-medium">{f.cut}</td>
                       <td className="px-3 py-2">
-                        <div>{f.nombre_llamante}</div>
-                        <div className="text-xs text-gray-500">{f.telefono || "Sin teléfono"}</div>
+                        <div>
+                          {f.nombre_llamante}
+                          <span
+                            className={`ml-2 rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                              f.tipo_atencion === "PRESENCIAL"
+                                ? "bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-100"
+                                : "bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-100"
+                            }`}
+                          >
+                            {f.tipo_atencion === "PRESENCIAL" ? "Presencial" : "Llamada"}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500">{f.telefono || (f.tipo_atencion === "PRESENCIAL" ? "Atención en persona" : "Sin teléfono")}</div>
                       </td>
                       <td className="max-w-xs truncate px-3 py-2" title={f.motivo}>
                         {f.motivo}

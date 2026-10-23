@@ -58,7 +58,9 @@ exports.asignaciones = async (req, res) => {
       const plain = a.get({ plain: true });
       const r = resumen.get(a.id);
       const vence = a.estado_prorroga === 'ACEPTADA' ? a.fecha_vencimiento_prorroga : a.fecha_vencimiento;
-      const cerrada = r.estado === ESTADOS.CERRADA;
+      // Una asignación reasignada queda cerrada para su dueño anterior: su cumplimiento se mide hasta su última respuesta.
+      const reasignada = Boolean(a.motivo_cierre);
+      const cerrada = reasignada || r.estado === ESTADOS.CERRADA;
       return {
         cut: a.cut,
         asignado: plain.asignado ? `${plain.asignado.nombre} ${plain.asignado.apellido}` : '',
@@ -68,7 +70,7 @@ exports.asignaciones = async (req, res) => {
         vence,
         prorroga: a.estado_prorroga || '',
         dias_restantes: cerrada ? null : diasEntre(vence, hoy),
-        estado_respuesta: r.estado,
+        estado_respuesta: reasignada ? 'REASIGNADA' : r.estado,
         total_respuestas: r.total,
         ultima_respuesta: aLima(r.ultima_respuesta),
         tiempo_respuesta_horas: r.ultima_respuesta ? tiempoRespuestaHoras(a.fecha_asignacion, r.ultima_respuesta) : null,
@@ -90,6 +92,7 @@ exports.asignaciones = async (req, res) => {
         respondidas: contar(ESTADOS.RESPONDIDA),
         observadas: contar(ESTADOS.OBSERVADA),
         cerradas: contar(ESTADOS.CERRADA),
+        reasignadas: contar('REASIGNADA'),
         vencidas: filas.filter((f) => f.dias_restantes !== null && f.dias_restantes < 0).length,
       },
     });
@@ -110,6 +113,7 @@ exports.llamadas = async (req, res) => {
     if (normalizar(respondido)) where.respondido = respondido === 'true';
     if (normalizar(id_responsable)) where.id_responsable = parseInt(id_responsable, 10);
     if (normalizar(req.query.cut)) where.cut = { [Op.like]: `%${normalizar(req.query.cut).toUpperCase()}%` };
+    if (req.query.tipo === 'LLAMADA' || req.query.tipo === 'PRESENCIAL') where.tipo_atencion = req.query.tipo;
     if (normalizar(req.query.nombre_llamante)) {
       where.nombre_llamante = { [Op.like]: `%${normalizar(req.query.nombre_llamante).toUpperCase()}%` };
     }
@@ -162,6 +166,7 @@ exports.llamadas = async (req, res) => {
         fecha_llamada: aLima(l.fecha_llamada),
         cut: l.cut,
         nombre_llamante: l.nombre_llamante,
+        tipo_atencion: l.tipo_atencion,
         telefono: l.telefono || '',
         motivo: l.motivo,
         responsable: plain.responsable ? `${plain.responsable.nombre} ${plain.responsable.apellido}` : '',
@@ -192,6 +197,8 @@ exports.llamadas = async (req, res) => {
         vencidas: contar('VENCIDA'),
         por_vencer: contar('POR_VENCER'),
         sin_plazo: contar('SIN_PLAZO'),
+        llamadas: filas.filter((f) => f.tipo_atencion !== 'PRESENCIAL').length,
+        presenciales: filas.filter((f) => f.tipo_atencion === 'PRESENCIAL').length,
         acciones_pendientes: filas.reduce((s, f) => s + f.acciones_pendientes, 0),
       },
     });
