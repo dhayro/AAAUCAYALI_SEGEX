@@ -31,6 +31,12 @@ const LlamadaAdministrado = sequelize.define('LlamadaAdministrado', {
     type: DataTypes.TEXT,
     allowNull: false,
   },
+  // LLAMADA (por defecto) o PRESENCIAL: atención en persona, registrada con el mismo flujo.
+  tipo_atencion: {
+    type: DataTypes.STRING(12),
+    allowNull: false,
+    defaultValue: 'LLAMADA',
+  },
   fecha_respuesta: {
     type: DataTypes.DATEONLY,
     comment: 'Fecha en que se da o se dará respuesta al administrado',

@@ -227,7 +227,7 @@ exports.calendario = async (req, res) => {
       : { fecha_respuesta: { [Op.between]: [desde, hasta] } };
     const llamadas = await LlamadaAdministrado.findAll({
       where: rango,
-      attributes: ['id', 'cut', 'nombre_llamante', 'motivo', 'fecha_llamada', 'fecha_respuesta', 'respondido'],
+      attributes: ['id', 'cut', 'nombre_llamante', 'motivo', 'tipo_atencion', 'fecha_llamada', 'fecha_respuesta', 'respondido'],
       include: [{ model: Usuario, as: 'responsable', attributes: ['nombre', 'apellido'], required: false }],
       order: [['fecha_respuesta', 'ASC'], ['id', 'ASC']],
     });
@@ -248,6 +248,7 @@ exports.calendario = async (req, res) => {
           cut: l.cut,
           nombre_llamante: l.nombre_llamante,
           motivo: l.motivo,
+          tipo_atencion: l.tipo_atencion,
           fecha_llamada: fechaLlamadaLima,
           fecha_respuesta: l.fecha_respuesta,
           // Día en que se muestra la llamada en el calendario, según el criterio elegido.
@@ -351,6 +352,7 @@ exports.crearLlamada = async (req, res) => {
       nombre_llamante: nombreLlamante,
       telefono: req.body.telefono ? String(req.body.telefono).trim() : null,
       motivo,
+      tipo_atencion: req.body.tipo_atencion === 'PRESENCIAL' ? 'PRESENCIAL' : 'LLAMADA',
       fecha_respuesta: req.body.fecha_respuesta || null,
       respondido: parseBoolean(req.body.respondido),
       id_responsable: idResponsable,

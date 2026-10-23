@@ -168,7 +168,7 @@ exports.monitorLlamadas = async (req, res) => {
 
     const llamadas = await LlamadaAdministrado.findAll({
       where,
-      attributes: ['id', 'cut', 'nombre_llamante', 'telefono', 'motivo', 'fecha_llamada', 'fecha_respuesta'],
+      attributes: ['id', 'cut', 'nombre_llamante', 'telefono', 'motivo', 'tipo_atencion', 'fecha_llamada', 'fecha_respuesta'],
       include: [{ model: Usuario, as: 'responsable', attributes: ['id', 'nombre', 'apellido'], required: false }],
     });
 
@@ -207,6 +207,7 @@ exports.monitorLlamadas = async (req, res) => {
           id: l.id,
           cut: l.cut,
           nombre_llamante: l.nombre_llamante,
+          tipo_atencion: l.tipo_atencion,
           telefono: l.telefono,
           motivo: l.motivo,
           fecha_llamada: aLima(l.fecha_llamada),
