@@ -10,6 +10,7 @@ import { colorUsuario } from "@/utils/colorUsuario";
 import { formatFecha, formatFechaHora } from "@/components/expedientes/format";
 import { BadgePlazo } from "@/components/atencion/EditorPlazo";
 import api from "@/utils/api";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 interface Llamada {
   id: number;
@@ -40,7 +41,27 @@ export default function Llamadas() {
   const [loading, setLoading] = useState(true);
   const [registrando, setRegistrando] = useState(false);
   const [detalleId, setDetalleId] = useState<number | null>(null);
-  const [detalleAccion, setDetalleAccion] = useState<"editar" | "anular" | undefined>(undefined);
+  const [detalleAccion, setDetalleAccion] = useState<"editar" | undefined>(undefined);
+  const [eliminarLlamada, setEliminarLlamada] = useState<{ id: number; cut: string } | null>(null);
+  const [motivoEliminar, setMotivoEliminar] = useState("");
+  const [eliminando, setEliminando] = useState(false);
+
+  const confirmarEliminar = async () => {
+    if (!eliminarLlamada) return;
+    if (!motivoEliminar.trim()) return toast.error("Escriba el motivo de la eliminación");
+    setEliminando(true);
+    try {
+      await api.post(`/atenciones/llamadas/${eliminarLlamada.id}/anular`, { motivo: motivoEliminar });
+      toast.success("Registro eliminado");
+      setEliminarLlamada(null);
+      setMotivoEliminar("");
+      fetchLlamadas();
+    } catch (error: any) {
+      toast.error(error.response?.data?.mensaje || "No se pudo eliminar el registro");
+    } finally {
+      setEliminando(false);
+    }
+  };
   const [cutAbierto, setCutAbierto] = useState<string | null>(null);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [filters, setFilters] = useState({ cut: "", respondido: "false", plazo: "" });
@@ -290,8 +311,7 @@ export default function Llamadas() {
                           {l.puede_eliminar && (
                             <button
                               onClick={() => {
-                                setDetalleAccion("anular");
-                                setDetalleId(l.id);
+                                setEliminarLlamada({ id: l.id, cut: l.cut });
                               }}
                               className="rounded border border-red-300 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-300 dark:hover:bg-gray-700"
                             >
@@ -357,6 +377,33 @@ export default function Llamadas() {
         />
       )}
       {cutAbierto && <ExpedienteDetalleModal cut={cutAbierto} onClose={() => setCutAbierto(null)} />}
+      <ConfirmDialog
+        abierto={eliminarLlamada !== null}
+        titulo="Eliminar registro"
+        textoConfirmar="Eliminar"
+        peligro
+        procesando={eliminando}
+        mensaje={
+          <div className="space-y-3">
+            <p>
+              El registro del CUT {eliminarLlamada?.cut} saldrá de las listas, el monitor, el calendario y los reportes. Quedará en el historial del CUT como eliminado.
+            </p>
+            <textarea
+              rows={3}
+              value={motivoEliminar}
+              onChange={(e) => setMotivoEliminar(e.target.value)}
+              placeholder="Motivo, por ejemplo: registrada por error"
+              className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700"
+            />
+          </div>
+        }
+        onConfirmar={confirmarEliminar}
+        onCancelar={() => {
+          setEliminarLlamada(null);
+          setMotivoEliminar("");
+        }}
+      />
+
       {detalleId !== null && (
         <DetalleLlamadaModal
           llamadaId={detalleId}

@@ -16,8 +16,8 @@ type Props = {
   onClose: () => void;
   onCambio: () => void;
   soloLectura?: boolean;
-  // Al abrir desde la tabla: entra directo a editar los datos o a anular el registro.
-  accionInicial?: "editar" | "anular";
+  // Al abrir desde la tabla: entra directo a editar los datos.
+  accionInicial?: "editar";
 };
 
 const nombre = (u?: { nombre: string; apellido: string } | null) => (u ? `${u.nombre} ${u.apellido}` : "—");
@@ -90,9 +90,6 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
   const [verAntecedentes, setVerAntecedentes] = useState(false);
   const [editandoDatos, setEditandoDatos] = useState(false);
   const [datosForm, setDatosForm] = useState({ fecha_llamada: "", nombre_llamante: "", telefono: "", motivo: "" });
-  const [anularAbierto, setAnularAbierto] = useState(false);
-  const [motivoAnular, setMotivoAnular] = useState("");
-  const [anulando, setAnulando] = useState(false);
   const [editandoArchivo, setEditandoArchivo] = useState<{ id: number; valor: string } | null>(null);
 
   const ejecutarConfirmacion = async () => {
@@ -138,11 +135,10 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
   const puedeMarcar = !soloLectura && llamada && (gestiona || llamada.id_responsable === usuarioId);
   const puedeOperar = puedeMarcar && !llamada?.respondido;
 
-  // Editar datos y anular: solo mientras la llamada no tenga respuesta ni gestión (el servidor también lo valida).
+  // Editar datos: solo mientras la llamada no tenga respuesta ni acciones ejecutadas (el servidor también lo valida).
   const accionesEjecutadas = (llamada?.acciones || []).some((a: any) => a.estado === "EJECUTADO");
   const esSuya = !!llamada && (gestiona || llamada.id_usuario_creador === usuarioId || llamada.id_responsable === usuarioId);
   const puedeEditarDatos = !soloLectura && !!llamada && !llamada.respondido && !accionesEjecutadas && esSuya;
-  const puedeAnular = !soloLectura && !!llamada && !llamada.respondido && !accionesEjecutadas && (gestiona || llamada.id_usuario_creador === usuarioId);
 
   const abrirEditarDatos = () => {
     setDatosForm({
@@ -159,8 +155,7 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
     if (!llamada || accionAplicada.current || !accionInicial) return;
     accionAplicada.current = true;
     if (accionInicial === "editar" && puedeEditarDatos) abrirEditarDatos();
-    if (accionInicial === "anular" && puedeAnular) setAnularAbierto(true);
-  }, [llamada, accionInicial, puedeEditarDatos, puedeAnular]);
+  }, [llamada, accionInicial, puedeEditarDatos]);
 
   const guardarDatos = async () => {
     if (!datosForm.nombre_llamante.trim() || !datosForm.motivo.trim()) {
@@ -175,20 +170,6 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
       "Datos actualizados"
     );
     if (ok) setEditandoDatos(false);
-  };
-
-  const confirmarAnular = async () => {
-    if (!motivoAnular.trim()) return toast.error("Escriba el motivo de la eliminación");
-    setAnulando(true);
-    try {
-      await api.post(`/atenciones/llamadas/${llamadaId}/anular`, { motivo: motivoAnular });
-      toast.success("Registro eliminado");
-      onCambio();
-      onClose();
-    } catch (error: any) {
-      toast.error(error.response?.data?.mensaje || "No se pudo eliminar el registro");
-      setAnulando(false);
-    }
   };
 
   const notificar = async (fn: () => Promise<any>, ok: string): Promise<boolean> => {
@@ -501,7 +482,8 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
                   </div>
                 </section>
 
-                {(puedeEditarDatos || puedeAnular) && (
+
+                {puedeEditarDatos && (
                   <section className="flex flex-wrap items-start gap-3">
                     {puedeEditarDatos && !editandoDatos && (
                       <button
@@ -509,14 +491,6 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
                         className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
                       >
                         Editar datos
-                      </button>
-                    )}
-                    {puedeAnular && (
-                      <button
-                        onClick={() => setAnularAbierto(true)}
-                        className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 dark:border-red-700 dark:bg-gray-800 dark:text-red-300"
-                      >
-                        Eliminar registro
                       </button>
                     )}
                     {editandoDatos && (
@@ -573,38 +547,6 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
                   </section>
                 )}
 
-                {anularAbierto && (
-                  <div className="fixed inset-0 z-[1000001] flex items-center justify-center bg-black/50 p-4">
-                    <div className="w-full max-w-md space-y-4 rounded-lg bg-white p-6 shadow-2xl dark:bg-gray-800">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Eliminar registro</h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-300">
-                        El registro sale de las listas, el monitor y el calendario, pero queda visible en el historial del CUT marcado como eliminado.
-                      </p>
-                      <textarea
-                        rows={3}
-                        value={motivoAnular}
-                        onChange={(e) => setMotivoAnular(e.target.value)}
-                        placeholder="Motivo, por ejemplo: registrada por error"
-                        className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700"
-                      />
-                      <div className="flex justify-end gap-3">
-                        <button
-                          onClick={() => setAnularAbierto(false)}
-                          className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
-                        >
-                          Cancelar
-                        </button>
-                        <button
-                          onClick={confirmarAnular}
-                          disabled={anulando}
-                          className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
-                        >
-                          {anulando ? "Eliminando..." : "Eliminar"}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 <section className="space-y-3">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
