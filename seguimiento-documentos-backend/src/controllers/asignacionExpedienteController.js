@@ -72,6 +72,8 @@ exports.obtenerTodas = async (req, res) => {
     if (id_usuario) whereClause.id_usuario = parseInt(id_usuario, 10);
     if (!puedeVerTodas(req.user)) whereClause.id_usuario = req.user.id;
     if (estado !== undefined && estado !== '') whereClause.estado = parseBoolean(estado);
+    // Base sin el filtro de prórroga: permite contar cada estado aunque la lista esté filtrada por uno.
+    const whereBase = { ...whereClause };
     if (parseBoolean(con_prorroga)) whereClause.estado_prorroga = { [Op.ne]: null };
     if (estado_prorroga) whereClause.estado_prorroga = normalizarTexto(estado_prorroga);
 
@@ -109,8 +111,19 @@ exports.obtenerTodas = async (req, res) => {
     const posicion = new Map(idsPagina.map((id, i) => [id, i]));
     rows.sort((x, y) => posicion.get(x.id) - posicion.get(y.id));
 
+    const filasProrroga = await AsignacionExpediente.findAll({
+      where: whereBase,
+      attributes: ['estado_prorroga'],
+      raw: true,
+    });
+    const contadoresProrroga = { PENDIENTE: 0, ACEPTADA: 0, RECHAZADA: 0 };
+    filasProrroga.forEach((f) => {
+      if (contadoresProrroga[f.estado_prorroga] !== undefined) contadoresProrroga[f.estado_prorroga] += 1;
+    });
+
     res.json({
       contadores,
+      contadores_prorroga: contadoresProrroga,
       asignaciones: rows.map((a) => {
         const r = resumen.get(a.id);
         const evaluacion = r.evaluacion && { ...r.evaluacion, fecha_evaluacion: aLima(r.evaluacion.fecha_evaluacion) };

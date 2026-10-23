@@ -55,6 +55,7 @@ export default function Prorrogas() {
 
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [filters, setFilters] = useState({ cut: "", estado_prorroga: "PENDIENTE" });
+  const [contadores, setContadores] = useState<Record<string, number>>({});
   const [totalCount, setTotalCount] = useState(0);
 
   const fetchProrrogas = useCallback(async () => {
@@ -71,6 +72,7 @@ export default function Prorrogas() {
 
       const response = await api.get("/asignaciones-expediente", { params });
       setProrrogas(response.data.asignaciones || []);
+      setContadores(response.data.contadores_prorroga || {});
       setTotalCount(response.data.totalAsignaciones || 0);
       setSeleccion([]);
     } catch (error) {
@@ -91,6 +93,18 @@ export default function Prorrogas() {
     setPagination({ pageIndex: 0, pageSize: 10 });
   };
 
+  const cambiarEstadoProrroga = (valor: string) => {
+    setFilters((prev) => ({ ...prev, estado_prorroga: valor }));
+    setPagination({ pageIndex: 0, pageSize: 10 });
+  };
+
+  const FILTROS_PRORROGA = [
+    { value: "", texto: "Todas", cantidad: Object.values(contadores).reduce((s, n) => s + n, 0) },
+    { value: "PENDIENTE", texto: "Pendientes", cantidad: contadores.PENDIENTE ?? 0 },
+    { value: "ACEPTADA", texto: "Aceptadas", cantidad: contadores.ACEPTADA ?? 0 },
+    { value: "RECHAZADA", texto: "Rechazadas", cantidad: contadores.RECHAZADA ?? 0 },
+  ];
+
   const selectClass =
     "w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700";
 
@@ -106,6 +120,25 @@ export default function Prorrogas() {
           <p className="mt-2 text-gray-600 dark:text-gray-400">
             Revisa las solicitudes de prórroga: acepta, cambia los días o rechaza
           </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {FILTROS_PRORROGA.map((f) => {
+            const activo = filters.estado_prorroga === f.value;
+            return (
+              <button
+                key={f.value || "todas"}
+                onClick={() => cambiarEstadoProrroga(f.value)}
+                className={`rounded-full px-4 py-1.5 text-sm font-semibold ${
+                  activo
+                    ? "bg-brand-600 text-white"
+                    : "bg-white text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:ring-gray-600 dark:hover:bg-gray-700"
+                }`}
+              >
+                {f.texto} · {f.cantidad}
+              </button>
+            );
+          })}
         </div>
 
         <div className="grid grid-cols-1 gap-4 rounded-lg bg-gray-50 p-4 dark:bg-gray-800 md:grid-cols-2">
