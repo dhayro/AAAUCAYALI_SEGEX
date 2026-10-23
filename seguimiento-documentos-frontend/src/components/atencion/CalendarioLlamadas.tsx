@@ -118,6 +118,13 @@ export default function CalendarioLlamadas({ campo, onVerDetalle }: Props) {
             Hoy
           </button>
         </div>
+        <div className="flex flex-wrap gap-2 text-xs font-semibold">
+          {(Object.keys(SITUACION) as LlamadaCalendario["situacion"][]).map((s) => (
+            <span key={s} className={`rounded-full border px-2.5 py-1 ${SITUACION[s].clases}`}>
+              {SITUACION[s].texto} · {conteos[s]}
+            </span>
+          ))}
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-lg bg-white shadow dark:bg-gray-800">
@@ -175,15 +182,6 @@ export default function CalendarioLlamadas({ campo, onVerDetalle }: Props) {
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 rounded-lg bg-white p-3 text-xs font-semibold shadow dark:bg-gray-800">
-        <span className="mr-1 text-gray-500 dark:text-gray-400">Leyenda:</span>
-        {(Object.keys(SITUACION) as LlamadaCalendario["situacion"][]).map((s) => (
-          <span key={s} className={`rounded-full border px-2.5 py-1 ${SITUACION[s].clases}`}>
-            {SITUACION[s].texto} · {conteos[s]} en el mes
-          </span>
-        ))}
-        <span className="ml-auto text-gray-500 dark:text-gray-400">El número junto al día indica cuántas llamadas hay ese día.</span>
-      </div>
     </div>
   );
 }
