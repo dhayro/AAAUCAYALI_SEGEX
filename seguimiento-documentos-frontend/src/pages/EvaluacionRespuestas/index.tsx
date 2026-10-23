@@ -302,14 +302,14 @@ export default function EvaluacionRespuestas() {
 
       {evaluando && (
         <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg rounded-lg bg-white shadow-2xl dark:bg-gray-800">
-            <div className="flex items-center justify-between border-b p-6 dark:border-gray-700">
+          <div className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-lg bg-white shadow-2xl dark:bg-gray-800">
+            <div className="flex shrink-0 items-center justify-between border-b p-6 dark:border-gray-700">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Evaluar respuesta — {evaluando.cut}</h2>
               <button onClick={() => setEvaluando(null)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400">
                 <CloseIcon className="h-6 w-6" />
               </button>
             </div>
-            <form onSubmit={enviarEvaluacion} className="space-y-4 p-6">
+            <form onSubmit={enviarEvaluacion} className="min-h-0 flex-1 space-y-4 overflow-y-auto p-6">
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Atiende <strong>{nombre(evaluando.asignado)}</strong>. Última respuesta:{" "}
                 <strong>{formatFechaHora(evaluando.ultima_respuesta)}</strong> ({formatoTiempo(evaluando.tiempo_respuesta_horas)} desde la asignación).
