@@ -48,6 +48,25 @@ const nombreDe = (u) => (u ? `${u.nombre} ${u.apellido || ''}`.trim() : '');
 const vencimientoVigente = (a) => (a.estado_prorroga === 'ACEPTADA' ? a.fecha_vencimiento_prorroga : a.fecha_vencimiento);
 
 // 1. Productividad por persona: asignaciones y llamadas de cada responsable.
+// Evaluación del desempeño (solo admin y jefe): cumplimiento 50%, calidad 20%, llamadas y presenciales 30%.
+const PESOS_EVALUACION = { cumplimiento: 50, calidad: 20, llamadas: 30 };
+const porcentaje = (num, den) => (den > 0 ? Math.round((num / den) * 1000) / 10 : null);
+const nivelEvaluacion = (puntaje) => {
+  if (puntaje === null) return 'Sin datos';
+  if (puntaje >= 90) return 'Excelente';
+  if (puntaje >= 75) return 'Bueno';
+  if (puntaje >= 60) return 'Regular';
+  return 'Deficiente';
+};
+// Promedio ponderado de los componentes que tienen datos; los pesos se reparten entre ellos.
+const puntajeCombinado = (componentes) => {
+  const validos = Object.entries(componentes).filter(([, v]) => v !== null);
+  if (!validos.length) return null;
+  const pesoTotal = validos.reduce((s, [k]) => s + PESOS_EVALUACION[k], 0);
+  const suma = validos.reduce((s, [k, v]) => s + PESOS_EVALUACION[k] * v, 0);
+  return Math.round((suma / pesoTotal) * 10) / 10;
+};
+
 exports.productividad = async (req, res) => {
   try {
     const hoy = hoyLima();
@@ -73,10 +92,16 @@ exports.productividad = async (req, res) => {
           sin_respuesta: 0,
           vencidas: 0,
           tiempos: [],
+          cumplibles: 0,
+          a_tiempo: 0,
+          evaluadas: 0,
+          observadas_evaluadas: 0,
           llamadas: 0,
           presenciales: 0,
           llamadas_respondidas: 0,
           llamadas_vencidas: 0,
+          llamadas_cumplibles: 0,
+          llamadas_a_tiempo: 0,
         });
       }
       return personas.get(id);
@@ -86,7 +111,10 @@ exports.productividad = async (req, res) => {
       const p = persona(a.id_usuario, a.get({ plain: true }).asignado);
       const r = resumen.get(a.id);
       p.asignaciones += 1;
+      const vence = vencimientoVigente(a);
+      const dias = diasEntre(vence, hoy);
       // Reasignada: cerrada para su dueño anterior, con cumplimiento hasta su última respuesta.
+      const cerradaOk = Boolean(a.motivo_cierre) || r.estado === ESTADOS.CERRADA;
       if (a.motivo_cierre) {
         p.cerradas += 1;
         p.reasignadas += 1;
@@ -94,8 +122,17 @@ exports.productividad = async (req, res) => {
         if (r.estado === ESTADOS.CERRADA) p.cerradas += 1;
         if (r.estado === ESTADOS.OBSERVADA) p.observadas += 1;
         if (r.estado === ESTADOS.SIN_RESPUESTA) p.sin_respuesta += 1;
-        const dias = diasEntre(vencimientoVigente(a), hoy);
-        if (r.estado !== ESTADOS.CERRADA && dias < 0) p.vencidas += 1;
+        if (!cerradaOk && dias < 0) p.vencidas += 1;
+      }
+      // Cumplimiento: de las asignaciones cerradas o vencidas, cuántas se cerraron a tiempo.
+      if (cerradaOk || dias < 0) {
+        p.cumplibles += 1;
+        if (cerradaOk && r.ultima_respuesta && diasEntre(vence, aLima(r.ultima_respuesta).slice(0, 10)) >= 0) p.a_tiempo += 1;
+      }
+      // Calidad: de las asignaciones evaluadas, cuántas quedaron sin observación en su última evaluación.
+      if (r.evaluacion) {
+        p.evaluadas += 1;
+        if (r.evaluacion.resultado === 'OBSERVADA') p.observadas_evaluadas += 1;
       }
       if (r.ultima_respuesta) p.tiempos.push(tiempoRespuestaHoras(a.fecha_asignacion, r.ultima_respuesta));
     });
@@ -107,6 +144,19 @@ exports.productividad = async (req, res) => {
       attributes: ['id', 'id_responsable', 'tipo_atencion', 'respondido', 'fecha_respuesta'],
       include: [{ model: Usuario, as: 'responsable', attributes: ['id', 'nombre', 'apellido'], required: false }],
     });
+    // Fecha real en que se marcó cada llamada como respondida (primer evento RESPONDIDO).
+    const respondidoEn = {};
+    const eventos = llamadas.length
+      ? await HistorialLlamada.findAll({
+          attributes: ['id_llamada', 'fecha_registro'],
+          where: { id_llamada: { [Op.in]: llamadas.map((l) => l.id) }, tipo: 'RESPONDIDO' },
+          raw: true,
+        })
+      : [];
+    eventos.forEach((e) => {
+      if (!respondidoEn[e.id_llamada] || e.fecha_registro < respondidoEn[e.id_llamada]) respondidoEn[e.id_llamada] = e.fecha_registro;
+    });
+
     llamadas.forEach((l) => {
       if (!l.id_responsable) return;
       const p = persona(l.id_responsable, l.get({ plain: true }).responsable);
@@ -114,25 +164,49 @@ exports.productividad = async (req, res) => {
       if (l.tipo_atencion === 'PRESENCIAL') p.presenciales += 1;
       if (l.respondido) p.llamadas_respondidas += 1;
       else if (l.fecha_respuesta && l.fecha_respuesta < hoy) p.llamadas_vencidas += 1;
+      // Llamadas con plazo ya respondidas o vencidas: cuántas se respondieron a tiempo.
+      if (l.fecha_respuesta && (l.respondido || l.fecha_respuesta < hoy)) {
+        p.llamadas_cumplibles += 1;
+        if (l.respondido && respondidoEn[l.id] && diasEntre(l.fecha_respuesta, aLima(respondidoEn[l.id]).slice(0, 10)) >= 0) {
+          p.llamadas_a_tiempo += 1;
+        }
+      }
     });
 
+    const mostrarEvaluacion = ['admin', 'jefe'].includes(req.user.perfil);
     const media = (lista) => (lista.length ? Math.round((lista.reduce((s, h) => s + h, 0) / lista.length) * 10) / 10 : null);
     const filas = [...personas.values()]
-      .map((p) => ({
-        nombre: p.nombre,
-        cargo: p.cargo,
-        asignaciones: p.asignaciones,
-        cerradas: p.cerradas,
-        reasignadas: p.reasignadas,
-        observadas: p.observadas,
-        sin_respuesta: p.sin_respuesta,
-        vencidas: p.vencidas,
-        tiempo_promedio_horas: media(p.tiempos),
-        llamadas: p.llamadas,
-        presenciales: p.presenciales,
-        llamadas_respondidas: p.llamadas_respondidas,
-        llamadas_vencidas: p.llamadas_vencidas,
-      }))
+      .map((p) => {
+        const fila = {
+          nombre: p.nombre,
+          cargo: p.cargo,
+          asignaciones: p.asignaciones,
+          cerradas: p.cerradas,
+          reasignadas: p.reasignadas,
+          observadas: p.observadas,
+          sin_respuesta: p.sin_respuesta,
+          vencidas: p.vencidas,
+          tiempo_promedio_horas: media(p.tiempos),
+          llamadas: p.llamadas,
+          presenciales: p.presenciales,
+          llamadas_respondidas: p.llamadas_respondidas,
+          llamadas_vencidas: p.llamadas_vencidas,
+        };
+        if (mostrarEvaluacion) {
+          const cumplimiento = porcentaje(p.a_tiempo, p.cumplibles);
+          const calidad = porcentaje(p.evaluadas - p.observadas_evaluadas, p.evaluadas);
+          const llamadasPct = porcentaje(p.llamadas_a_tiempo, p.llamadas_cumplibles);
+          const puntaje = puntajeCombinado({ cumplimiento, calidad, llamadas: llamadasPct });
+          Object.assign(fila, {
+            cumplimiento_pct: cumplimiento,
+            calidad_pct: calidad,
+            llamadas_pct: llamadasPct,
+            evaluacion_puntaje: puntaje,
+            evaluacion_nivel: nivelEvaluacion(puntaje),
+          });
+        }
+        return fila;
+      })
       .sort((a, b) => a.nombre.localeCompare(b.nombre));
 
     const suma = (campo) => filas.reduce((s, f) => s + f[campo], 0);

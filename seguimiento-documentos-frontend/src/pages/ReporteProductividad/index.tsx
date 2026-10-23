@@ -1,4 +1,30 @@
 import ReporteTabla, { type Columna } from "@/components/reportes/ReporteTabla";
+import { perfilActual } from "@/utils/sesion";
+
+const NIVEL_CLASES: Record<string, string> = {
+  Excelente: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100",
+  Bueno: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100",
+  Regular: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100",
+  Deficiente: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100",
+  "Sin datos": "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200",
+};
+
+// Solo admin y jefe ven la evaluación del desempeño.
+const columnasEvaluacion: Columna[] = [
+  { titulo: "Cumplimiento a tiempo", align: "center", celda: (f) => (f.cumplimiento_pct != null ? `${f.cumplimiento_pct}%` : "—"), excel: (f) => (f.cumplimiento_pct != null ? `${f.cumplimiento_pct}%` : "") },
+  { titulo: "Calidad", align: "center", celda: (f) => (f.calidad_pct != null ? `${f.calidad_pct}%` : "—"), excel: (f) => (f.calidad_pct != null ? `${f.calidad_pct}%` : "") },
+  { titulo: "Llamadas a tiempo", align: "center", celda: (f) => (f.llamadas_pct != null ? `${f.llamadas_pct}%` : "—"), excel: (f) => (f.llamadas_pct != null ? `${f.llamadas_pct}%` : "") },
+  {
+    titulo: "Evaluación",
+    align: "center",
+    celda: (f) => (
+      <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${NIVEL_CLASES[f.evaluacion_nivel] ?? ""}`}>
+        {f.evaluacion_puntaje != null ? `${f.evaluacion_puntaje} · ` : ""}{f.evaluacion_nivel ?? "Sin datos"}
+      </span>
+    ),
+    excel: (f) => (f.evaluacion_puntaje != null ? `${f.evaluacion_puntaje} (${f.evaluacion_nivel})` : "Sin datos"),
+  },
+];
 
 const formatoHoras = (horas: number | null) => {
   if (horas === null || horas === undefined) return "—";
@@ -47,13 +73,14 @@ const columnas: Columna[] = [
 ];
 
 export default function ReporteProductividad() {
+  const verEvaluacion = ["admin", "jefe"].includes(perfilActual() ?? "");
   return (
     <ReporteTabla
       titulo="Productividad por persona"
       descripcion="Asignaciones, cierres, vencimientos, tiempo de respuesta y llamadas atendidas por cada persona"
       endpoint="/reportes/productividad"
       nombreArchivo="Reporte-Productividad"
-      columnas={columnas}
+      columnas={verEvaluacion ? [...columnas, ...columnasEvaluacion] : columnas}
       anchoMinimo={1200}
       indicadores={[
         { titulo: "Personas", clave: "personas" },
