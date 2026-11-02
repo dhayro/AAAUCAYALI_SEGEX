@@ -44,6 +44,7 @@ import ReporteExpedientesSinAsignar from "./pages/ReporteExpedientesSinAsignar";
 import ReporteAcciones from "./pages/ReporteAcciones";
 import ReporteHistorialCut from "./pages/ReporteHistorialCut";
 import ReporteResumen from "./pages/ReporteResumen";
+import DocumentosCreadosSisged from "./pages/DocumentosCreadosSisged";
 import MiDesempenoPagina from "./pages/MiDesempeno";
 import ConsultaPersona from "./pages/ConsultaPersona";
 import SISGED from "./pages/SISGED";
@@ -113,6 +114,7 @@ export default function App() {
             <Route path="/reporte-acciones" element={<ReporteAcciones />} />
             <Route path="/reporte-historial" element={<ReporteHistorialCut />} />
             <Route path="/reporte-resumen" element={<ReporteResumen />} />
+            <Route path="/reporte-documentos-sisged" element={<DocumentosCreadosSisged />} />
             <Route path="/mi-desempeno" element={<MiDesempenoPagina />} />
             <Route path="/consulta-persona" element={<ConsultaPersona />} />
             <Route path="/expedientes" element={<Expedientes />} />

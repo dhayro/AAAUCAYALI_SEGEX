@@ -183,6 +183,11 @@ const navItems: NavItem[] = [
         key: "reporte-acciones",
         path: "/reporte-acciones",
       },
+      {
+        name: "Documentos creados en SISGED",
+        key: "reporte-documentos-sisged",
+        path: "/reporte-documentos-sisged",
+      },
     ],
   },
   {

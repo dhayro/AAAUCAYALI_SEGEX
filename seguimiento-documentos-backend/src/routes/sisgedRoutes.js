@@ -1,7 +1,7 @@
 const express = require('express');
 const sisgedController = require('../controllers/sisgedController');
 const sisgedTokenController = require('../controllers/sisgedTokenController');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, isSecretariaOrAbove } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -118,6 +118,8 @@ router.post('/test-post', (req, res) => {
 router.post('/sincronizar', sisgedController.sincronizar);
 
 router.post('/sincronizar-con-parametros', sisgedController.sincronizarConParametros);
+// Documentos creados (reporte de SISGED): solo gestores.
+router.post('/documentos-creados', authenticateToken, isSecretariaOrAbove, sisgedController.documentosCreados);
 
 /**
  * @swagger

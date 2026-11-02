@@ -318,6 +318,26 @@ exports.sincronizarConParametros = async (req, res) => {
   }
 };
 
+// Documentos creados en SISGED para el reporte: rango de fechas, tipo, oficina y cantidad de filas.
+exports.documentosCreados = async (req, res) => {
+  try {
+    const { desde, hasta, tipo, oficina, filas } = req.body || {};
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(desde || '')) || !/^\d{4}-\d{2}-\d{2}$/.test(String(hasta || ''))) {
+      return res.status(400).json({ mensaje: 'Indique el rango de fechas' });
+    }
+    if (desde > hasta) {
+      return res.status(400).json({ mensaje: 'La fecha inicial no puede ser mayor que la final' });
+    }
+    if (tipo && !/^\d+$/.test(String(tipo))) return res.status(400).json({ mensaje: 'Tipo de documento no válido' });
+    if (oficina && !/^\d+$/.test(String(oficina))) return res.status(400).json({ mensaje: 'Oficina no válida' });
+    const cantidad = [50, 100, 150, 300].includes(Number(filas)) ? Number(filas) : 150;
+    const datos = await sisgedSyncService.obtenerDocumentosCreados({ desde, hasta, tipo, oficina, filas: cantidad });
+    res.json(datos);
+  } catch (error) {
+    res.status(500).json({ mensaje: error.message });
+  }
+};
+
 exports.limpiarCache = async (req, res) => {
   try {
     sisgedSyncService.limpiarCacheToken();
