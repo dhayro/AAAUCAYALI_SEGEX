@@ -21,7 +21,6 @@ interface DocumentoCreado {
 }
 
 const CANTIDADES = [15, 50, 100, 150, 300];
-const POR_PAGINA = 10;
 
 const hoyYMD = () =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
@@ -43,6 +42,7 @@ export default function DocumentosCreadosSisged() {
   const [consultado, setConsultado] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [pagina, setPagina] = useState(0);
+  const [tamanoPagina, setTamanoPagina] = useState(15);
   const [cutAbierto, setCutAbierto] = useState<string | null>(null);
 
   const consultar = async () => {
@@ -54,6 +54,7 @@ export default function DocumentosCreadosSisged() {
       setFilas(res.data.filas || []);
       setTotal(res.data.total || 0);
       setPagina(0);
+      setTamanoPagina(filtros.filas);
       setConsultado(true);
     } catch (error: any) {
       toast.error(error.response?.data?.mensaje || "No se pudo consultar SISGED");
@@ -71,8 +72,8 @@ export default function DocumentosCreadosSisged() {
     XLSX.writeFile(libro, `Documentos-creados-SISGED-${filtros.desde}-${filtros.hasta}.xlsx`);
   };
 
-  const paginaFilas = filas.slice(pagina * POR_PAGINA, (pagina + 1) * POR_PAGINA);
-  const totalPaginas = Math.max(1, Math.ceil(filas.length / POR_PAGINA));
+  const paginaFilas = filas.slice(pagina * tamanoPagina, (pagina + 1) * tamanoPagina);
+  const totalPaginas = Math.max(1, Math.ceil(filas.length / tamanoPagina));
 
   return (
     <>
@@ -194,7 +195,7 @@ export default function DocumentosCreadosSisged() {
               </table>
             )}
           </div>
-          {filas.length > POR_PAGINA && (
+          {filas.length > tamanoPagina && (
             <div className="flex items-center justify-between border-t px-4 py-3 text-sm dark:border-gray-700">
               <span className="text-gray-600 dark:text-gray-400">
                 Página {pagina + 1} de {totalPaginas}

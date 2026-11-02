@@ -311,7 +311,7 @@ const fechaParaSisged = (fecha) => {
   return `${dia}/${mes}/${anio}`;
 };
 
-const construirGridDocumentosCreados = ({ desde, hasta, tipo, oficina, filas }) => {
+const construirGridDocumentosCreados = ({ desde, hasta, tipo, oficina, filas, pagina = 1 }) => {
   const ofi = oficina || OFICINA_POR_DEFECTO;
   const inicio = fechaParaSisged(desde);
   const fin = fechaParaSisged(hasta);
@@ -340,7 +340,7 @@ const construirGridDocumentosCreados = ({ desde, hasta, tipo, oficina, filas }) 
   );
   return {
     grid: {
-      page: 1,
+      page: pagina,
       rows: String(filas),
       sidx: 'CORRELATIVO_DOCUMENTO',
       sord: 'desc',
@@ -354,11 +354,8 @@ const construirGridDocumentosCreados = ({ desde, hasta, tipo, oficina, filas }) 
   };
 };
 
-// Filas del reporte "Documento Creado" de SISGED, ya ordenadas por correlativo descendente.
-async function obtenerDocumentosCreados({ desde, hasta, tipo = '', oficina = '', filas = 150 } = {}) {
-  const token = await obtenerToken();
-  const body = construirGridDocumentosCreados({ desde, hasta, tipo, oficina, filas });
-
+// Una página del reporte "Documento Creado" de SISGED.
+async function pedirPaginaDocumentosCreados(token, parametros) {
   const response = await fetch(SISGED_DOCUMENTOS_CREADOS_URL, {
     method: 'POST',
     headers: {
@@ -366,7 +363,7 @@ async function obtenerDocumentosCreados({ desde, hasta, tipo = '', oficina = '',
       'Accept': 'application/json',
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(construirGridDocumentosCreados(parametros)),
   });
   if (!response.ok) {
     // SISGED responde 404 o 401 cuando el token venció: se pide uno vigente en Admin Tokens SISGED.
@@ -375,29 +372,44 @@ async function obtenerDocumentosCreados({ desde, hasta, tipo = '', oficina = '',
     }
     throw new Error(`SISGED respondió con error: ${response.status}`);
   }
-
   const data = await response.json();
   if (!data || !Array.isArray(data.rows)) {
     throw new Error('Formato de respuesta de documentos creados no válido');
   }
+  return data;
+}
 
-  // Columnas del reporte: [1] id, [2] Nro CUT, [5] N° documento, [6] asunto, [7] referencia,
-  // [8] destinos, [9] fecha de creación, [10] tipo, [11] estado.
-  const lista = data.rows.map((fila) => {
-    const c = fila.cell || [];
-    return {
-      id: fila.id,
-      cut: c[2] || '',
-      documento: c[5] || '',
-      asunto: c[6] || '',
-      referencia: c[7] || '',
-      destinos: String(c[8] || '').replace(/\r/g, '').trim(),
-      fecha_creacion: c[9] || '',
-      tipo: c[10] || '',
-      estado: c[11] || '',
-    };
-  });
-  return { total: Number(data.records) || lista.length, filas: lista };
+// Columnas del reporte: [1] id, [2] Nro CUT, [5] N° documento, [6] asunto, [7] referencia,
+// [8] destinos, [9] fecha de creación, [10] tipo, [11] estado.
+const filaDocumentoCreado = (fila) => {
+  const c = fila.cell || [];
+  return {
+    id: fila.id,
+    cut: c[2] || '',
+    documento: c[5] || '',
+    asunto: c[6] || '',
+    referencia: c[7] || '',
+    destinos: String(c[8] || '').replace(/\r/g, '').trim(),
+    fecha_creacion: c[9] || '',
+    tipo: c[10] || '',
+    estado: c[11] || '',
+  };
+};
+
+// Todas las filas del rango: pide página por página (de `filas` en `filas`) hasta completar el total de SISGED.
+const MAX_PAGINAS_DOCUMENTOS_CREADOS = 200;
+async function obtenerDocumentosCreados({ desde, hasta, tipo = '', oficina = '', filas = 15 } = {}) {
+  const token = await obtenerToken();
+  const lista = [];
+  let total = 0;
+  for (let pagina = 1; pagina <= MAX_PAGINAS_DOCUMENTOS_CREADOS; pagina++) {
+    const data = await pedirPaginaDocumentosCreados(token, { desde, hasta, tipo, oficina, filas, pagina });
+    total = Number(data.records) || 0;
+    const paginaFilas = data.rows.map(filaDocumentoCreado);
+    lista.push(...paginaFilas);
+    if (paginaFilas.length === 0 || lista.length >= total) break;
+  }
+  return { total: total || lista.length, filas: lista };
 }
 
 module.exports = {
