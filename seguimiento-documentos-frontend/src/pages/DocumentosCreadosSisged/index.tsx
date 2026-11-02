@@ -20,7 +20,7 @@ interface DocumentoCreado {
   estado: string;
 }
 
-const CANTIDADES = [50, 100, 150, 300];
+const CANTIDADES = [15, 50, 100, 150, 300];
 const POR_PAGINA = 10;
 
 const hoyYMD = () =>
@@ -36,7 +36,7 @@ export default function DocumentosCreadosSisged() {
     hasta: hoy,
     oficina: OFICINA_SISGED_POR_DEFECTO,
     tipo: "",
-    filas: 150,
+    filas: 15,
   });
   const [filas, setFilas] = useState<DocumentoCreado[]>([]);
   const [total, setTotal] = useState(0);

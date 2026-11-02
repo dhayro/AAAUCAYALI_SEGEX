@@ -330,7 +330,7 @@ exports.documentosCreados = async (req, res) => {
     }
     if (tipo && !/^\d+$/.test(String(tipo))) return res.status(400).json({ mensaje: 'Tipo de documento no válido' });
     if (oficina && !/^\d+$/.test(String(oficina))) return res.status(400).json({ mensaje: 'Oficina no válida' });
-    const cantidad = [50, 100, 150, 300].includes(Number(filas)) ? Number(filas) : 150;
+    const cantidad = [15, 50, 100, 150, 300].includes(Number(filas)) ? Number(filas) : 15;
     const datos = await sisgedSyncService.obtenerDocumentosCreados({ desde, hasta, tipo, oficina, filas: cantidad });
     res.json(datos);
   } catch (error) {
