@@ -35,7 +35,7 @@ export default function DocumentosCreadosSisged() {
     desde: `${hoy.slice(0, 8)}01`,
     hasta: hoy,
     oficina: OFICINA_SISGED_POR_DEFECTO,
-    tipo: "",
+    tipo: "129",
     filas: 15,
   });
   const [filas, setFilas] = useState<DocumentoCreado[]>([]);
