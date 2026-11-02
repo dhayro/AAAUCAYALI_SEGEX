@@ -396,14 +396,26 @@ const filaDocumentoCreado = (fila) => {
   };
 };
 
-// Todas las filas del rango: pide página por página (de `filas` en `filas`) hasta completar el total de SISGED.
+// Una página del reporte (lo que se ve en pantalla) o todas las páginas (para exportar a Excel).
 const MAX_PAGINAS_DOCUMENTOS_CREADOS = 200;
-async function obtenerDocumentosCreados({ desde, hasta, tipo = '', oficina = '', filas = 15 } = {}) {
+async function obtenerDocumentosCreados({ desde, hasta, tipo = '', oficina = '', filas = 15, pagina = 1, todas = false } = {}) {
   const token = await obtenerToken();
+
+  if (!todas) {
+    const data = await pedirPaginaDocumentosCreados(token, { desde, hasta, tipo, oficina, filas, pagina });
+    const total = Number(data.records) || 0;
+    return {
+      total,
+      pagina,
+      paginas: Math.max(1, Math.ceil(total / filas)),
+      filas: data.rows.map(filaDocumentoCreado),
+    };
+  }
+
   const lista = [];
   let total = 0;
-  for (let pagina = 1; pagina <= MAX_PAGINAS_DOCUMENTOS_CREADOS; pagina++) {
-    const data = await pedirPaginaDocumentosCreados(token, { desde, hasta, tipo, oficina, filas, pagina });
+  for (let p = 1; p <= MAX_PAGINAS_DOCUMENTOS_CREADOS; p++) {
+    const data = await pedirPaginaDocumentosCreados(token, { desde, hasta, tipo, oficina, filas, pagina: p });
     total = Number(data.records) || 0;
     const paginaFilas = data.rows.map(filaDocumentoCreado);
     lista.push(...paginaFilas);

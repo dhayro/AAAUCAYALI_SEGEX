@@ -20,6 +20,14 @@ interface DocumentoCreado {
   estado: string;
 }
 
+interface Filtros {
+  desde: string;
+  hasta: string;
+  oficina: string;
+  tipo: string;
+  filas: number;
+}
+
 const CANTIDADES = [15, 50, 100, 150, 300];
 
 const hoyYMD = () =>
@@ -27,35 +35,35 @@ const hoyYMD = () =>
 
 const selectClass = "w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700";
 
-// Reporte "Documentos creados" de SISGED: rango de fechas, oficina, tipo y cantidad de filas.
+// Reporte "Documentos creados" de SISGED: se trae página por página, con las filas elegidas.
 export default function DocumentosCreadosSisged() {
   const hoy = hoyYMD();
-  const [filtros, setFiltros] = useState({
+  const [filtros, setFiltros] = useState<Filtros>({
     desde: `${hoy.slice(0, 8)}01`,
     hasta: hoy,
     oficina: OFICINA_SISGED_POR_DEFECTO,
     tipo: "129",
     filas: 15,
   });
+  // Filtros de la última consulta: las páginas siguientes se piden con los mismos filtros.
+  const [consulta, setConsulta] = useState<Filtros | null>(null);
   const [filas, setFilas] = useState<DocumentoCreado[]>([]);
   const [total, setTotal] = useState(0);
-  const [consultado, setConsultado] = useState(false);
+  const [pagina, setPagina] = useState(1);
+  const [paginas, setPaginas] = useState(1);
   const [cargando, setCargando] = useState(false);
-  const [pagina, setPagina] = useState(0);
-  const [tamanoPagina, setTamanoPagina] = useState(15);
+  const [exportando, setExportando] = useState(false);
   const [cutAbierto, setCutAbierto] = useState<string | null>(null);
 
-  const consultar = async () => {
-    if (!filtros.desde || !filtros.hasta) return toast.error("Seleccione el rango de fechas");
-    if (filtros.desde > filtros.hasta) return toast.error("La fecha inicial no puede ser mayor que la final");
+  const traerPagina = async (base: Filtros, numero: number) => {
     setCargando(true);
     try {
-      const res = await api.post("/sisged/documentos-creados", filtros);
+      const res = await api.post("/sisged/documentos-creados", { ...base, pagina: numero });
       setFilas(res.data.filas || []);
       setTotal(res.data.total || 0);
-      setPagina(0);
-      setTamanoPagina(filtros.filas);
-      setConsultado(true);
+      setPaginas(res.data.paginas || 1);
+      setPagina(numero);
+      setConsulta(base);
     } catch (error: any) {
       toast.error(error.response?.data?.mensaje || "No se pudo consultar SISGED");
     } finally {
@@ -63,17 +71,35 @@ export default function DocumentosCreadosSisged() {
     }
   };
 
-  const exportarExcel = () => {
-    const encabezado = ["Nro CUT", "N° Documento", "Asunto", "Referencia", "Destinos", "Fecha Creación", "Tipo", "Estado"];
-    const datos = filas.map((f) => [f.cut, f.documento, f.asunto, f.referencia, f.destinos, f.fecha_creacion, f.tipo, f.estado]);
-    const hoja = XLSX.utils.aoa_to_sheet([encabezado, ...datos]);
-    const libro = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(libro, hoja, "Documentos");
-    XLSX.writeFile(libro, `Documentos-creados-SISGED-${filtros.desde}-${filtros.hasta}.xlsx`);
+  const consultar = () => {
+    if (!filtros.desde || !filtros.hasta) return toast.error("Seleccione el rango de fechas");
+    if (filtros.desde > filtros.hasta) return toast.error("La fecha inicial no puede ser mayor que la final");
+    traerPagina({ ...filtros }, 1);
   };
 
-  const paginaFilas = filas.slice(pagina * tamanoPagina, (pagina + 1) * tamanoPagina);
-  const totalPaginas = Math.max(1, Math.ceil(filas.length / tamanoPagina));
+  const irAPagina = (numero: number) => {
+    if (consulta) traerPagina(consulta, numero);
+  };
+
+  // Para el Excel se piden todas las páginas de SISGED del mismo rango.
+  const exportarExcel = async () => {
+    if (!consulta) return;
+    setExportando(true);
+    try {
+      const res = await api.post("/sisged/documentos-creados", { ...consulta, todas: true });
+      const todas: DocumentoCreado[] = res.data.filas || [];
+      const encabezado = ["Nro CUT", "N° Documento", "Asunto", "Referencia", "Destinos", "Fecha Creación", "Tipo", "Estado"];
+      const datos = todas.map((f) => [f.cut, f.documento, f.asunto, f.referencia, f.destinos, f.fecha_creacion, f.tipo, f.estado]);
+      const hoja = XLSX.utils.aoa_to_sheet([encabezado, ...datos]);
+      const libro = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(libro, hoja, "Documentos");
+      XLSX.writeFile(libro, `Documentos-creados-SISGED-${consulta.desde}-${consulta.hasta}.xlsx`);
+    } catch (error: any) {
+      toast.error(error.response?.data?.mensaje || "No se pudo exportar");
+    } finally {
+      setExportando(false);
+    }
+  };
 
   return (
     <>
@@ -130,15 +156,16 @@ export default function DocumentosCreadosSisged() {
           >
             {cargando ? "Consultando SISGED..." : "Consultar"}
           </button>
-          {filas.length > 0 && (
+          {consulta && total > 0 && (
             <button
               onClick={exportarExcel}
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+              disabled={exportando}
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
             >
-              Exportar Excel
+              {exportando ? "Preparando Excel..." : `Exportar Excel (${total} documentos)`}
             </button>
           )}
-          {consultado && (
+          {consulta && (
             <span className="text-sm text-gray-600 dark:text-gray-400">
               {filas.length} de {total} documento{total === 1 ? "" : "s"} en SISGED
             </span>
@@ -147,7 +174,7 @@ export default function DocumentosCreadosSisged() {
 
         <div className="overflow-hidden rounded-lg bg-white shadow dark:bg-gray-800">
           <div className="overflow-x-auto">
-            {!consultado ? (
+            {!consulta ? (
               <div className="p-12 text-center text-gray-500">Seleccione el rango y pulse Consultar</div>
             ) : filas.length === 0 ? (
               <div className="p-12 text-center text-gray-500">No hay documentos para estos filtros</div>
@@ -167,7 +194,7 @@ export default function DocumentosCreadosSisged() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                  {paginaFilas.map((f) => (
+                  {filas.map((f) => (
                     <tr key={f.id} className="align-top hover:bg-gray-50 dark:hover:bg-gray-700/50">
                       <td className="px-3 py-2 text-center">
                         {f.cut ? (
@@ -195,22 +222,22 @@ export default function DocumentosCreadosSisged() {
               </table>
             )}
           </div>
-          {filas.length > tamanoPagina && (
+          {consulta && paginas > 1 && (
             <div className="flex items-center justify-between border-t px-4 py-3 text-sm dark:border-gray-700">
               <span className="text-gray-600 dark:text-gray-400">
-                Página {pagina + 1} de {totalPaginas}
+                Página {pagina} de {paginas}
               </span>
               <div className="flex gap-2">
                 <button
-                  onClick={() => setPagina((p) => Math.max(0, p - 1))}
-                  disabled={pagina === 0}
+                  onClick={() => irAPagina(pagina - 1)}
+                  disabled={cargando || pagina <= 1}
                   className="rounded border border-gray-300 px-3 py-1 disabled:opacity-40 dark:border-gray-600"
                 >
                   Anterior
                 </button>
                 <button
-                  onClick={() => setPagina((p) => Math.min(totalPaginas - 1, p + 1))}
-                  disabled={pagina >= totalPaginas - 1}
+                  onClick={() => irAPagina(pagina + 1)}
+                  disabled={cargando || pagina >= paginas}
                   className="rounded border border-gray-300 px-3 py-1 disabled:opacity-40 dark:border-gray-600"
                 >
                   Siguiente
