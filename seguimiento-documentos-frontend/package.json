@@ -20,6 +20,7 @@
     "flatpickr": "^4.6.13",
     "i18next": "^26.4.0",
     "jsvectormap": "^1.7.0",
+    "jszip": "^3.10.2",
     "jwt-decode": "^4.0.0",
     "leaflet": "^1.9.4",
     "maplibre-gl": "^6.8.0",

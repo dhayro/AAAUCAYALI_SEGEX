@@ -7,7 +7,7 @@ import ExpedienteDetalleModal from "@/components/expedientes/ExpedienteDetalleMo
 import AsignadoExpedienteModal from "@/components/asignaciones/AsignadoExpedienteModal";
 import { formatFechaHora } from "@/components/expedientes/format";
 import api from "@/utils/api";
-import { UserCircleIcon } from "@/icons";
+import { UserCircleIcon, ChevronLeftIcon } from "@/icons";
 
 interface Expediente {
   id: number;
@@ -163,7 +163,7 @@ export default function Expedientes() {
                 {Math.min((pagination.pageIndex + 1) * pagination.pageSize, totalCount)}{" "}
                 de {totalCount}
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-nowrap items-center gap-4">
                 <select
                   value={pagination.pageSize}
                   onChange={(e) => setPagination({ pageIndex: 0, pageSize: Number(e.target.value) })}
@@ -172,22 +172,23 @@ export default function Expedientes() {
                   <option value={5}>5</option>
                   <option value={10}>10</option>
                   <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                  <option value={150}>150</option>
+                  <option value={200}>200</option>
                 </select>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setPagination((p) => ({ ...p, pageIndex: Math.max(0, p.pageIndex - 1) }))}
                     disabled={pagination.pageIndex === 0}
-                    className="rounded border border-gray-300 px-3 py-1 text-sm disabled:opacity-50"
-                  >
-                    ← Anterior
-                  </button>
+                   title="Anterior" aria-label="Anterior" className="inline-flex h-8 w-8 items-center justify-center rounded border border-gray-300 disabled:opacity-50 dark:border-gray-600"><ChevronLeftIcon className="h-4 w-4" /></button>
+                  <span className="whitespace-nowrap px-2 py-1 text-sm">
+                    {pagination.pageIndex + 1} / {Math.max(1, Math.ceil(totalCount / pagination.pageSize))}
+                  </span>
                   <button
                     onClick={() => setPagination((p) => ({ ...p, pageIndex: p.pageIndex + 1 }))}
                     disabled={(pagination.pageIndex + 1) * pagination.pageSize >= totalCount}
-                    className="rounded border border-gray-300 px-3 py-1 text-sm disabled:opacity-50"
-                  >
-                    Siguiente →
-                  </button>
+                   title="Siguiente" aria-label="Siguiente" className="inline-flex h-8 w-8 items-center justify-center rounded border border-gray-300 disabled:opacity-50 dark:border-gray-600"><ChevronLeftIcon className="h-4 w-4 rotate-180" /></button>
                 </div>
               </div>
             </div>

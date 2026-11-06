@@ -23,7 +23,7 @@ const LayoutContent: React.FC = () => {
         )}
       >
         <AppHeader />
-        <main className="mx-auto max-w-(--breakpoint-2xl) p-4 md:p-6">
+        <main className="mx-auto max-w-none p-4 md:p-6">
           <Outlet />
         </main>
       </div>

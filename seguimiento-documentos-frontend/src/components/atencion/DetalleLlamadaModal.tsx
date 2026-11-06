@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import SearchableSelect from "@/components/form/SearchableSelect";
 import Input from "@/components/form/input/InputField";
@@ -7,7 +8,8 @@ import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { formatFecha, formatFechaHora } from "@/components/expedientes/format";
 import api from "@/utils/api";
 import { puedeGestionarAsignaciones, usuarioActualId } from "@/utils/sesion";
-import { CloseIcon } from "@/icons";
+import { CloseIcon, HistoryIcon } from "@/icons";
+import BotonAccion from "@/components/common/BotonAccion";
 import { BadgePlazo, EditorPlazo } from "@/components/atencion/EditorPlazo";
 import { colorUsuario } from "@/utils/colorUsuario";
 
@@ -64,6 +66,7 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
   const usuarioId = usuarioActualId();
   const [llamada, setLlamada] = useState<any>(null);
   const [cargando, setCargando] = useState(true);
+  const [antecedentesOtra, setAntecedentesOtra] = useState<{ cut: string; antecedentes: any[] } | null>(null);
   const [catalogo, setCatalogo] = useState<any[]>([]);
   const [opcionesAcciones, setOpcionesAcciones] = useState<{ id: number; nombre: string }[]>([]);
 
@@ -121,8 +124,8 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
       setCatalogo(r.data);
       setOpcionesAcciones(r.data.slice(0, 10));
     });
-    if (gestiona) buscarUsuarios();
-  }, [cargar, gestiona]);
+    if (!soloLectura) buscarUsuarios();
+  }, [cargar, soloLectura]);
 
   const buscarUsuarios = async (filtro = "") => {
     const params: any = {};
@@ -254,11 +257,8 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
   };
 
   const subirArchivos = async (accion: any, archivos: FileList) => {
+    // Si no escribe qué contiene el archivo, el servidor usa su nombre.
     const descripcion = (descripciones[accion.id] || "").trim();
-    if (!descripcion) {
-      toast.error("Escriba qué contiene el archivo antes de subirlo");
-      return;
-    }
     setSubiendo(accion.id);
     try {
       for (const archivo of Array.from(archivos)) {
@@ -367,8 +367,26 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
     if (ok) setNuevaAccion({ id_accion: "", observacion: "" });
   };
 
+  // Solo los antecedentes de otro registro del mismo CUT, sin abrir la llamada completa.
+  const verAntecedentesDe = async (id: number) => {
+    try {
+      const res = await api.get(`/atenciones/llamadas/${id}`);
+      setAntecedentesOtra({ cut: res.data.cut, antecedentes: res.data.antecedentes || [] });
+    } catch {
+      toast.error("No se pudieron cargar los antecedentes");
+    }
+  };
+
   return (
     <>
+      {antecedentesOtra && createPortal(
+        <AntecedentesModal
+          cut={antecedentesOtra.cut}
+          antecedentes={antecedentesOtra.antecedentes}
+          onClose={() => setAntecedentesOtra(null)}
+        />,
+        document.body
+      )}
       <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-gray-900/50 p-4">
         <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-gray-800">
           <div className="flex items-center gap-3 bg-brand-600 px-5 py-3 text-white">
@@ -427,7 +445,8 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
                         {llamada.otras_del_cut.map((o: any) => {
                           const presencial = o.tipo_atencion === "PRESENCIAL";
                           return (
-                            <li key={o.id} className="rounded-lg bg-amber-50 p-2 text-sm dark:bg-amber-900/30">
+                            <li key={o.id} className="flex items-start justify-between gap-2 rounded-lg bg-amber-50 p-2 text-sm dark:bg-amber-900/30">
+                              <div>
                               <span
                                 className={`mr-2 rounded-full px-2 py-0.5 text-[11px] font-bold ${
                                   presencial
@@ -440,6 +459,13 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
                               <span className="font-semibold">{formatFechaHora(o.fecha_llamada)}</span> ·{" "}
                               {presencial ? "atendido" : "llamó"} <span className="font-semibold">{o.nombre_llamante}</span> ·{" "}
                               {o.respondido ? "Respondida" : "Sin respuesta"} · {nombre(o.responsable)} — {o.motivo}
+                              </div>
+                              <BotonAccion
+                                etiqueta="Ver antecedentes de esta llamada"
+                                icono={<HistoryIcon />}
+                                tono="primario"
+                                onClick={() => verAntecedentesDe(o.id)}
+                              />
                             </li>
                           );
                         })}
@@ -590,16 +616,11 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
                           </button>
                         )}
                       </div>
-                      {accion.observacion && accion.accion?.requiere_archivo && (
-                        <div className="text-sm text-gray-600 dark:text-gray-300">{accion.observacion}</div>
-                      )}
-                      {!accion.accion?.requiere_archivo && (
-                        <RespuestaAccion
-                          accion={accion}
-                          puedeEditar={!!puedeOperar && accion.estado !== "EJECUTADO"}
-                          onGuardado={cargar}
-                        />
-                      )}
+                      <RespuestaAccion
+                        accion={accion}
+                        puedeEditar={!!puedeOperar && accion.estado !== "EJECUTADO"}
+                        onGuardado={cargar}
+                      />
 
                       <div className="space-y-2">
                         {accion.accion?.requiere_archivo && (accion.archivos || []).length === 0 && (
@@ -682,7 +703,7 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
                             <Input
                               value={descripciones[accion.id] || ""}
                               onChange={(e) => setDescripciones((prev) => ({ ...prev, [accion.id]: e.target.value }))}
-                              placeholder="Qué contiene el archivo (obligatorio)"
+                              placeholder="Qué contiene el archivo (opcional: si lo deja vacío se usa el nombre del archivo)"
                             />
                           </div>
                           <label
@@ -731,7 +752,7 @@ export default function DetalleLlamadaModal({ llamadaId, onClose, onCambio, solo
                   )}
                 </section>
 
-                {gestiona && (
+                {!soloLectura && (
                   <section className="flex flex-wrap items-end gap-3 rounded-xl bg-white p-4 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700">
                     <div className="min-w-[16rem] flex-1">
                       <div className="mb-1 text-xs font-semibold uppercase text-gray-500">Reasignar a</div>

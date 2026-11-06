@@ -45,9 +45,15 @@ const visibleParaPerfil = (items: NavItem[]) => {
       .filter((item) => MENUS_PERSONAL.includes(item.key ?? ""))
       .map((item) => (item.subItems ? { ...item, subItems: item.subItems.filter((sub) => MENUS_PERSONAL.includes(sub.key ?? "")) } : item));
   }
-  return items.filter(
-    (item) => (!item.gestoresOnly || puedeGestionarAsignaciones()) && (!item.adminOnly || perfilActual() === "admin")
-  );
+  // Subopciones solo para el admin.
+  const soloAdmin = ["reporte-documentos-sisged"];
+  return items
+    .filter((item) => (!item.gestoresOnly || puedeGestionarAsignaciones()) && (!item.adminOnly || perfilActual() === "admin"))
+    .map((item) =>
+      item.subItems && perfilActual() !== "admin"
+        ? { ...item, subItems: item.subItems.filter((sub) => !soloAdmin.includes(sub.key ?? "")) }
+        : item
+    );
 };
 
 const navItems: NavItem[] = [

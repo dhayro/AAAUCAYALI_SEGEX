@@ -9,8 +9,7 @@ import {
   TrashBinIcon,
   PlusIcon,
   FolderIcon,
-  CloseIcon,
-} from "@/icons";
+  CloseIcon, ChevronLeftIcon } from "@/icons";
 
 interface Area {
   id: number;
@@ -462,7 +461,7 @@ export default function Areas() {
                 de {totalCount}
               </div>
 
-              <div className="flex items-center gap-4">
+              <div className="flex flex-nowrap items-center gap-4">
                 <select
                   value={pagination.pageSize}
                   onChange={(e) =>
@@ -470,9 +469,13 @@ export default function Areas() {
                   }
                   className="rounded border border-gray-300 bg-white px-3 py-1 text-sm dark:border-gray-600 dark:bg-gray-700"
                 >
-                  <option value={5}>5 por página</option>
-                  <option value={10}>10 por página</option>
-                  <option value={25}>25 por página</option>
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                  <option value={150}>150</option>
+                  <option value={200}>200</option>
                 </select>
 
                 <div className="flex gap-2">
@@ -481,10 +484,10 @@ export default function Areas() {
                       handleChangePage(Math.max(0, pagination.pageIndex - 1))
                     }
                     disabled={pagination.pageIndex === 0}
-                    className="rounded border border-gray-300 px-3 py-1 text-sm disabled:opacity-50 dark:border-gray-600"
-                  >
-                    ← Anterior
-                  </button>
+                   title="Anterior" aria-label="Anterior" className="inline-flex h-8 w-8 items-center justify-center rounded border border-gray-300 disabled:opacity-50 dark:border-gray-600"><ChevronLeftIcon className="h-4 w-4" /></button>
+                  <span className="whitespace-nowrap px-2 py-1 text-sm">
+                    {pagination.pageIndex + 1} / {Math.max(1, Math.ceil(totalCount / pagination.pageSize))}
+                  </span>
                   <button
                     onClick={() =>
                       handleChangePage(pagination.pageIndex + 1)
@@ -493,10 +496,7 @@ export default function Areas() {
                       (pagination.pageIndex + 1) * pagination.pageSize >=
                       totalCount
                     }
-                    className="rounded border border-gray-300 px-3 py-1 text-sm disabled:opacity-50 dark:border-gray-600"
-                  >
-                    Siguiente →
-                  </button>
+                   title="Siguiente" aria-label="Siguiente" className="inline-flex h-8 w-8 items-center justify-center rounded border border-gray-300 disabled:opacity-50 dark:border-gray-600"><ChevronLeftIcon className="h-4 w-4 rotate-180" /></button>
                 </div>
               </div>
             </div>

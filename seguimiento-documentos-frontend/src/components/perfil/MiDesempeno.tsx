@@ -1,6 +1,6 @@
 import DatePickerLima from "@/components/form/DatePickerLima";
 import { formatFecha, formatFechaHora } from "@/components/expedientes/format";
-import { DownloadIcon } from "@/icons";
+import { DownloadIcon, ChevronLeftIcon } from "@/icons";
 import api from "@/utils/api";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -117,20 +117,14 @@ function Paginador({ total, pagina, onCambio }: { total: number; pagina: number;
         <button
           onClick={() => onCambio(Math.max(0, pagina - 1))}
           disabled={pagina === 0}
-          className="rounded border border-gray-300 px-2 py-1 disabled:opacity-50 dark:border-gray-600"
-        >
-          ← Anterior
-        </button>
-        <span>
+         title="Anterior" aria-label="Anterior" className="inline-flex h-8 w-8 items-center justify-center rounded border border-gray-300 disabled:opacity-50 dark:border-gray-600"><ChevronLeftIcon className="h-4 w-4" /></button>
+        <span className="whitespace-nowrap">
           {pagina + 1} / {paginas}
         </span>
         <button
           onClick={() => onCambio(Math.min(paginas - 1, pagina + 1))}
           disabled={pagina + 1 >= paginas}
-          className="rounded border border-gray-300 px-2 py-1 disabled:opacity-50 dark:border-gray-600"
-        >
-          Siguiente →
-        </button>
+         title="Siguiente" aria-label="Siguiente" className="inline-flex h-8 w-8 items-center justify-center rounded border border-gray-300 disabled:opacity-50 dark:border-gray-600"><ChevronLeftIcon className="h-4 w-4 rotate-180" /></button>
       </div>
     </div>
   );

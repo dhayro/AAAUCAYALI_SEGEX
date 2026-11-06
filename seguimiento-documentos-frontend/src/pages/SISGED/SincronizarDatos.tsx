@@ -605,9 +605,9 @@ export default function SincronizarDatos() {
                       }}
                       className="border rounded px-2 py-1 dark:bg-gray-600 dark:border-gray-500 text-sm"
                     >
-                      <option value={15}>15 por página</option>
-                      <option value={20}>20 por página</option>
-                      <option value={50}>50 por página</option>
+                      <option value={15}>15</option>
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
                     </select>
                   </div>
                 </div>

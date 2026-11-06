@@ -11,6 +11,8 @@ import { formatFecha, formatFechaHora } from "@/components/expedientes/format";
 import { BadgePlazo } from "@/components/atencion/EditorPlazo";
 import api from "@/utils/api";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
+import BotonAccion from "@/components/common/BotonAccion";
+import { ChevronLeftIcon, EyeIcon, PlusIcon, TrashBinIcon } from "@/icons";
 
 interface Llamada {
   id: number;
@@ -125,6 +127,7 @@ export default function Llamadas() {
             onClick={() => setRegistrando(true)}
             className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
           >
+            <PlusIcon className="h-4 w-4" />
             Registrar llamada o atención
           </button>
         </div>
@@ -288,24 +291,24 @@ export default function Llamadas() {
                       </td>
                       <td className="px-6 py-4 text-center">
                         <div className="flex flex-wrap items-center justify-center gap-1">
-                          <button
+                          <BotonAccion
+                            etiqueta="Ver llamada"
+                            icono={<EyeIcon className="fill-current" />}
+                            tono="primario"
                             onClick={() => {
                               setDetalleAccion(undefined);
                               setDetalleId(l.id);
                             }}
-                            className="rounded border border-brand-600 px-2 py-1 text-xs font-semibold text-brand-600 hover:bg-brand-50 dark:border-brand-400 dark:text-brand-400 dark:hover:bg-gray-700"
-                          >
-                            Ver
-                          </button>
+                          />
                           {l.puede_eliminar && (
-                            <button
+                            <BotonAccion
+                              etiqueta="Eliminar"
+                              icono={<TrashBinIcon />}
+                              tono="peligro"
                               onClick={() => {
                                 setEliminarLlamada({ id: l.id, cut: l.cut });
                               }}
-                              className="rounded border border-red-300 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-300 dark:hover:bg-gray-700"
-                            >
-                              Eliminar
-                            </button>
+                            />
                           )}
                         </div>
                       </td>
@@ -324,7 +327,7 @@ export default function Llamadas() {
                 Mostrando {pagination.pageIndex * pagination.pageSize + 1}-
                 {Math.min((pagination.pageIndex + 1) * pagination.pageSize, totalCount)} de {totalCount}
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-nowrap items-center gap-4">
                 <select
                   value={pagination.pageSize}
                   onChange={(e) => setPagination({ pageIndex: 0, pageSize: Number(e.target.value) })}
@@ -333,21 +336,32 @@ export default function Llamadas() {
                   <option value={5}>5</option>
                   <option value={10}>10</option>
                   <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                  <option value={150}>150</option>
+                  <option value={200}>200</option>
                 </select>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setPagination((p) => ({ ...p, pageIndex: Math.max(0, p.pageIndex - 1) }))}
                     disabled={pagination.pageIndex === 0}
-                    className="rounded border border-gray-300 px-3 py-1 text-sm disabled:opacity-50"
+                    title="Anterior"
+                    aria-label="Anterior"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded border border-gray-300 disabled:opacity-50 dark:border-gray-600"
                   >
-                    ← Anterior
+                    <ChevronLeftIcon className="h-4 w-4" />
                   </button>
+                  <span className="whitespace-nowrap px-2 py-1 text-sm">
+                    {pagination.pageIndex + 1} / {Math.max(1, Math.ceil(totalCount / pagination.pageSize))}
+                  </span>
                   <button
                     onClick={() => setPagination((p) => ({ ...p, pageIndex: p.pageIndex + 1 }))}
                     disabled={(pagination.pageIndex + 1) * pagination.pageSize >= totalCount}
-                    className="rounded border border-gray-300 px-3 py-1 text-sm disabled:opacity-50"
+                    title="Siguiente"
+                    aria-label="Siguiente"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded border border-gray-300 disabled:opacity-50 dark:border-gray-600"
                   >
-                    Siguiente →
+                    <ChevronLeftIcon className="h-4 w-4 rotate-180" />
                   </button>
                 </div>
               </div>

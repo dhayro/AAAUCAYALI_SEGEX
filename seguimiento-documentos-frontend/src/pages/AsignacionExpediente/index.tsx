@@ -13,7 +13,7 @@ import { formatFecha, formatFechaHora } from "@/components/expedientes/format";
 import api from "@/utils/api";
 import * as XLSX from "xlsx";
 import { puedeGestionarAsignaciones, usuarioActualId } from "@/utils/sesion";
-import { PencilIcon, TrashBinIcon, PlusIcon, CloseIcon, CalendarPlusIcon, ChatBubbleIcon, HistoryIcon } from "@/icons";
+import { PencilIcon, TrashBinIcon, PlusIcon, CloseIcon, CalendarPlusIcon, ChatBubbleIcon, HistoryIcon, ChevronLeftIcon } from "@/icons";
 import BotonAccion from "@/components/common/BotonAccion";
 
 interface UsuarioResumen {
@@ -85,16 +85,20 @@ const diasEntre = (fecha: string, hoy: string) =>
     (Date.parse(`${fecha.slice(0, 10)}T00:00:00Z`) - Date.parse(`${hoy}T00:00:00Z`)) / 86400000
   );
 
-const vencimientoVigente = (a: Asignacion) =>
-  a.estado_prorroga === "ACEPTADA" ? a.fecha_vencimiento_prorroga : a.fecha_vencimiento;
+const vencimientoVigente = (a: Asignacion) => a.fecha_vencimiento_prorroga || a.fecha_vencimiento;
 
 const puedeProrrogar = (a: Asignacion) => {
-  if (a.estado_prorroga === "PENDIENTE" || a.estado_prorroga === "ACEPTADA") return false;
+  // Se puede pedir otra prórroga después de una aceptada; la ventana se cuenta desde el vencimiento vigente.
+  if (a.estado_prorroga === "PENDIENTE") return false;
   if (a.respuesta?.estado === "CERRADA" || a.respuesta?.estado === "REASIGNADA") return false;
   // Ventana: desde 5 días antes del vencimiento, y solo mientras el plazo no haya vencido.
-  const dias = diasEntre(a.fecha_vencimiento, hoyLima());
+  const dias = diasEntre(vencimientoVigente(a), hoyLima());
   return dias >= 0 && dias <= DIAS_PARA_PRORROGA;
 };
+
+// Quien puede pedir prórroga de una fila: el gestor o el dueño de la asignación.
+const puedeSeleccionarProrroga = (a: Asignacion) =>
+  puedeProrrogar(a) && (puedeGestionarAsignaciones() || a.id_usuario === usuarioActualId());
 
 const ESTADO_PRORROGA: Record<string, { texto: string; clases: string }> = {
   PENDIENTE: { texto: "Pendiente", clases: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100" },
@@ -864,7 +868,7 @@ export default function AsignacionExpediente() {
           <ExpedienteDetalleModal cut={cutAbierto} onClose={() => setCutAbierto(null)} />
         )}
 
-        {gestiona && seleccion.length > 0 && (
+        {seleccion.length > 0 && (
           <div className="flex flex-wrap items-center gap-3 rounded-lg border border-brand-200 bg-brand-50 p-3 dark:border-brand-800 dark:bg-brand-900/20">
             <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">
               {seleccion.length} seleccionada(s)
@@ -1027,17 +1031,17 @@ export default function AsignacionExpediente() {
                 <thead>
                   <tr className="border-b bg-gray-50 dark:bg-gray-700">
                     <th className="px-4 py-4 text-center">
-                      {gestiona && (
+                      {(
                       <input
                         type="checkbox"
                         aria-label="Seleccionar las que pueden pedir prórroga"
                         checked={
-                          asignaciones.some((a) => puedeProrrogar(a)) &&
-                          asignaciones.filter((a) => puedeProrrogar(a)).every((a) => seleccion.includes(a.id))
+                          asignaciones.some((a) => puedeSeleccionarProrroga(a)) &&
+                          asignaciones.filter((a) => puedeSeleccionarProrroga(a)).every((a) => seleccion.includes(a.id))
                         }
                         onChange={(e) =>
                           setSeleccion(
-                            e.target.checked ? asignaciones.filter((a) => puedeProrrogar(a)).map((a) => a.id) : []
+                            e.target.checked ? asignaciones.filter((a) => puedeSeleccionarProrroga(a)).map((a) => a.id) : []
                           )
                         }
                       />
@@ -1061,7 +1065,7 @@ export default function AsignacionExpediente() {
                   {asignaciones.map((a, index) => (
                     <tr key={a.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700">
                       <td className="px-4 py-4 text-center">
-                        {gestiona && puedeProrrogar(a) && (
+                        {puedeSeleccionarProrroga(a) && (
                           <input
                             type="checkbox"
                             aria-label={`Seleccionar ${a.cut}`}
@@ -1109,7 +1113,7 @@ export default function AsignacionExpediente() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-center text-sm">
-                        {a.estado_prorroga === "ACEPTADA" ? formatFecha(a.fecha_vencimiento_prorroga) : "—"}
+                        {a.fecha_vencimiento_prorroga ? formatFecha(a.fecha_vencimiento_prorroga) : "—"}
                       </td>
                       <td className="px-6 py-4 text-center text-sm">
                         <DiasRestantes a={a} />
@@ -1188,7 +1192,7 @@ export default function AsignacionExpediente() {
                 {Math.min((pagination.pageIndex + 1) * pagination.pageSize, totalCount)}{" "}
                 de {totalCount}
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-nowrap items-center gap-4">
                 <select
                   value={pagination.pageSize}
                   onChange={(e) =>
@@ -1199,6 +1203,10 @@ export default function AsignacionExpediente() {
                   <option value={5}>5</option>
                   <option value={10}>10</option>
                   <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                  <option value={150}>150</option>
+                  <option value={200}>200</option>
                 </select>
                 <div className="flex gap-2">
                   <button
@@ -1206,19 +1214,16 @@ export default function AsignacionExpediente() {
                       setPagination((p) => ({ ...p, pageIndex: Math.max(0, p.pageIndex - 1) }))
                     }
                     disabled={pagination.pageIndex === 0}
-                    className="rounded border border-gray-300 px-3 py-1 text-sm disabled:opacity-50"
-                  >
-                    ← Anterior
-                  </button>
+                   title="Anterior" aria-label="Anterior" className="inline-flex h-8 w-8 items-center justify-center rounded border border-gray-300 disabled:opacity-50 dark:border-gray-600"><ChevronLeftIcon className="h-4 w-4" /></button>
+                  <span className="whitespace-nowrap px-2 py-1 text-sm">
+                    {pagination.pageIndex + 1} / {Math.max(1, Math.ceil(totalCount / pagination.pageSize))}
+                  </span>
                   <button
                     onClick={() =>
                       setPagination((p) => ({ ...p, pageIndex: p.pageIndex + 1 }))
                     }
                     disabled={(pagination.pageIndex + 1) * pagination.pageSize >= totalCount}
-                    className="rounded border border-gray-300 px-3 py-1 text-sm disabled:opacity-50"
-                  >
-                    Siguiente →
-                  </button>
+                   title="Siguiente" aria-label="Siguiente" className="inline-flex h-8 w-8 items-center justify-center rounded border border-gray-300 disabled:opacity-50 dark:border-gray-600"><ChevronLeftIcon className="h-4 w-4 rotate-180" /></button>
                 </div>
               </div>
             </div>

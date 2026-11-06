@@ -4,7 +4,7 @@ import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import SearchableSelect from "@/components/form/SearchableSelect";
 import { formatFecha, formatFechaHora } from "@/components/expedientes/format";
-import { DownloadIcon } from "@/icons";
+import { DownloadIcon, ChevronLeftIcon } from "@/icons";
 import api from "@/utils/api";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -367,7 +367,7 @@ export default function ReporteAsignaciones() {
                 Mostrando {pagina.pageIndex * pagina.pageSize + 1}-
                 {Math.min((pagina.pageIndex + 1) * pagina.pageSize, filas.length)} de {filas.length}
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-nowrap items-center gap-4">
                 <select
                   value={pagina.pageSize}
                   onChange={(e) => setPagina({ pageIndex: 0, pageSize: Number(e.target.value) })}
@@ -376,25 +376,22 @@ export default function ReporteAsignaciones() {
                   <option value={10}>10</option>
                   <option value={25}>25</option>
                   <option value={50}>50</option>
+<option value={100}>100</option>
+<option value={150}>150</option>
+<option value={200}>200</option>
                 </select>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setPagina((p) => ({ ...p, pageIndex: Math.max(0, p.pageIndex - 1) }))}
                     disabled={pagina.pageIndex === 0}
-                    className="rounded border border-gray-300 px-3 py-1 text-sm disabled:opacity-50"
-                  >
-                    ← Anterior
-                  </button>
-                  <span className="px-2 py-1 text-sm">
+                   title="Anterior" aria-label="Anterior" className="inline-flex h-8 w-8 items-center justify-center rounded border border-gray-300 disabled:opacity-50 dark:border-gray-600"><ChevronLeftIcon className="h-4 w-4" /></button>
+                  <span className="px-2 py-1 text-sm whitespace-nowrap">
                     {pagina.pageIndex + 1} / {totalPaginas}
                   </span>
                   <button
                     onClick={() => setPagina((p) => ({ ...p, pageIndex: Math.min(totalPaginas - 1, p.pageIndex + 1) }))}
                     disabled={pagina.pageIndex + 1 >= totalPaginas}
-                    className="rounded border border-gray-300 px-3 py-1 text-sm disabled:opacity-50"
-                  >
-                    Siguiente →
-                  </button>
+                   title="Siguiente" aria-label="Siguiente" className="inline-flex h-8 w-8 items-center justify-center rounded border border-gray-300 disabled:opacity-50 dark:border-gray-600"><ChevronLeftIcon className="h-4 w-4 rotate-180" /></button>
                 </div>
               </div>
             </div>

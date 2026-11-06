@@ -22,6 +22,29 @@ const columnas: Columna[] = [
     excel: (f) => f.procedimiento,
   },
   {
+    titulo: "Usuario remitente",
+    celda: (f) => (
+      <span className="block max-w-xs truncate" title={f.usuario_remitente}>
+        {f.usuario_remitente || "—"}
+      </span>
+    ),
+    excel: (f) => f.usuario_remitente,
+  },
+  {
+    titulo: "Destino",
+    celda: (f) => (
+      <span className="block max-w-xs truncate" title={f.destino}>
+        {f.destino || "—"}
+      </span>
+    ),
+    excel: (f) => f.destino,
+  },
+  {
+    titulo: "Creado por",
+    celda: (f) => f.creado_por || "—",
+    excel: (f) => f.creado_por,
+  },
+  {
     titulo: "Fecha de registro",
     align: "center",
     celda: (f) => (f.fecha_registro ? formatFechaHora(f.fecha_registro) : "—"),
@@ -47,7 +70,7 @@ export default function ReporteExpedientesSinAsignar() {
       endpoint="/reportes/expedientes-sin-asignar"
       nombreArchivo="Reporte-Expedientes-Sin-Asignar"
       columnas={columnas}
-      anchoMinimo={1100}
+      anchoMinimo={1400}
       indicadores={[{ titulo: "Sin asignar", clave: "total", tono: "text-amber-600 dark:text-amber-400" }]}
     />
   );

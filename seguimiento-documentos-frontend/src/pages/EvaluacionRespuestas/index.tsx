@@ -1,12 +1,14 @@
 import PageMeta from "@/components/common/PageMeta";
 import { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import RespuestasAsignacionModal from "@/components/asignaciones/RespuestasAsignacionModal";
 import { formatFecha, formatFechaHora } from "@/components/expedientes/format";
-import { CloseIcon, ChatBubbleIcon, ClipboardCheckIcon } from "@/icons";
+import { ChevronLeftIcon, CloseIcon, ChatBubbleIcon } from "@/icons";
 import BotonAccion from "@/components/common/BotonAccion";
+import ExpedienteDetalleModal from "@/components/expedientes/ExpedienteDetalleModal";
 import SearchableSelect from "@/components/form/SearchableSelect";
 import api from "@/utils/api";
 
@@ -75,7 +77,9 @@ export default function EvaluacionRespuestas() {
   const [loading, setLoading] = useState(true);
   const [filtroCut, setFiltroCut] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("POR_EVALUAR");
+  const [pagina, setPagina] = useState({ pageIndex: 0, pageSize: 10 });
   const [respuestasDe, setRespuestasDe] = useState<FilaEvaluable | null>(null);
+  const [cutAbierto, setCutAbierto] = useState<string | null>(null);
   const [evaluando, setEvaluando] = useState<FilaEvaluable | null>(null);
   const [formEvaluacion, setFormEvaluacion] = useState<{ resultado: "APROBADA" | "OBSERVADA" | "REASIGNADA"; observacion: string }>({
     resultado: "APROBADA",
@@ -88,6 +92,7 @@ export default function EvaluacionRespuestas() {
 
   const fetchFilas = useCallback(async () => {
     setLoading(true);
+    setPagina((p) => ({ ...p, pageIndex: 0 }));
     try {
       const res = await api.get("/evaluaciones-asignacion", {
         params: { estado: filtroEstado || undefined, cut: filtroCut.trim() || undefined },
@@ -107,7 +112,8 @@ export default function EvaluacionRespuestas() {
     return () => clearTimeout(espera);
   }, [fetchFilas]);
 
-  const filasVisibles = filas;
+  const totalPaginas = Math.max(1, Math.ceil(filas.length / pagina.pageSize));
+  const filasVisibles = filas.slice(pagina.pageIndex * pagina.pageSize, (pagina.pageIndex + 1) * pagina.pageSize);
 
   const buscarUsuariosReasig = useCallback(async (filtro = "") => {
     try {
@@ -168,6 +174,7 @@ export default function EvaluacionRespuestas() {
 
   return (
     <>
+      {cutAbierto && <ExpedienteDetalleModal cut={cutAbierto} onClose={() => setCutAbierto(null)} />}
       <PageMeta title="Evaluación de Respuestas | Sistema de Seguimiento" description="Evaluación de respuestas de asignaciones" />
       <div className="space-y-6">
         <div>
@@ -239,7 +246,15 @@ export default function EvaluacionRespuestas() {
                 <tbody>
                   {filasVisibles.map((f) => (
                     <tr key={f.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <td className="px-6 py-4 font-medium">{f.cut}</td>
+                      <td className="px-6 py-4 font-medium">
+                        <button
+                          onClick={() => setCutAbierto(f.cut)}
+                          title="Ver expediente"
+                          className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+                        >
+                          {f.cut}
+                        </button>
+                      </td>
                       <td className="px-6 py-4 text-sm">
                         <div>{nombre(f.asignado)}</div>
                         {f.asignado?.Cargo && <div className="text-xs text-gray-500">{f.asignado.Cargo.nombre}</div>}
@@ -268,14 +283,6 @@ export default function EvaluacionRespuestas() {
                             tono="primario"
                             onClick={() => setRespuestasDe(f)}
                           />
-                          {f.estado !== "CERRADA" && (
-                            <BotonAccion
-                              etiqueta="Evaluar"
-                              icono={<ClipboardCheckIcon />}
-                              tono="alerta"
-                              onClick={() => abrirEvaluacion(f)}
-                            />
-                          )}
                         </div>
                       </td>
                     </tr>
@@ -286,6 +293,49 @@ export default function EvaluacionRespuestas() {
               <div className="p-12 text-center text-gray-500">No hay respuestas para evaluar con este filtro</div>
             )}
           </div>
+          {filas.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 text-sm dark:border-gray-700">
+              <span className="text-gray-600 dark:text-gray-400">
+                Mostrando {pagina.pageIndex * pagina.pageSize + 1}-{Math.min((pagina.pageIndex + 1) * pagina.pageSize, filas.length)} de {filas.length}
+              </span>
+              <div className="flex flex-nowrap items-center gap-4">
+                <select
+                  value={pagina.pageSize}
+                  onChange={(e) => setPagina({ pageIndex: 0, pageSize: Number(e.target.value) })}
+                  className={selectClass}
+                >
+                  {[10, 25, 50, 100, 150, 200].map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPagina((p) => ({ ...p, pageIndex: Math.max(0, p.pageIndex - 1) }))}
+                    disabled={pagina.pageIndex === 0}
+                    title="Anterior"
+                    aria-label="Anterior"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded border border-gray-300 disabled:opacity-50 dark:border-gray-600"
+                  >
+                    <ChevronLeftIcon className="h-4 w-4" />
+                  </button>
+                  <span className="px-2 py-1 whitespace-nowrap">
+                    {pagina.pageIndex + 1} / {totalPaginas}
+                  </span>
+                  <button
+                    onClick={() => setPagina((p) => ({ ...p, pageIndex: Math.min(totalPaginas - 1, p.pageIndex + 1) }))}
+                    disabled={pagina.pageIndex + 1 >= totalPaginas}
+                    title="Siguiente"
+                    aria-label="Siguiente"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded border border-gray-300 disabled:opacity-50 dark:border-gray-600"
+                  >
+                    <ChevronLeftIcon className="h-4 w-4 rotate-180" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -297,10 +347,19 @@ export default function EvaluacionRespuestas() {
           estadoRespuesta={respuestasDe.estado}
           onCambio={fetchFilas}
           onClose={() => setRespuestasDe(null)}
+          onEvaluar={
+            respuestasDe.estado !== "CERRADA"
+              ? () => {
+                  const fila = respuestasDe;
+                  setRespuestasDe(null);
+                  abrirEvaluacion(fila);
+                }
+              : undefined
+          }
         />
       )}
 
-      {evaluando && (
+      {evaluando && createPortal(
         <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/50 p-4">
           <div className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-lg bg-white shadow-2xl dark:bg-gray-800">
             <div className="flex shrink-0 items-center justify-between border-b p-6 dark:border-gray-700">
@@ -425,7 +484,7 @@ export default function EvaluacionRespuestas() {
             </form>
           </div>
         </div>
-      )}
+      , document.body)}
     </>
   );
 }

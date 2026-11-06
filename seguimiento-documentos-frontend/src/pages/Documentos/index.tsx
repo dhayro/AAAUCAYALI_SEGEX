@@ -1,4 +1,5 @@
 import PageMeta from "@/components/common/PageMeta";
+import { ChevronLeftIcon } from "@/icons";
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import Input from "@/components/form/input/InputField";
@@ -419,29 +420,47 @@ export default function Documentos() {
             Mostrando {asignaciones.length > 0 ? pagination.pageIndex * pagination.pageSize + 1 : 0} a{" "}
             {Math.min((pagination.pageIndex + 1) * pagination.pageSize, totalCount)} de {totalCount}
           </div>
-          <div className="flex gap-2">
-            <Button
-              onClick={() => setPagination((p) => ({ ...p, pageIndex: Math.max(0, p.pageIndex - 1) }))}
-              disabled={pagination.pageIndex === 0}
-              size="sm"
+          <div className="flex flex-nowrap items-center gap-4">
+            <select
+              value={pagination.pageSize}
+              onChange={(e) => setPagination({ pageIndex: 0, pageSize: Number(e.target.value) })}
+              className="rounded border border-gray-300 bg-white px-3 py-1 text-sm dark:border-gray-600 dark:bg-gray-700"
             >
-              Anterior
-            </Button>
-            <Button
-              onClick={() =>
-                setPagination((p) => ({
-                  ...p,
-                  pageIndex: Math.min(
-                    p.pageIndex + 1,
-                    Math.ceil(totalCount / pagination.pageSize) - 1
-                  ),
-                }))
-              }
-              disabled={(pagination.pageIndex + 1) * pagination.pageSize >= totalCount}
-              size="sm"
-            >
-              Siguiente
-            </Button>
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+              <option value={150}>150</option>
+              <option value={200}>200</option>
+            </select>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPagination((p) => ({ ...p, pageIndex: Math.max(0, p.pageIndex - 1) }))}
+                disabled={pagination.pageIndex === 0}
+                title="Anterior"
+                aria-label="Anterior"
+                className="inline-flex h-8 w-8 items-center justify-center rounded border border-gray-300 disabled:opacity-50 dark:border-gray-600"
+              >
+                <ChevronLeftIcon className="h-4 w-4" />
+              </button>
+                  <span className="whitespace-nowrap px-2 py-1 text-sm">
+                    {pagination.pageIndex + 1} / {Math.max(1, Math.ceil(totalCount / pagination.pageSize))}
+                  </span>
+              <button
+                onClick={() =>
+                  setPagination((p) => ({
+                    ...p,
+                    pageIndex: Math.min(p.pageIndex + 1, Math.ceil(totalCount / pagination.pageSize) - 1),
+                  }))
+                }
+                disabled={(pagination.pageIndex + 1) * pagination.pageSize >= totalCount}
+                title="Siguiente"
+                aria-label="Siguiente"
+                className="inline-flex h-8 w-8 items-center justify-center rounded border border-gray-300 disabled:opacity-50 dark:border-gray-600"
+              >
+                <ChevronLeftIcon className="h-4 w-4 rotate-180" />
+              </button>
+            </div>
           </div>
         </div>
       </div>

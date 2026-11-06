@@ -51,6 +51,7 @@ import SISGED from "./pages/SISGED";
 import ImportarSISGED from "./pages/ImportarSISGED";
 import SincronizarDatos from "./pages/SISGED/SincronizarDatos";
 import AdminTokens from "./pages/SISGED/AdminTokens";
+import { perfilActual } from "./utils/sesion";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem("token");
@@ -114,7 +115,7 @@ export default function App() {
             <Route path="/reporte-acciones" element={<ReporteAcciones />} />
             <Route path="/reporte-historial" element={<ReporteHistorialCut />} />
             <Route path="/reporte-resumen" element={<ReporteResumen />} />
-            <Route path="/reporte-documentos-sisged" element={<DocumentosCreadosSisged />} />
+            <Route path="/reporte-documentos-sisged" element={perfilActual() === "admin" ? <DocumentosCreadosSisged /> : <Navigate to="/" replace />} />
             <Route path="/mi-desempeno" element={<MiDesempenoPagina />} />
             <Route path="/consulta-persona" element={<ConsultaPersona />} />
             <Route path="/expedientes" element={<Expedientes />} />

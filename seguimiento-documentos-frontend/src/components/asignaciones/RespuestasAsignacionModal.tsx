@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import Input from "@/components/form/input/InputField";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
@@ -7,7 +8,7 @@ import { formatFechaHora } from "@/components/expedientes/format";
 import api from "@/utils/api";
 import { colorUsuario } from "@/utils/colorUsuario";
 import { puedeGestionarAsignaciones, usuarioActualId } from "@/utils/sesion";
-import { CloseIcon } from "@/icons";
+import { CloseIcon, ClipboardCheckIcon } from "@/icons";
 
 type Evaluacion = {
   resultado: string;
@@ -23,6 +24,8 @@ type Props = {
   soloLectura?: boolean;
   ultimaEvaluacion?: Evaluacion | null;
   estadoRespuesta?: string | null;
+  // Si se indica, la ventana muestra el botón para evaluar la respuesta desde aquí.
+  onEvaluar?: () => void;
 };
 
 type Archivo = { id: number; descripcion: string; nombre_original: string; mimetype?: string; fecha_subida: string };
@@ -38,6 +41,7 @@ export default function RespuestasAsignacionModal({
   soloLectura = false,
   ultimaEvaluacion = null,
   estadoRespuesta = null,
+  onEvaluar,
 }: Props) {
   const gestiona = puedeGestionarAsignaciones();
   const usuarioId = usuarioActualId();
@@ -48,6 +52,7 @@ export default function RespuestasAsignacionModal({
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [descripciones, setDescripciones] = useState<Record<number, string>>({});
+  const [editandoRespuesta, setEditandoRespuesta] = useState<{ id: number; texto: string } | null>(null);
   const [subiendo, setSubiendo] = useState<number | null>(null);
   const [visor, setVisor] = useState<{ titulo: string; url: string | null; cargando: boolean; error: string } | null>(null);
   const [eliminando, setEliminando] = useState<Archivo | null>(null);
@@ -111,9 +116,22 @@ export default function RespuestasAsignacionModal({
   const reemplazarEnLista = (actualizada: Respuesta) =>
     setRespuestas((prev) => prev.map((r) => (r.id === actualizada.id ? actualizada : r)));
 
+  const guardarRespuesta = async () => {
+    if (!editandoRespuesta) return;
+    if (!editandoRespuesta.texto.trim()) return toast.error("Escriba la respuesta o avance");
+    try {
+      const res = await api.patch(`/asignaciones-expediente/respuestas/${editandoRespuesta.id}`, { texto: editandoRespuesta.texto });
+      setRespuestas(res.data || []);
+      setEditandoRespuesta(null);
+      toast.success("Respuesta actualizada");
+    } catch (error: any) {
+      toast.error(error.response?.data?.mensaje || "No se pudo guardar la respuesta");
+    }
+  };
+
   const subirArchivos = async (respuesta: Respuesta, archivos: FileList) => {
+    // Si no escribe qué contiene el archivo, el servidor usa su nombre.
     const descripcion = (descripciones[respuesta.id] || "").trim();
-    if (!descripcion) return toast.error("Describa qué contiene el archivo antes de subirlo");
     setSubiendo(respuesta.id);
     try {
       for (const archivo of Array.from(archivos)) {
@@ -210,7 +228,8 @@ export default function RespuestasAsignacionModal({
     }
   };
 
-  return (
+  // Se dibuja directamente en el body para quedar por encima del modal que lo abrió.
+  return createPortal(
     <>
       <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-gray-900/50 p-4">
         <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-gray-800">
@@ -218,7 +237,16 @@ export default function RespuestasAsignacionModal({
             <span className="text-[10px] font-semibold uppercase tracking-widest text-white/70">Respuestas</span>
             <h2 className="text-lg font-bold">{asignacion.cut}</h2>
             <span className="text-xs text-white/70">{respuestas.length} registradas</span>
-            <button onClick={onClose} className="ml-auto rounded-full p-1 text-white/80 hover:bg-white/20 hover:text-white">
+            {onEvaluar && (
+              <button
+                onClick={onEvaluar}
+                className="ml-auto inline-flex items-center gap-2 rounded-lg border border-amber-500 bg-amber-100 px-3 py-1.5 text-sm font-semibold text-amber-700 hover:bg-amber-200 dark:border-amber-400 dark:bg-amber-900/40 dark:text-amber-300"
+              >
+                <ClipboardCheckIcon className="h-4 w-4" />
+                Evaluar respuesta
+              </button>
+            )}
+            <button onClick={onClose} className="ml-2 rounded-full p-1 text-white/80 hover:bg-white/20 hover:text-white">
               <CloseIcon className="h-5 w-5" />
             </button>
           </div>
@@ -291,7 +319,39 @@ export default function RespuestasAsignacionModal({
                       </span>
                     )}
                   </div>
-                  <div className="whitespace-pre-wrap break-words text-sm text-gray-900 dark:text-white">{r.texto}</div>
+                  {editandoRespuesta?.id === r.id ? (
+                    <div className="space-y-2">
+                      <textarea
+                        value={editandoRespuesta.texto}
+                        onChange={(e) => setEditandoRespuesta({ id: r.id, texto: e.target.value })}
+                        rows={3}
+                        className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700"
+                      />
+                      <div className="flex gap-2">
+                        <button onClick={guardarRespuesta} className="rounded bg-brand-500 px-3 py-1 text-xs font-semibold text-white hover:bg-brand-600">
+                          Guardar
+                        </button>
+                        <button
+                          onClick={() => setEditandoRespuesta(null)}
+                          className="rounded border border-gray-300 px-3 py-1 text-xs text-gray-600 dark:border-gray-600 dark:text-gray-300"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="whitespace-pre-wrap break-words text-sm text-gray-900 dark:text-white">{r.texto}</div>
+                      {puedeEscribir && (
+                        <button
+                          onClick={() => setEditandoRespuesta({ id: r.id, texto: r.texto })}
+                          className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300"
+                        >
+                          Editar respuesta
+                        </button>
+                      )}
+                    </>
+                  )}
 
                   {r.archivos.length > 0 && (
                     <div className="space-y-2">
@@ -377,7 +437,7 @@ export default function RespuestasAsignacionModal({
                         <Input
                           value={descripciones[r.id] || ""}
                           onChange={(e) => setDescripciones((prev) => ({ ...prev, [r.id]: e.target.value }))}
-                          placeholder="Qué contiene el archivo (obligatorio)"
+                          placeholder="Qué contiene el archivo (opcional: si lo deja vacío se usa el nombre del archivo)"
                         />
                       </div>
                       <label
@@ -442,6 +502,7 @@ export default function RespuestasAsignacionModal({
         onConfirmar={enviarRevision}
         onCancelar={() => setConfirmandoEnvio(false)}
       />
-    </>
+    </>,
+    document.body
   );
 }

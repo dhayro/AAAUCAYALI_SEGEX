@@ -98,7 +98,7 @@ export default function AsignadoExpedienteModal({ cut, onClose }: Props) {
                       )}
                     </td>
                     <td className="whitespace-nowrap px-4 py-2 text-center">
-                      {a.estado_prorroga === "ACEPTADA" ? formatFecha(a.fecha_vencimiento_prorroga) : "—"}
+                      {a.fecha_vencimiento_prorroga ? formatFecha(a.fecha_vencimiento_prorroga) : "—"}
                     </td>
                     <td className="px-4 py-2 text-center">
                       <button
