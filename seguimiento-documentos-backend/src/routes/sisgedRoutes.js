@@ -1,7 +1,9 @@
 const express = require('express');
 const sisgedController = require('../controllers/sisgedController');
 const sisgedTokenController = require('../controllers/sisgedTokenController');
-const { authenticateToken, isSecretariaOrAbove } = require('../middleware/auth');
+const { authenticateToken, isAdmin } = require('../middleware/auth');
+const multer = require('multer');
+const subirZip = multer({ storage: multer.memoryStorage(), limits: { fileSize: 300 * 1024 * 1024 } });
 
 const router = express.Router();
 
@@ -117,9 +119,14 @@ router.post('/test-post', (req, res) => {
  */
 router.post('/sincronizar', sisgedController.sincronizar);
 
-router.post('/sincronizar-con-parametros', sisgedController.sincronizarConParametros);
+// Con token: el filtro por destino depende de si quien consulta es admin.
+router.post('/sincronizar-con-parametros', authenticateToken, sisgedController.sincronizarConParametros);
 // Documentos creados (reporte de SISGED): solo gestores.
-router.post('/documentos-creados', authenticateToken, isSecretariaOrAbove, sisgedController.documentosCreados);
+router.post('/documentos-creados', authenticateToken, isAdmin, sisgedController.documentosCreados);
+// Descarga masiva de PDF (ZIP) de los documentos elegidos: solo gestores.
+router.post('/documentos-creados/descargar', authenticateToken, isAdmin, sisgedController.descargarDocumentos);
+// Analiza los PDF de un ZIP descargado del reporte y devuelve los datos para el Excel: solo gestores.
+router.post('/analizar-zip', authenticateToken, isAdmin, subirZip.single('archivo'), sisgedController.analizarZip);
 
 /**
  * @swagger

@@ -91,7 +91,7 @@ exports.obtenerTodas = async (req, res) => {
     if (estado_prorroga) whereClause.estado_prorroga = normalizarTexto(estado_prorroga);
 
     // Vencimiento vigente (la prórroga aceptada reemplaza al vencimiento original). Más urgente primero; sin fecha al final.
-    const vencimientoVigenteSql = "(CASE WHEN estado_prorroga = 'ACEPTADA' THEN fecha_vencimiento_prorroga ELSE fecha_vencimiento END)";
+    const vencimientoVigenteSql = '(COALESCE(fecha_vencimiento_prorroga, fecha_vencimiento))';
     const orden = [
       [sequelize.literal(`${vencimientoVigenteSql} IS NULL`), 'ASC'],
       [sequelize.literal(vencimientoVigenteSql), 'ASC'],
@@ -382,8 +382,10 @@ exports.actualizar = async (req, res) => {
     cambios.fecha_asignacion = fechaAsignacion;
     cambios.plazo_atencion = plazo;
     cambios.fecha_vencimiento = sumarDiasCalendario(fechaAsignacion, plazo);
-    if (actual.estado_prorroga === 'ACEPTADA') {
-      cambios.fecha_vencimiento_prorroga = sumarDiasCalendario(cambios.fecha_vencimiento, actual.plazo_prorroga);
+    // La fecha vigente de prórroga se mueve con la fecha de vencimiento (misma distancia en días).
+    if (actual.fecha_vencimiento_prorroga) {
+      const movimiento = Math.round((Date.parse(`${String(cambios.fecha_vencimiento).slice(0, 10)}T00:00:00Z`) - Date.parse(`${String(actual.fecha_vencimiento).slice(0, 10)}T00:00:00Z`)) / 86400000);
+      cambios.fecha_vencimiento_prorroga = sumarDiasCalendario(actual.fecha_vencimiento_prorroga, movimiento);
     }
 
     // Auditoría: cada campo que cambió queda con su valor anterior y el nuevo. Se calcula antes de actualizar.
@@ -433,14 +435,14 @@ const DIAS_PARA_PRORROGA = 5;
 const diasHastaVencimiento = (fecha) =>
   Math.round((Date.parse(`${String(fecha).slice(0, 10)}T00:00:00Z`) - Date.parse(`${hoyLima()}T00:00:00Z`)) / 86400000);
 
+// Vence en la fecha vigente: la de la última prórroga aceptada, o la original si no hay ninguna.
+const vencimientoVigente = (a) => a.fecha_vencimiento_prorroga || a.fecha_vencimiento;
+
 const solicitarProrroga = async (actual, datos, userId) => {
   if (actual.estado_prorroga === 'PENDIENTE') {
     throw errorConEstado('Ya hay una prórroga pendiente de aceptación');
   }
-  if (actual.estado_prorroga === 'ACEPTADA') {
-    throw errorConEstado('La asignación ya tiene una prórroga aceptada');
-  }
-  const diasRestantes = diasHastaVencimiento(actual.fecha_vencimiento);
+  const diasRestantes = diasHastaVencimiento(vencimientoVigente(actual));
   if (diasRestantes < 0) {
     throw errorConEstado('El plazo ya venció: no se puede solicitar prórroga');
   }
@@ -460,7 +462,6 @@ const solicitarProrroga = async (actual, datos, userId) => {
     plazo_prorroga: plazo,
     estado_prorroga: 'PENDIENTE',
     motivo_prorroga: motivo,
-    fecha_vencimiento_prorroga: null,
     id_usuario_modificador: userId,
   });
   await HistorialAsignacion.create({
@@ -485,7 +486,7 @@ const aceptarProrrogaPendiente = async (actual, datos, userId) => {
   await actual.update({
     plazo_prorroga: plazo,
     estado_prorroga: 'ACEPTADA',
-    fecha_vencimiento_prorroga: sumarDiasCalendario(actual.fecha_vencimiento, plazo),
+    fecha_vencimiento_prorroga: sumarDiasCalendario(vencimientoVigente(actual), plazo),
     id_usuario_modificador: userId,
   });
   await HistorialAsignacion.create({
@@ -509,7 +510,6 @@ const rechazarProrrogaPendiente = async (actual, datos, userId) => {
 
   await actual.update({
     estado_prorroga: 'RECHAZADA',
-    fecha_vencimiento_prorroga: null,
     id_usuario_modificador: userId,
   });
   await HistorialAsignacion.create({
@@ -549,7 +549,7 @@ const accionMasiva = (accion) => async (req, res) => {
     try {
       const actual = await AsignacionExpediente.findByPk(id);
       if (!actual) throw errorConEstado('Asignación no encontrada');
-      await accion(actual, req.body, req.user.id);
+      await accion(actual, req.body, req.user.id, req.user);
       ok.push(id);
     } catch (error) {
       errores.push({ id, mensaje: error.message });
@@ -568,7 +568,14 @@ exports.prorrogar = async (req, res) => {
 };
 exports.aceptarProrroga = accionIndividual(aceptarProrrogaPendiente);
 exports.rechazarProrroga = accionIndividual(rechazarProrrogaPendiente);
-exports.prorrogarMasivo = accionMasiva(solicitarProrroga);
+// Cada asignación se revisa como en la prórroga individual: el dueño o un gestor.
+const solicitarProrrogaPropia = async (actual, datos, userId, usuario) => {
+  if (!puedeVerTodas(usuario) && actual.id_usuario !== usuario.id) {
+    throw errorConEstado('Solo el usuario asignado o un gestor puede solicitar la prórroga');
+  }
+  return solicitarProrroga(actual, datos, userId);
+};
+exports.prorrogarMasivo = accionMasiva(solicitarProrrogaPropia);
 exports.aceptarProrrogaMasivo = accionMasiva(aceptarProrrogaPendiente);
 exports.rechazarProrrogaMasivo = accionMasiva(rechazarProrrogaPendiente);
 

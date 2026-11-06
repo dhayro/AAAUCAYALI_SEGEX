@@ -115,14 +115,37 @@ const respuestaDeArchivo = async (id) => {
   return { respuesta, asignacion };
 };
 
+// El texto de la respuesta lo corrige el usuario asignado o un gestor, mientras la asignación no esté cerrada ni reasignada.
+exports.editarRespuesta = async (req, res) => {
+  try {
+    const { respuesta, asignacion } = await respuestaDeArchivo(req.params.id);
+    if (!respuesta || !asignacion || !(await puedeVer(asignacion, req.user))) {
+      throw errorConEstado('Respuesta no encontrada', 404);
+    }
+    if (reasignada(asignacion)) throw errorReasignada();
+    if (await cerrada(asignacion)) throw errorCerrada();
+    if (!puedeOperar(asignacion, req.user)) {
+      throw errorConEstado('Solo el usuario asignado o un gestor puede editar la respuesta', 403);
+    }
+    const texto = textoMayuscula(req.body.texto);
+    if (!texto) throw errorConEstado('Escriba la respuesta o avance');
+
+    await respuesta.update({ texto });
+    await registrarEvento(asignacion.id, req.user.id, 'RESPUESTA_EDITADA', texto);
+    res.json(await listarRespuestasDe(await idsDeCadena(asignacion)));
+  } catch (error) {
+    res.status(error.status || 400).json({ mensaje: error.message });
+  }
+};
+
 exports.subirArchivo = async (req, res) => {
   const limpiarTemporal = () => {
     if (req.file) fs.unlink(req.file.path, () => {});
   };
   try {
     if (!req.file) throw errorConEstado('Seleccione un archivo para subir');
-    const descripcion = textoMayuscula(req.body.descripcion);
-    if (!descripcion) throw errorConEstado('Describa qué contiene el archivo antes de subirlo');
+    // Si no se describe el archivo, se usa su nombre.
+    const descripcion = textoMayuscula(req.body.descripcion) || textoMayuscula(req.file.originalname);
 
     const { respuesta, asignacion } = await respuestaDeArchivo(req.params.id);
     if (!respuesta || !asignacion || !(await puedeVer(asignacion, req.user))) {

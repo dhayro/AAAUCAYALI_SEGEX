@@ -2,6 +2,7 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const { convertirFechaSisged } = require('../utils/fechas');
+const { extraerCodigosDestino } = require('./destinosService');
 
 const textoMayuscula = (valor) => (valor === undefined || valor === null || valor === '' ? null : String(valor).trim().toUpperCase());
 
@@ -390,6 +391,7 @@ const filaDocumentoCreado = (fila) => {
     asunto: c[6] || '',
     referencia: c[7] || '',
     destinos: String(c[8] || '').replace(/\r/g, '').trim(),
+    destino_codigos: extraerCodigosDestino(c[8]),
     fecha_creacion: c[9] || '',
     tipo: c[10] || '',
     estado: c[11] || '',
@@ -424,9 +426,56 @@ async function obtenerDocumentosCreados({ desde, hasta, tipo = '', oficina = '',
   return { total: total || lista.length, filas: lista };
 }
 
+// Descarga masiva: SISGED arma un ZIP con los PDF de los documentos (ids del reporte) en dos pasos.
+const SISGED_DESCARGA_MASIVA_URL = 'https://sisged.ana.gob.pe/SISGED/Recursos/Descarga/FrmDescargaMasivo.aspx';
+const SISGED_DESCARGA_CERRAR_URL = 'https://sisged.ana.gob.pe/SISGED/Recursos/Descarga/FrmDescargaCerrar.aspx';
+// SISGED entrega como máximo 20 documentos por descarga; el navegador une las tandas.
+const MAX_DOCUMENTOS_DESCARGA = 20;
+
+// Valor de un campo oculto del HTML: <input ... id="hdfCodigo" value="...">
+const valorDeCampoOculto = (html, id) => {
+  const coincidencia = html.match(new RegExp(`id="${id}"[^>]*value="([^"]*)"`)) || html.match(new RegExp(`value="([^"]*)"[^>]*id="${id}"`));
+  return coincidencia ? coincidencia[1] : '';
+};
+
+const INTENTOS_DESCARGA_SISGED = 3;
+
+// SISGED a veces responde 500 de forma pasajera: se reintenta antes de rendirse.
+async function pedirASisged(url, descripcion) {
+  for (let intento = 1; ; intento++) {
+    const respuesta = await fetch(url);
+    if (respuesta.ok) return respuesta;
+    if (respuesta.status < 500 || intento >= INTENTOS_DESCARGA_SISGED) {
+      throw new Error(`SISGED respondió con error al ${descripcion}: ${respuesta.status}`);
+    }
+    await new Promise((resolver) => setTimeout(resolver, 1500 * intento));
+  }
+}
+
+// Una tanda (máximo 20 ids): devuelve el ZIP de SISGED como Buffer.
+async function descargarTandaZip(ids, usuarioSisged) {
+  const paso1 = new URL(SISGED_DESCARGA_MASIVA_URL);
+  paso1.search = new URLSearchParams({ ID_PERFIL: String(PERFIL_REPORTE_SISGED), USU_CREACION: usuarioSisged, WHERE: ids.join(',') }).toString();
+  const html = await (await pedirASisged(paso1, 'preparar la descarga')).text();
+  const codigo = valorDeCampoOculto(html, 'hdfCodigo');
+  const cut = valorDeCampoOculto(html, 'hdfCut');
+  if (!codigo || !cut) throw new Error('SISGED no devolvió los datos de la descarga masiva');
+
+  const paso2 = new URL(SISGED_DESCARGA_CERRAR_URL);
+  paso2.search = new URLSearchParams({ CODIGO: codigo, NRO_CUT: cut }).toString();
+  const respuesta2 = await pedirASisged(paso2, 'generar el ZIP');
+  const zip = Buffer.from(await respuesta2.arrayBuffer());
+  // Un ZIP empieza con "PK"; cualquier otra cosa es una página de error de SISGED.
+  if (zip.length < 4 || zip[0] !== 0x50 || zip[1] !== 0x4b) throw new Error('SISGED no devolvió un archivo ZIP');
+  return zip;
+}
+
+
 module.exports = {
   obtenerDatosDeSISGED,
   obtenerDocumentosCreados,
+  descargarTandaZip,
+  MAX_DOCUMENTOS_DESCARGA,
   importarExpedientesABD,
   obtenerToken,
   limpiarCacheToken

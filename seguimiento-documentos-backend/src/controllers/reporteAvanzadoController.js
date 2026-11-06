@@ -45,7 +45,7 @@ const rangoFechaHora = (desde, hasta) => {
 };
 
 const nombreDe = (u) => (u ? `${u.nombre} ${u.apellido || ''}`.trim() : '');
-const vencimientoVigente = (a) => (a.estado_prorroga === 'ACEPTADA' ? a.fecha_vencimiento_prorroga : a.fecha_vencimiento);
+const vencimientoVigente = (a) => a.fecha_vencimiento_prorroga || a.fecha_vencimiento;
 
 // 1. Productividad por persona: asignaciones y llamadas de cada responsable.
 exports.productividad = async (req, res) => {
@@ -197,10 +197,10 @@ exports.prorrogas = async (req, res) => {
         estado: a.estado_prorroga,
         solicitada_por: solicitadaPor[a.id]?.nombre || '',
         vence_original: a.fecha_vencimiento,
-        vence_nueva: a.estado_prorroga === 'ACEPTADA' ? a.fecha_vencimiento_prorroga : null,
+        vence_nueva: a.fecha_vencimiento_prorroga || null,
         revisada_por: revision?.nombre || '',
         fecha_revision: revision ? aLima(revision.fecha) : null,
-        dias_restantes: a.estado_prorroga === 'ACEPTADA' ? diasEntre(a.fecha_vencimiento_prorroga, hoy) : null,
+        dias_restantes: a.fecha_vencimiento_prorroga ? diasEntre(a.fecha_vencimiento_prorroga, hoy) : null,
       };
     });
 
@@ -220,11 +220,13 @@ exports.expedientesSinAsignar = async (req, res) => {
     const hoy = hoyLima();
     const where = {};
     const rfh = rangoFechaHora(req.query.desde, req.query.hasta);
-    if (rfh) where.feccrea = rfh;
+    // El rango de fechas se aplica a la fecha de registro en SEGEX.
+    if (rfh) where.fecha_creacion = rfh;
     const expedientes = await Expediente.findAll({
       where,
-      attributes: ['cut', 'asunto', 'proced', 'feccrea'],
-      order: [['feccrea', 'DESC']],
+      attributes: ['cut', 'asunto', 'proced', 'feccrea', 'fecha_creacion', 'usurem', 'destinos'],
+      include: [{ model: Usuario, as: 'creador', attributes: ['nombre', 'apellido'], required: false }],
+      order: [['fecha_creacion', 'DESC']],
     });
 
     const cuts = [...new Set(expedientes.map((e) => e.cut))];
@@ -243,13 +245,18 @@ exports.expedientesSinAsignar = async (req, res) => {
     expedientes.forEach((e) => {
       if (asignados.has(e.cut) || vistos.has(e.cut)) return;
       vistos.add(e.cut);
-      const fecha = e.feccrea ? aLima(e.feccrea) : null;
+      // Fecha en que se registró el expediente en SEGEX.
+      const fecha = e.fecha_creacion ? aLima(e.fecha_creacion) : null;
       filas.push({
         cut: e.cut,
         asunto: e.asunto || '',
         procedimiento: e.proced || '',
+        creado_por: e.creador ? `${e.creador.nombre} ${e.creador.apellido}` : '',
+        usuario_remitente: e.usurem || '',
+        destino: String(e.destinos || '').replace(/\r/g, '').trim(),
         fecha_registro: fecha,
-        dias_sin_asignar: e.feccrea ? diasEntre(hoy, String(e.feccrea).slice(0, 10)) : null,
+        // Días desde que el expediente se registró en SEGEX (fecha de creación local, hora de Lima).
+        dias_sin_asignar: e.fecha_creacion ? diasEntre(hoy, aLima(e.fecha_creacion).slice(0, 10)) : null,
       });
     });
 
@@ -559,7 +566,7 @@ exports.miDesempeno = async (req, res) => {
           motivo: a.motivo_prorroga || '',
           estado: a.estado_prorroga,
           vence_original: a.fecha_vencimiento,
-          vence_nueva: a.estado_prorroga === 'ACEPTADA' ? a.fecha_vencimiento_prorroga : null,
+          vence_nueva: a.fecha_vencimiento_prorroga || null,
         })),
       acciones: detalleAcciones.map((a) => {
         const p = a.get({ plain: true });

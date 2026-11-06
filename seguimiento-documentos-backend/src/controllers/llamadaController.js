@@ -665,11 +665,8 @@ exports.actualizarAccionLlamada = async (req, res) => {
 exports.subirArchivo = async (req, res) => {
   try {
     if (!req.file) throw errorConEstado('Seleccione un archivo para subir');
-    const descripcion = textoMayuscula(req.body.descripcion);
-    if (!descripcion) {
-      fs.unlink(req.file.path, () => {});
-      throw errorConEstado('Describa qué contiene el archivo antes de subirlo');
-    }
+    // Si no se describe el archivo, se usa su nombre.
+    const descripcion = textoMayuscula(req.body.descripcion) || textoMayuscula(req.file.originalname);
     const { accion, llamada } = await llamadaDeAccion(req.params.id);
     if (!accion || !llamada || !puedeVerLlamada(llamada, req.user)) {
       fs.unlink(req.file.path, () => {});

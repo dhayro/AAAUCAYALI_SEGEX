@@ -57,7 +57,7 @@ exports.asignaciones = async (req, res) => {
     let filas = asignaciones.map((a) => {
       const plain = a.get({ plain: true });
       const r = resumen.get(a.id);
-      const vence = a.estado_prorroga === 'ACEPTADA' ? a.fecha_vencimiento_prorroga : a.fecha_vencimiento;
+      const vence = a.fecha_vencimiento_prorroga || a.fecha_vencimiento;
       // Una asignación reasignada queda cerrada para su dueño anterior: su cumplimiento se mide hasta su última respuesta.
       const reasignada = Boolean(a.motivo_cierre);
       const cerrada = reasignada || r.estado === ESTADOS.CERRADA;

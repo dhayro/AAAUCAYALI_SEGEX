@@ -24,7 +24,7 @@ const PRIORIDAD_MOTIVO = {
 const diasEntre = (fecha, hoy) =>
   Math.round((Date.parse(`${String(fecha).slice(0, 10)}T00:00:00Z`) - Date.parse(`${hoy}T00:00:00Z`)) / 86400000);
 
-const vencimientoVigente = (a) => (a.estado_prorroga === 'ACEPTADA' ? a.fecha_vencimiento_prorroga : a.fecha_vencimiento);
+const vencimientoVigente = (a) => a.fecha_vencimiento_prorroga || a.fecha_vencimiento;
 
 // Motivo por el que la asignación necesita atención de quien mira el dashboard.
 const motivoDeAtencion = (fila, gestor) => {

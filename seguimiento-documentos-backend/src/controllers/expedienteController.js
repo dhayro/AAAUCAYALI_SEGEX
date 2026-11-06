@@ -6,6 +6,7 @@ const Usuario = require('../models/Usuario');
 const { convertirFechaSisged } = require('../utils/fechas');
 const sisgedSyncService = require('../services/sisgedSyncService');
 const { listarTrazabilidad } = require('../services/trazabilidadService');
+const { esDestinoPermitido, esAdmin } = require('../services/destinosService');
 
 const CAMPOS_TEXTO = ['cut', 'origen', 'destip', 'estupa', 'proced', 'asunto', 'refe', 'destinos', 'ndoc', 'usurem', 'ofirem', 'tema'];
 const CAMPOS_ENTERO = ['idoc', 'fol', 'flgcut', 'flgarc'];
@@ -77,9 +78,22 @@ exports.getAllExpedientes = async (req, res) => {
   }
 };
 
+// Un CUT es de la jurisdicción de quien consulta si algún documento de SISGED tiene un destino suyo.
+// El admin ve todos los CUT.
+const cutEsDeJurisdiccion = async (cut) => {
+  const datos = await sisgedSyncService.obtenerDatosDeSISGED('general', { NRO_CUT: cut });
+  return (Array.isArray(datos) ? datos.flat() : [])
+    .some((item) => String(item.ncut || '').trim().toUpperCase() === cut && esDestinoPermitido(item.destinos));
+};
+
+const MENSAJE_FUERA_DE_JURISDICCION = 'Este CUT no pertenece a su jurisdicción';
+
 exports.buscarPorCut = async (req, res) => {
   try {
     const cut = String(req.params.cut).trim().toUpperCase();
+    if (!esAdmin(req.user) && !(await cutEsDeJurisdiccion(cut))) {
+      return res.status(403).json({ mensaje: MENSAJE_FUERA_DE_JURISDICCION });
+    }
 
     const local = await Expediente.findOne({ where: { cut }, include: incluirUsuarios });
     if (local) {
@@ -107,6 +121,10 @@ exports.buscarPorCut = async (req, res) => {
 
 exports.getTrazabilidadPorCut = async (req, res) => {
   try {
+    const cut = String(req.params.cut).trim().toUpperCase();
+    if (!esAdmin(req.user) && !(await cutEsDeJurisdiccion(cut))) {
+      return res.status(403).json({ mensaje: MENSAJE_FUERA_DE_JURISDICCION });
+    }
     const documentos = await listarTrazabilidad(req.params.cut);
     res.json({ total: documentos.length, documentos });
   } catch (error) {

@@ -3,6 +3,10 @@ const sisgedSyncService = require('../services/sisgedSyncService');
 const postmanUpdateService = require('../services/postmanUpdateService');
 const { guardarTrazabilidad } = require('../services/trazabilidadService');
 const { agregarUsuariosLocales } = require('../services/usuarioSisgedMapeoService');
+const Usuario = require('../models/Usuario');
+const { extraerCodigosDestino, esDestinoPermitido, esAdmin } = require('../services/destinosService');
+const JSZip = require('jszip');
+const analisisResolucionesService = require('../services/analisisResolucionesService');
 
 // Obtener token: primero de BD, luego de Postman
 async function obtenerTokenOptimizado() {
@@ -299,7 +303,14 @@ exports.sincronizarConParametros = async (req, res) => {
         console.log('[SYNC-PARAMS] Trazabilidad guardada:', guardados, 'documentos');
       }
       // En los movimientos se agrega el usuario del sistema que corresponde a quien envía y a quien recibe.
-      const datosFinales = endpoint === 'movimientos' ? await agregarUsuariosLocales(datos) : datos;
+      let datosFinales = endpoint === 'movimientos' ? await agregarUsuariosLocales(datos) : datos;
+      // Los documentos de otros destinos solo los ve el admin. SISGED devuelve la lista anidada: [[...]].
+      if (endpoint === 'general' && !esAdmin(req.user) && Array.isArray(datosFinales?.[0])) {
+        const lista = datosFinales[0]
+          .filter((doc) => esDestinoPermitido(doc.destinos))
+          .map((doc) => ({ ...doc, destino_codigos: extraerCodigosDestino(doc.destinos) }));
+        datosFinales = [lista];
+      }
       console.log('[SYNC-PARAMS] ✅ Completado:', datosFinales?.length || 0, 'registros');
       res.status(200).json({
         success: true,
@@ -333,9 +344,46 @@ exports.documentosCreados = async (req, res) => {
     const cantidad = [15, 50, 100, 150, 300].includes(Number(filas)) ? Number(filas) : 15;
     const pagina = Math.max(1, parseInt(req.body.pagina, 10) || 1);
     const todas = req.body.todas === true;
+    // Quien no es admin solo ve los documentos con un destino suyo: se filtra toda la lista y luego se pagina.
+    if (!esAdmin(req.user)) {
+      const todos = await sisgedSyncService.obtenerDocumentosCreados({ desde, hasta, tipo, oficina, filas: cantidad, todas: true });
+      const visibles = todos.filas.filter((f) => esDestinoPermitido(f.destinos));
+      if (todas) return res.json({ total: visibles.length, filas: visibles });
+      const paginas = Math.max(1, Math.ceil(visibles.length / cantidad));
+      const inicio = (pagina - 1) * cantidad;
+      return res.json({ total: visibles.length, pagina, paginas, filas: visibles.slice(inicio, inicio + cantidad) });
+    }
     const datos = await sisgedSyncService.obtenerDocumentosCreados({ desde, hasta, tipo, oficina, filas: cantidad, pagina, todas });
     res.json(datos);
   } catch (error) {
+    res.status(500).json({ mensaje: error.message });
+  }
+};
+
+// Descarga masiva: ZIP con los PDF de los documentos elegidos en el reporte (solo lectura en SEGEX).
+exports.descargarDocumentos = async (req, res) => {
+  const inicio = Date.now();
+  try {
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(String) : [];
+    console.log(`[DESCARGA] POST /documentos-creados/descargar: ${ids.length} ids`);
+    if (ids.length === 0) return res.status(400).json({ mensaje: 'Seleccione al menos un documento' });
+    if (ids.length > sisgedSyncService.MAX_DOCUMENTOS_DESCARGA) {
+      return res.status(400).json({ mensaje: `Descargue como máximo ${sisgedSyncService.MAX_DOCUMENTOS_DESCARGA} documentos por vez` });
+    }
+    if (!ids.every((id) => /^\d+$/.test(id))) return res.status(400).json({ mensaje: 'Documentos no válidos' });
+
+    // USU_CREACION de SISGED es el usuario con el que entró a SEGEX.
+    const usuario = await Usuario.findByPk(req.user.id, { attributes: ['usuario'] });
+    if (!usuario?.usuario) return res.status(400).json({ mensaje: 'Su usuario no tiene nombre de usuario registrado' });
+
+    const zip = await sisgedSyncService.descargarTandaZip(ids, usuario.usuario);
+    console.log(`[DESCARGA] ZIP listo: ${zip.length} bytes en ${(Date.now() - inicio) / 1000}s`);
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename="documentos-sisged.zip"');
+    res.send(zip);
+    console.log(`[DESCARGA] ZIP enviado al navegador`);
+  } catch (error) {
+    console.error(`[DESCARGA] Error tras ${(Date.now() - inicio) / 1000}s: ${error.message}`);
     res.status(500).json({ mensaje: error.message });
   }
 };
@@ -419,5 +467,32 @@ exports.obtenerArchivo = async (req, res) => {
       success: false,
       error: error.message || 'Error al obtener archivo'
     });
+  }
+};
+
+// Analiza los PDF de un ZIP subido (el que se descarga del reporte) y devuelve una fila por PDF.
+exports.analizarZip = async (req, res) => {
+  const inicio = Date.now();
+  try {
+    if (!req.file) return res.status(400).json({ mensaje: 'Suba un archivo ZIP' });
+    const zip = await JSZip.loadAsync(req.file.buffer);
+    const pdfs = Object.keys(zip.files).filter((nombre) => !zip.files[nombre].dir && nombre.toLowerCase().endsWith('.pdf'));
+    if (pdfs.length === 0) return res.status(400).json({ mensaje: 'El ZIP no tiene archivos PDF' });
+    console.log(`[ANALISIS] ${pdfs.length} PDF en el ZIP`);
+
+    const filas = [];
+    for (const nombre of pdfs) {
+      const archivo = nombre.split('/').pop();
+      try {
+        filas.push(await analisisResolucionesService.analizarPdf(await zip.files[nombre].async('nodebuffer'), archivo));
+      } catch (error) {
+        filas.push({ archivo, numero_resolucion: '', fecha: '', cut: '', ala: '', administrado: '', contenido: `Error al leer el PDF: ${error.message}`, patron: 'Ninguno' });
+      }
+    }
+    console.log(`[ANALISIS] Listo: ${filas.length} filas en ${(Date.now() - inicio) / 1000}s`);
+    res.json({ total: filas.length, filas });
+  } catch (error) {
+    console.error(`[ANALISIS] Error: ${error.message}`);
+    res.status(500).json({ mensaje: error.message });
   }
 };

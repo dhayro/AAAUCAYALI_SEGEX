@@ -45,7 +45,7 @@ router.get('/calendario', authenticateToken, controller.calendario);
 router.get('/llamadas/:id', authenticateToken, controller.obtenerLlamada);
 router.put('/llamadas/:id', authenticateToken, controller.actualizarLlamada);
 router.post('/llamadas/:id/anular', authenticateToken, controller.anularLlamada);
-router.patch('/llamadas/:id/responsable', authenticateToken, isSecretariaOrAbove, controller.reasignarLlamada);
+router.patch('/llamadas/:id/responsable', authenticateToken, controller.reasignarLlamada);
 router.post('/llamadas/:id/acciones', authenticateToken, controller.agregarAccion);
 
 // Acciones de cada llamada, archivos de avance

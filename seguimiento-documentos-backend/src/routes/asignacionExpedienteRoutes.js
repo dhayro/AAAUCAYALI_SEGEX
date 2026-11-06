@@ -168,7 +168,7 @@ router.patch('/:id/prorroga/aceptar', authenticateToken, isSecretariaOrAbove, co
 router.patch('/:id/prorroga/rechazar', authenticateToken, isSecretariaOrAbove, controller.rechazarProrroga);
 router.get('/:id/historial', authenticateToken, controller.obtenerHistorial);
 router.get('/por-cut/:cut', authenticateToken, isSecretariaOrAbove, controller.asignacionesDelCut);
-router.post('/prorroga-masiva/solicitar', authenticateToken, isSecretariaOrAbove, controller.prorrogarMasivo);
+router.post('/prorroga-masiva/solicitar', authenticateToken, controller.prorrogarMasivo);
 router.post('/prorroga-masiva/aceptar', authenticateToken, isSecretariaOrAbove, controller.aceptarProrrogaMasivo);
 router.post('/prorroga-masiva/rechazar', authenticateToken, isSecretariaOrAbove, controller.rechazarProrrogaMasivo);
 router.post('/carga-masiva', authenticateToken, isSecretariaOrAbove, controller.cargaMasiva);
@@ -221,6 +221,7 @@ router.get('/:id/respuestas', authenticateToken, respuestaController.listarRespu
 router.post('/:id/respuestas', authenticateToken, respuestaController.crearRespuesta);
 router.post('/:id/respuestas/enviar', authenticateToken, respuestaController.enviarRevision);
 router.post('/respuestas/:id/archivos', authenticateToken, subirArchivoRespuesta, respuestaController.subirArchivo);
+router.patch('/respuestas/:id', authenticateToken, respuestaController.editarRespuesta);
 router.get('/archivos-respuesta/:id/descargar', authenticateToken, respuestaController.descargarArchivo);
 router.patch('/archivos-respuesta/:id', authenticateToken, respuestaController.editarArchivo);
 router.put('/archivos-respuesta/:id/archivo', authenticateToken, subirArchivoRespuesta, respuestaController.reemplazarArchivo);
